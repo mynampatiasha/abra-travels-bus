@@ -6,7 +6,7 @@
 |---|---|---|
 | Customer / operator / driver / admin / partner apps | Flutter 3 + Dart, Material 3, Riverpod, go_router | Shared packages for models, network, auth, UI, localization |
 | Public SEO website | Next.js (App Router, SSG/ISR) | Content, route landing pages, offers, FAQ. Deep-links into the Flutter booking app. No booking logic. |
-| Backend | Node.js 22 + TypeScript + NestJS | Modular monolith. One process for the API, separate processes for workers. |
+| Backend | Node.js 24 LTS + TypeScript + NestJS | Modular monolith. One process for the API, separate processes for workers. Libraries: NestJS 12, Mongoose 9, ioredis, nestjs-pino (JSON logs), zod 4, helmet |
 | Database | MongoDB 7+ **replica set** | Multi-document transactions require a replica set (Atlas or local `rs0`). |
 | Cache / locks / rate limits | Redis 7 | Never the source of truth for seats or bookings. |
 | Background jobs | BullMQ | Notifications, lock expiry sweeps, webhooks, refunds, reports, analytics |

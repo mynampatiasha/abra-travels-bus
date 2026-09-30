@@ -1,6 +1,6 @@
 # Environment Variables
 
-Files `.env.development`, `.env.test`, `.env.staging`, `.env.production` are **never committed**. `backend/.env.example` lists every key with dummy values. Values are validated at start-up with zod; the app refuses to start if a required value is missing or a `Development*` adapter is selected in production.
+Files `.env.development`, `.env.test`, `.env.staging`, `.env.production` are **never committed**. `backend/.env.example` lists every key with dummy values. Values are validated at start-up with zod (`backend/src/config/`); the app refuses to start if a required value is missing or a `Development*` adapter is selected in production. Error messages name the variable, never its value. For local development, `npm run env:create-development` (in `backend/`) creates `.env.development` from the example with freshly generated secrets.
 
 | Variable | Example | Required |
 |---|---|---|
@@ -34,6 +34,7 @@ Files `.env.development`, `.env.test`, `.env.staging`, `.env.production` are **n
 | STORAGE_DRIVER | s3 \| local | yes |
 | STORAGE_BUCKET / STORAGE_REGION / STORAGE_ENDPOINT / STORAGE_ACCESS_KEY / STORAGE_SECRET_KEY | — | if s3 |
 | LOG_LEVEL | info | no |
+| API_DOCS_ENABLED | true (default: true outside production; `true` is refused in production) | no |
 
 Next.js (`apps/public_website/.env.local`): `NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_BOOKING_APP_URL`, `NEXT_PUBLIC_SITE_URL`, `REVALIDATE_SECRET`.
 

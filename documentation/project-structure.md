@@ -33,18 +33,24 @@ backend/src/
 ├── worker.ts                  BullMQ worker entry point
 ├── app.module.ts
 ├── worker.module.ts
+├── configure-http-application.ts  HTTP pipeline shared by main.ts and e2e tests (request id, helmet, CORS, prefix, filter, pipe, envelope, Swagger)
 ├── config/                    typed config + env validation (zod)
+├── redis/                     shared ioredis client (cache, rate limits; never source of truth)
+├── tests/                     application-level e2e tests (http-application.e2e-spec.ts)
 ├── common/
 │   ├── guards/                jwt-authentication.guard.ts, permission.guard.ts, partner-client.guard.ts
 │   ├── decorators/            require-permission.decorator.ts, current-actor.decorator.ts, idempotent.decorator.ts
 │   ├── interceptors/          response-envelope.interceptor.ts, idempotency.interceptor.ts
 │   ├── filters/               api-exception.filter.ts
 │   ├── errors/                api-error-codes.ts, api-exception.ts
-│   ├── request-context/       request-context.service.ts
-│   └── pipes/                 zod-validation.pipe.ts
+│   ├── request-context/       request-context.service.ts, request-id.middleware.ts, request-actor.ts
+│   ├── logging/               logger-options.factory.ts (pino, redaction)
+│   ├── openapi/               api-documentation.setup.ts (/api/docs)
+│   └── pipes/                 zod-validation.pipe.ts, zod-dto.factory.ts
 ├── database/
-│   ├── transaction-runner.service.ts
-│   ├── scoped-repository.base.ts
+│   ├── transaction-runner.service.ts, transaction-errors.ts
+│   ├── scoped-repository.base.ts, data-scope.policy.ts
+│   ├── index-bootstrap.service.ts, database-startup.service.ts, mongo-replica-set.verifier.ts
 │   └── seeders/               permission-registry.seeder.ts, system-roles.seeder.ts, cities.seeder.ts
 ├── integrations/
 │   ├── payment/               payment-gateway.interface.ts, razorpay-payment-gateway.ts, development-payment-gateway.ts

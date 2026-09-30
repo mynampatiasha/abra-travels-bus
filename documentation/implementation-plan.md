@@ -7,7 +7,7 @@ Status legend: ⬜ not started · 🟨 in progress · ✅ done
 | # | Phase | Main deliverables | Exit criteria | Status |
 |---|---|---|---|---|
 | 1 | Discovery, architecture, UX | This documentation set, screen map, design tokens, infra decision | Docs reviewed; local MongoDB replica set + Redis reachable | ✅ 2026-09-30 |
-| 2 | Foundation, design system, authentication | Monorepo, NestJS skeleton (config, request context, error envelope, logging, Swagger), Mongo transaction runner, outbox, BullMQ worker process; `shared_ui`, `shared_network`, `shared_authentication`, `shared_localization`; OTP + password + JWT + refresh rotation; customer login/signup screens | Login works end-to-end in customer and admin apps; CI green | ⬜ |
+| 2 | Foundation, design system, authentication | Monorepo, NestJS skeleton (config, request context, error envelope, logging, Swagger), Mongo transaction runner, outbox, BullMQ worker process; `shared_ui`, `shared_network`, `shared_authentication`, `shared_localization`; OTP + password + JWT + refresh rotation; customer login/signup screens | Login works end-to-end in customer and admin apps; CI green | 🟨 |
 | 3 | RBAC + operator supply side | Permission registry, roles, overrides, data scope, PermissionGuard, ScopedRepository, audit logs, admin users/roles/permission matrix; operator registration + approval; buses, seat-layout designer (versioned), cities/locations, routes, stops, boarding/dropping points, schedules, fare rule sets; operator app screens | RBAC matrix test and cross-tenant tests pass; operator can create bus → layout → route → fare → trip | ⬜ |
 | 4 | Master inventory, seat lock, booking engine | Trip publish → inventory generation, search API + customer search/results/filters/details, seat map, atomic seat locks, lock expiry worker, passenger details, booking creation with idempotency, coupons (backend) | 500-concurrent same-seat test: exactly 1 winner; idempotent replays; expiry correct | ⬜ |
 | 5 | Payment, ticketing, cancellation, refunds | PaymentGateway interface, Development + Razorpay gateways, webhooks, verification, confirmation, late-payment recovery, PNR, ticket PDF + QR, my bookings, cancellation quote, partial cancellation, refunds worker, reconciliation | Duplicate-webhook, pending, failed, expired-lock-then-paid scenarios pass | ⬜ |
@@ -23,8 +23,8 @@ Phases 2–6 plus basic notifications (email/SMS) = MVP: customer booking, opera
 
 ## Build order inside Phase 2 (next step)
 
-1. `backend/` NestJS project, config validation, request context, error envelope, logger with redaction, health endpoints, Swagger.
-2. MongoDB connection + `TransactionRunner` + index bootstrap; Redis connection; BullMQ worker entry point; outbox + relay.
+1. ✅ `backend/` NestJS project, config validation, request context, error envelope, logger with redaction, health endpoints, Swagger, module structure (2026-09-30).
+2. ✅ MongoDB connection + `TransactionRunner` + index bootstrap + `ScopedRepository` (2026-09-30). ⬜ BullMQ worker entry point; outbox + relay (Redis connection already done in step 1).
 3. `authentication` + `users` + `sessions` modules, OTP with development SMS adapter.
 4. `packages/shared_*` Flutter packages and Abra theme.
 5. Customer app: splash, language selection, login, OTP, signup, home shell.

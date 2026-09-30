@@ -1,0 +1,42 @@
+import { Global, Inject, Logger, Module, type OnApplicationShutdown } from '@nestjs/common';
+import { Redis } from 'ioredis';
+import { AppConfigService } from '../config/app-config.service';
+
+/** Injection token for the shared ioredis client (cache, rate limits; BullMQ gets its own). */
+export const REDIS_CLIENT = Symbol('REDIS_CLIENT');
+
+/**
+ * Redis is cache / rate limits / queues only — never the source of truth for seats or bookings
+ * (architecture.md §3). BullMQ connections are configured in Phase 2 step 6.
+ */
+@Global()
+@Module({
+  providers: [
+    {
+      provide: REDIS_CLIENT,
+      inject: [AppConfigService],
+      useFactory: (config: AppConfigService): Redis => {
+        const logger = new Logger('Redis');
+        const client = new Redis(config.get('REDIS_URL'), {
+          connectionName: 'abra-travels-backend',
+          maxRetriesPerRequest: 3,
+          enableOfflineQueue: false,
+          lazyConnect: false,
+        });
+        // Without a listener ioredis would print raw errors; connection details stay out of logs
+        client.on('error', (error: NodeJS.ErrnoException) =>
+          logger.warn({ code: error.code, message: error.message }, 'Redis error'),
+        );
+        return client;
+      },
+    },
+  ],
+  exports: [REDIS_CLIENT],
+})
+export class RedisModule implements OnApplicationShutdown {
+  constructor(@Inject(REDIS_CLIENT) private readonly client: Redis) {}
+
+  async onApplicationShutdown(): Promise<void> {
+    if (this.client.status !== 'end') await this.client.quit();
+  }
+}
