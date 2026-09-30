@@ -1,0 +1,120 @@
+# Abra Travels — local development infrastructure
+#
+# Start:  docker compose -f infrastructure/docker-compose.development.yml --env-file infrastructure/.env up -d
+# Stop:   docker compose -f infrastructure/docker-compose.development.yml down        (data is kept)
+#
+# MongoDB runs as a single-node replica set (rs0) because seat locking and booking
+# confirmation use multi-document transactions, which need a replica set.
+# Redis is cache / rate limits / BullMQ only — never the source of truth.
+#
+# Ports are bound to 127.0.0.1 only, so the databases are not reachable from the network.
+# No database passwords in development for that reason; staging/production use managed
+# services with authentication (see documentation/deployment.md).
+
+name: abra-travels
+
+services:
+  mongodb:
+    image: mongo:8.0
+    container_name: abra-mongodb
+    command: ["--replSet", "rs0", "--bind_ip_all", "--wiredTigerCacheSizeGB", "1"]
+    ports:
+      - "127.0.0.1:${MONGODB_HOST_PORT:-27017}:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    networks:
+      - abra_network
+    healthcheck:
+      # Initiates the replica set on first start, then reports healthy once it has a primary.
+      # Member host is localhost:27017 so tools on Windows (Compass, backend in dev mode) can connect;
+      # containers connect with directConnection=true.
+      test:
+        - CMD
+        - mongosh
+        - --quiet
+        - --eval
+        - "try { rs.status().ok } catch (e) { rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'localhost:27017' }] }).ok }; db.hello().isWritablePrimary ? 0 : 1"
+      interval: 10s
+      timeout: 10s
+      start_period: 30s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: abra-redis
+    # appendonly: survive restarts (queued jobs). noeviction: required by BullMQ so jobs are never evicted.
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "noeviction"]
+    ports:
+      - "127.0.0.1:${REDIS_HOST_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - abra_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Application services (Phase 2+) ─────────────────────────────────────────
+  # Disabled until the backend exists. Start them with:  --profile application up -d
+  backend-api:
+    profiles: ["application"]
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: abra-backend-api
+    command: ["npm", "run", "start:dev"]
+    env_file: ../backend/.env.development
+    environment:
+      MONGODB_URI: mongodb://mongodb:27017/abra_travels?directConnection=true
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "127.0.0.1:${BACKEND_HOST_PORT:-4000}:4000"
+    volumes:
+      - ../backend/src:/app/src
+    networks:
+      - abra_network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  backend-worker:
+    profiles: ["application"]
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: abra-backend-worker
+    command: ["npm", "run", "worker:dev"]
+    env_file: ../backend/.env.development
+    environment:
+      MONGODB_URI: mongodb://mongodb:27017/abra_travels?directConnection=true
+      REDIS_URL: redis://redis:6379
+    volumes:
+      - ../backend/src:/app/src
+    networks:
+      - abra_network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  mongodb_data:
+    name: abra_mongodb_data
+  mongodb_config:
+    name: abra_mongodb_config
+  redis_data:
+    name: abra_redis_data
+
+networks:
+  abra_network:
+    name: abra_network

@@ -1,0 +1,52 @@
+# ── Secrets: real environment files are never committed ──
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+*.pem
+*.key
+service-account*.json
+*.p12
+*.pfx
+*.jks
+*.keystore
+**/android/key.properties
+secrets/
+**/GoogleService-Info.plist
+**/google-services.json
+
+# ── Node / NestJS / Next.js ──
+node_modules/
+dist/
+coverage/
+.next/
+out/
+*.tsbuildinfo
+npm-debug.log*
+backend/storage/
+
+# ── Flutter / Dart ──
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+**/android/.gradle/
+**/android/local.properties
+**/ios/Pods/
+**/ios/.symlinks/
+*.iml
+
+# ── Editors / OS ──
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+
+# ── Logs / load-test output ──
+logs/
+*.log
+infrastructure/load-tests/results/
