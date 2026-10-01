@@ -26,6 +26,7 @@ Phases 2–6 plus basic notifications (email/SMS) = MVP: customer booking, opera
 1. ✅ `backend/` NestJS project, config validation, request context, error envelope, logger with redaction, health endpoints, Swagger, module structure (2026-09-30).
 2. ✅ MongoDB connection + `TransactionRunner` + index bootstrap + `ScopedRepository` (2026-09-30). BullMQ queues with Redis-outage recovery, worker entry point, transactional outbox + relay, readiness (queues, outbox), backend Docker image — implemented and verified 2026-10-01 ([background-jobs.md](background-jobs.md)).
 3. `authentication` + `users` + `sessions` modules, OTP with development SMS adapter.
+   RBAC foundation (permission catalogue, 12 roles, user overrides, data-scope integration, PermissionGuard, `/me/permissions`, administration endpoints, audit trail) — implemented and verified 2026-10-01 ([authorization.md](authorization.md)).
 4. `packages/shared_*` Flutter packages and Abra theme.
 5. Customer app: splash, language selection, login, OTP, signup, home shell.
 6. Admin app: login, MFA, shell with permission-driven sidebar.

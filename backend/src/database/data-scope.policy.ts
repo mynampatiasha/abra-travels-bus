@@ -148,3 +148,46 @@ export function assertUpdateKeepsScope(
     throw new ApiException('PERMISSION_DENIED', 'Ownership fields cannot be changed');
   }
 }
+
+/**
+ * Ownership facts of one resource, for checks that are not a repository query (for example a
+ * service deciding whether the actor may act on a record it has already loaded).
+ */
+export interface ResourceOwnership {
+  readonly operatorId?: string | null;
+  readonly partnerId?: string | null;
+  /** The user the record belongs to (OWN_RECORDS). */
+  readonly ownerUserId?: string | null;
+  /** Users the record is assigned to (ASSIGNED_RECORDS), e.g. the crew of a trip. */
+  readonly assignedUserIds?: readonly string[];
+}
+
+/**
+ * Is this resource inside the actor's data scope? The same rules as `scopeFilterFor`, applied to
+ * one resource. Fail closed: a fact the scope needs but the resource does not state means "no".
+ */
+export function isResourceWithinScope(actor: RequestActor, resource: ResourceOwnership): boolean {
+  if (isUnrestricted(actor)) return true;
+  if (actor.actorType !== 'USER') return false;
+
+  const scope = actor.dataScope;
+  switch (scope.type) {
+    case 'OWN_OPERATOR':
+    case 'SELECTED_OPERATORS':
+      return (
+        typeof resource.operatorId === 'string' && scope.operatorIds.includes(resource.operatorId)
+      );
+    case 'OWN_PARTNER':
+      return (
+        typeof resource.partnerId === 'string' &&
+        actor.partnerId !== undefined &&
+        resource.partnerId === actor.partnerId
+      );
+    case 'OWN_RECORDS':
+      return resource.ownerUserId === actor.userId;
+    case 'ASSIGNED_RECORDS':
+      return resource.assignedUserIds?.includes(actor.userId) ?? false;
+    default:
+      return false;
+  }
+}

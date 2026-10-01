@@ -106,5 +106,5 @@ Layering inside every feature: **screen → controller → repository → shared
 - Filenames describe their purpose: `seat_lock_countdown_banner.dart`, `payment-verification.service.ts`.
 - Forbidden: `screen.dart`, `page.dart`, `service.dart`, `helper.dart`, `utils.dart`, `common.dart`, `manager.dart`, `data.dart`, `api.dart`, `new.dart`, `final.dart`, `test.dart`.
 - Dart: `snake_case.dart`. TypeScript: `kebab-case.<kind>.ts` (`.controller`, `.service`, `.repository`, `.schema`, `.dto`, `.guard`, `.worker`, `.gateway`, `.spec`).
-- Permission keys: `module.action` (e.g. `bookings.cancel`), defined once in `backend/src/modules/rbac/permission-registry.ts` and mirrored to Flutter through `GET /api/v1/permissions`.
+- Permission keys: `module.action` (e.g. `bookings.cancel`), defined once in `backend/src/modules/rbac/permissions/permission-catalog.ts` and mirrored to Flutter through `GET /api/v1/permissions`.
 - No file above ~400 lines. Split by responsibility.

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { type ClientSession } from 'mongoose';
+import { type ClientSession, type Types } from 'mongoose';
 import { ApiException } from '../../../common/errors/api-exception';
 import {
   normalizeEmail,
@@ -136,6 +136,15 @@ export class UsersService {
 
   async recordLogin(id: string, session?: ClientSession): Promise<void> {
     await this.repository.setFields(id, { lastLoginAt: new Date() }, { session });
+  }
+
+  /** Authorization changes (roles, data scope, overrides) always bump `permissionVersion`. */
+  applyAuthorizationChange(
+    id: Types.ObjectId,
+    change: { roleIds?: Types.ObjectId[]; dataScope?: User['dataScope'] },
+    session: ClientSession,
+  ): Promise<boolean> {
+    return this.repository.applyAuthorizationChange(id, change, session);
   }
 
   setPendingMfaSecret(id: string, pendingSecretEncrypted: string): Promise<boolean> {

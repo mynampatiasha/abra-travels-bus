@@ -54,6 +54,27 @@ export class UserRepository {
     return result.matchedCount === 1;
   }
 
+  /**
+   * Changes roles and/or data scope and bumps `permissionVersion` in one update, so access tokens
+   * issued before the change stop working (PERMISSIONS_CHANGED) and the user picks up the new
+   * permissions on refresh.
+   */
+  async applyAuthorizationChange(
+    id: Types.ObjectId,
+    change: { roleIds?: Types.ObjectId[]; dataScope?: User['dataScope'] },
+    session: ClientSession,
+  ): Promise<boolean> {
+    const result = await this.model.updateOne(
+      { _id: id },
+      {
+        ...(Object.keys(change).length > 0 ? { $set: change } : {}),
+        $inc: { permissionVersion: 1 },
+      },
+      { session, runValidators: true },
+    );
+    return result.matchedCount === 1;
+  }
+
   /** Stores a new MFA secret awaiting confirmation; refused when MFA is already enabled. */
   async setPendingMfaSecret(id: string, pendingSecretEncrypted: string): Promise<boolean> {
     const result = await this.model.updateOne(

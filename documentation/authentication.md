@@ -1,6 +1,6 @@
 # Authentication
 
-Status legend: **implemented** (Phase 2 step 7) · **Step 8** (RBAC, next) · **Phase 7** (partner platform) · **optional / future** (added when a provider or business decision exists).
+Status legend: **implemented** (Phase 2 step 7) · **Step 8** (RBAC — implemented, see authorization.md) · **Phase 7** (partner platform) · **optional / future** (added when a provider or business decision exists).
 
 Authorization (roles, permissions, overrides, data scope) is a separate concern: see [authorization.md](authorization.md).
 
@@ -89,7 +89,6 @@ Error codes: `UNAUTHENTICATED`, `TOKEN_EXPIRED`, `PERMISSIONS_CHANGED`, `INVALID
 ### Deferred
 
 ```
-GET  /me/permissions          effective permissions + permissionVersion          Step 8 (RBAC)
 POST /partner-auth/token      client credentials → partner access token         Phase 7
 POST /auth/password/forgot    email-based reset link                            optional / future (needs an email provider)
 ```

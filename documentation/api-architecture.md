@@ -57,7 +57,7 @@ POST /assistant/messages                              me/public  AI assistant
 ### Operator (all filtered by data scope)
 
 ```
-GET/POST/PUT  /operator/profile                         [operators.edit]
+GET/POST/PUT  /operator/profile                         [operators.update]
 GET/POST/PUT/DELETE /operator/staff                     [operator-staff.*]
 GET/POST/PUT/DELETE /buses                              [buses.*]
 GET/POST /seat-layouts   POST /seat-layouts/:id/versions  [seat-layouts.*]
@@ -66,29 +66,29 @@ GET/POST/PUT/DELETE /schedules                          [schedules.*]
 POST /schedules/:id/generate-trips                      [trips.create]
 GET/POST/PUT /trips                                     [trips.*]
 POST /trips/:tripId/publish                             [trips.publish]
-POST /trips/:tripId/status                              [trip-operations.edit]  SCHEDULED→BOARDING...
-POST /trips/:tripId/delay                               [trip-operations.edit]
-POST /trips/:tripId/change-bus                          [trips.edit]  preview + confirm, seat mapping
+POST /trips/:tripId/status                              [trip-operations.update]  SCHEDULED→BOARDING...
+POST /trips/:tripId/delay                               [trip-operations.update]
+POST /trips/:tripId/change-bus                          [trips.update]  preview + confirm, seat mapping
 POST /trips/:tripId/cancel                              [trips.cancel]  reason required
-GET  /trips/:tripId/inventory                           [inventory.view]
+GET  /trips/:tripId/inventory                           [inventory.read]
 POST /trips/:tripId/inventory/block | unblock           [inventory.block|unblock]
 GET/POST /fare-rule-sets  POST /fare-rule-sets/:id/versions   [fares.*]
-GET  /bookings?pnr=&phone=&tripId=&status=              [bookings.view]
+GET  /bookings?pnr=&phone=&tripId=&status=              [bookings.read]
 POST /counter-bookings                                  [bookings.create]
-GET  /trips/:tripId/manifest  /manifest.pdf  /manifest.csv   [manifests.view|export]
-GET  /settlements  /settlements/:id                     [settlements.view]
-GET  /reports/:reportKey  /reports/:reportKey/export    [reports.view|export]
-GET  /dashboard/operator                                [dashboard.view]
+GET  /trips/:tripId/manifest  /manifest.pdf  /manifest.csv   [manifests.read|export]
+GET  /settlements  /settlements/:id                     [settlements.read]
+GET  /reports/:reportKey  /reports/:reportKey/export    [reports.read|export]
+GET  /dashboard/operator                                [dashboard.read]
 ```
 
 ### Driver / conductor
 
 ```
-GET  /driver/trips?date=today                           [manifests.view]  assigned trips only
-GET  /driver/trips/:tripId/manifest                     [manifests.view]
+GET  /driver/trips?date=today                           [manifests.read]  assigned trips only
+GET  /driver/trips/:tripId/manifest                     [manifests.read]
 POST /driver/check-ins                                  [check-in.verify]  { qrToken | pnr+seat }
-POST /driver/trips/:tripId/status | /delay              [trip-operations.edit]
-WS   /tracking  event: location.update                  [trip-operations.edit]
+POST /driver/trips/:tripId/status | /delay              [trip-operations.update]
+WS   /tracking  event: location.update                  [trip-operations.update]
 POST /driver/sos                                        driver
 ```
 
@@ -96,14 +96,14 @@ POST /driver/sos                                        driver
 
 ```
 GET/POST/PUT /operators   POST /operators/:id/approve|reject|suspend|activate   [operators.*]
-GET  /admin/trips   /admin/trips/:tripId/timeline        [trips.view]
-GET  /admin/inventory/:tripId                            [inventory.view]  seat, state, lock, booking, channel, partner, last change
-GET  /admin/bookings  /admin/bookings/:id (timeline, payments, refunds, notifications, API events, audit)   [bookings.view]
-GET  /admin/customers                                    [customers.view]
-GET  /admin/payments   POST /admin/payments/:id/reconcile   [payments.view|verify]
+GET  /admin/trips   /admin/trips/:tripId/timeline        [trips.read]
+GET  /admin/inventory/:tripId                            [inventory.read]  seat, state, lock, booking, channel, partner, last change
+GET  /admin/bookings  /admin/bookings/:id (timeline, payments, refunds, notifications, API events, audit)   [bookings.read]
+GET  /admin/customers                                    [customers.read]
+GET  /admin/payments   POST /admin/payments/:id/reconcile   [payments.read|verify]
 GET/POST /admin/refunds   POST /admin/refunds/:id/approve|reject   [refunds.*]
 GET/POST/PUT /admin/partners  /admin/api-clients  POST /admin/api-clients/:id/rotate  [partners.*, api-clients.*]
-GET  /admin/api-monitoring                               [api-monitoring.view]
+GET  /admin/api-monitoring                               [api-monitoring.read]
 GET  /admin/webhook-deliveries  POST /admin/webhook-deliveries/:id/retry   [webhooks.*]
 GET/POST/PUT /admin/commission-rules                     [commissions.manage]
 POST /admin/settlements/generate   POST /admin/settlements/:id/approve|mark-paid   [settlements.*]
@@ -112,12 +112,12 @@ CRUD /admin/offers  /admin/coupons  /admin/content  /admin/popular-routes
 CRUD /admin/notification-templates   GET /admin/notifications
 CRUD /admin/languages  /admin/translations
 GET  /admin/safety/incidents   POST /admin/safety/incidents/:id/acknowledge|escalate|resolve   [safety.*]
-GET  /admin/tracking/live                                [tracking.view]
+GET  /admin/tracking/live                                [tracking.read]
 CRUD /users  /roles  + permission endpoints (see authorization.md)
-GET  /admin/audit-logs                                   [audit-logs.view]
+GET  /admin/audit-logs                                   [audit-logs.read]
 GET/PUT /admin/settings  /admin/feature-flags  /admin/maintenance
 GET  /admin/search?q=                                    global search (PNR, booking, phone, email, bus, operator, trip)
-GET  /dashboard/admin                                    [dashboard.view]
+GET  /dashboard/admin                                    [dashboard.read]
 ```
 
 ### Partner API (`/partner/v1`, scopes)

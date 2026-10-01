@@ -1,5 +1,6 @@
 import { Controller, Delete, Get, HttpCode, Param } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { AuthenticatedOnly } from '../../../common/decorators/authenticated-only.decorator';
 import { CurrentActor } from '../../../common/decorators/current-actor.decorator';
 import { ApiException } from '../../../common/errors/api-exception';
 import { type AuthenticatedUserActor } from '../../../common/request-context/request-actor';
@@ -8,6 +9,7 @@ import { type SessionSummary, SessionsService } from '../services/sessions.servi
 /** The signed-in devices of the authenticated user (authentication.md §5). */
 @ApiTags('sessions')
 @ApiBearerAuth('access-token')
+@AuthenticatedOnly()
 @Controller('me/sessions')
 export class MySessionsController {
   constructor(private readonly sessions: SessionsService) {}

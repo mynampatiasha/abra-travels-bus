@@ -1,6 +1,7 @@
 import { Body, Controller, Get, HttpCode, Post, Res } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { type Response } from 'express';
+import { AuthenticatedOnly } from '../../../common/decorators/authenticated-only.decorator';
 import { CurrentActor } from '../../../common/decorators/current-actor.decorator';
 import { ZodApiBody } from '../../../common/openapi/zod-api-body';
 import { type AuthenticatedUserActor } from '../../../common/request-context/request-actor';
@@ -21,6 +22,7 @@ export interface CurrentUserResponse {
 /** The authenticated user's own account: profile, password, two-step verification. */
 @ApiTags('authentication')
 @ApiBearerAuth('access-token')
+@AuthenticatedOnly()
 @Controller()
 export class CurrentUserController {
   constructor(
