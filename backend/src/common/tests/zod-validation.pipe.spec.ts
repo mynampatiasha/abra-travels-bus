@@ -33,6 +33,24 @@ describe('ZodValidationPipe', () => {
     );
   });
 
+  it('treats a missing request body as an empty object', () => {
+    class AllOptionalDto extends createZodDto(z.object({ refreshToken: z.string().optional() })) {}
+    expect(pipe.transform(undefined, { type: 'body', metatype: AllOptionalDto })).toEqual({});
+  });
+
+  it('still enforces required fields when the body is missing', () => {
+    expect(() => pipe.transform(undefined, { type: 'body', metatype: ExampleDto })).toThrow(
+      ApiException,
+    );
+  });
+
+  it('does not invent an object for a missing query or param', () => {
+    class AllOptionalDto extends createZodDto(z.object({ page: z.string().optional() })) {}
+    expect(() => pipe.transform(undefined, { type: 'query', metatype: AllOptionalDto })).toThrow(
+      ApiException,
+    );
+  });
+
   it('leaves parameters without a zod DTO untouched', () => {
     expect(pipe.transform('abc', { type: 'param', metatype: String })).toBe('abc');
   });

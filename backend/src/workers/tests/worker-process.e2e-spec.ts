@@ -81,9 +81,14 @@ describe('Worker process (e2e, real MongoDB + Redis)', () => {
 
   afterAll(async () => {
     if (!closed) await worker?.close();
+    // A fresh module only to drop the test database. Closing the module (not just its MongoDB
+    // connection) runs every provider's shutdown hook, so the Redis client it opened is released.
     const cleanup = await Test.createTestingModule({ imports: [WorkerModule] }).compile();
-    await cleanup.get<Connection>(getConnectionToken()).dropDatabase();
-    await cleanup.get<Connection>(getConnectionToken()).close();
+    try {
+      await cleanup.get<Connection>(getConnectionToken()).dropDatabase();
+    } finally {
+      await cleanup.close();
+    }
     await deleteQueueKeys(redisUrl, prefix);
   }, 60_000);
 

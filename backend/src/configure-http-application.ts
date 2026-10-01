@@ -18,6 +18,7 @@ export const API_PREFIX = 'api/v1';
 export function configureHttpApplication(app: NestExpressApplication): void {
   const config = app.get(AppConfigService);
 
+  app.set('trust proxy', config.get('TRUST_PROXY_HOPS'));
   app.use(requestIdMiddleware);
   app.useLogger(app.get(Logger));
 

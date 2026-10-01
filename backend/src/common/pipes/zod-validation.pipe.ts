@@ -22,7 +22,10 @@ export class ZodValidationPipe implements PipeTransform {
   transform(value: unknown, metadata: ArgumentMetadata): unknown {
     if (!isZodDtoClass(metadata.metatype)) return value;
 
-    const result = metadata.metatype.zodSchema.safeParse(value);
+    // A POST without a body (e.g. a browser refreshing with only its HttpOnly cookie) arrives as
+    // undefined; it is an empty object. Required fields are still enforced by the schema.
+    const input = metadata.type === 'body' && value === undefined ? {} : value;
+    const result = metadata.metatype.zodSchema.safeParse(input);
     if (result.success) return result.data;
 
     throw new ApiException('VALIDATION_FAILED', 'Request validation failed', {

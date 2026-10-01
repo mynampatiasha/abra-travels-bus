@@ -7,6 +7,7 @@ import { DatabaseModule } from './database/database.module';
 import { EventsModule } from './events/events.module';
 import { DOMAIN_MODULES } from './modules/domain-modules';
 import { QueueModule } from './queues/queue.module';
+import { RedisModule } from './redis/redis.module';
 import { WorkersModule } from './workers/workers.module';
 
 /**
@@ -18,6 +19,7 @@ import { WorkersModule } from './workers/workers.module';
     AppConfigModule,
     LoggerModule.forRootAsync({ inject: [AppConfigService], useFactory: createLoggerOptions }),
     DatabaseModule,
+    RedisModule,
     QueueModule,
     EventsModule,
     WorkersModule,

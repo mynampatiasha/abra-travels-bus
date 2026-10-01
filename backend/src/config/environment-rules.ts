@@ -80,6 +80,13 @@ export function applyEnvironmentRules(env: ParsedEnvironment, context: z.Refinem
         });
       }
     }
+    if (!env.MFA_REQUIRED_FOR_STAFF) {
+      context.addIssue({
+        code: 'custom',
+        path: ['MFA_REQUIRED_FOR_STAFF'],
+        message: 'must be true in production (staff accounts require MFA)',
+      });
+    }
     if (env.API_DOCS_ENABLED === true) {
       context.addIssue({
         code: 'custom',

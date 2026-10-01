@@ -1,6 +1,7 @@
 import { Global, Inject, Logger, Module, type OnApplicationShutdown } from '@nestjs/common';
 import { Redis } from 'ioredis';
 import { AppConfigService } from '../config/app-config.service';
+import { closeRedisClient } from './close-redis-client';
 
 /** Injection token for the shared ioredis client (cache, rate limits; BullMQ gets its own). */
 export const REDIS_CLIENT = Symbol('REDIS_CLIENT');
@@ -36,7 +37,8 @@ export const REDIS_CLIENT = Symbol('REDIS_CLIENT');
 export class RedisModule implements OnApplicationShutdown {
   constructor(@Inject(REDIS_CLIENT) private readonly client: Redis) {}
 
-  async onApplicationShutdown(): Promise<void> {
-    if (this.client.status !== 'end') await this.client.quit();
+  /** Also safe while Redis is down or the client is reconnecting (see closeRedisClient). */
+  onApplicationShutdown(): Promise<void> {
+    return closeRedisClient(this.client);
   }
 }

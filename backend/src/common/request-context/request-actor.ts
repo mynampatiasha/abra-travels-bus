@@ -27,6 +27,30 @@ export interface UserActor {
   readonly dataScope: DataScope;
 }
 
+export type UserType = 'STAFF' | 'OPERATOR_STAFF' | 'DRIVER' | 'PARTNER_USER' | 'CUSTOMER';
+
+/**
+ * A user identified by a verified access token (set by AccessTokenAuthenticationGuard). Carries
+ * what authorization (Phase 2 step 8) needs to resolve permissions without another lookup.
+ */
+export interface AuthenticatedUserActor extends UserActor {
+  readonly userType: UserType;
+  readonly sessionId: string;
+  /** `users.permissionVersion` at the time the request was authenticated. */
+  readonly permissionVersion: number;
+  readonly roleIds: readonly string[];
+  /** The operator the user belongs to (operator staff, drivers). */
+  readonly operatorId?: string;
+  /** The session may only be used to finish MFA enrolment. */
+  readonly mfaEnrollmentPending: boolean;
+}
+
+export function isAuthenticatedUserActor(
+  actor: RequestActor | undefined,
+): actor is AuthenticatedUserActor {
+  return actor?.actorType === 'USER' && 'sessionId' in actor;
+}
+
 /**
  * Background work with no user (workers, seeders, the outbox relay). Always unrestricted, so it
  * must be set explicitly with a reason — never as a fallback for a missing user.

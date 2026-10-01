@@ -1,5 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { PublicEndpoint } from '../../../common/decorators/public-endpoint.decorator';
 import { ApiException } from '../../../common/errors/api-exception';
 import { ReadinessCheckService, type ReadinessReport } from '../services/readiness-check.service';
 
@@ -8,6 +9,7 @@ import { ReadinessCheckService, type ReadinessReport } from '../services/readine
  * `/api/v1` prefix. Public: they expose dependency status only, never configuration.
  */
 @ApiTags('health')
+@PublicEndpoint()
 @Controller('health')
 export class HealthController {
   constructor(private readonly readinessCheck: ReadinessCheckService) {}

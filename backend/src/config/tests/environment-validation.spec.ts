@@ -22,6 +22,7 @@ function problemsOf(raw: Record<string, string | undefined>): string[] {
 function validProductionEnvironment(): Record<string, string | undefined> {
   return validTestEnvironment({
     NODE_ENV: 'production',
+    MFA_REQUIRED_FOR_STAFF: 'true',
     JWT_ACCESS_SECRET: undefined,
     JWT_ACCESS_PRIVATE_KEY: 'pem-private',
     JWT_ACCESS_PUBLIC_KEY: 'pem-public',
@@ -104,6 +105,15 @@ describe('environment validation', () => {
   ])('refuses %s=%s in production', (key, value) => {
     const problems = problemsOf({ ...validProductionEnvironment(), [key]: value });
     expect(problems.some((problem) => problem.startsWith(`${key}:`))).toBe(true);
+  });
+
+  it('requires MFA for staff in production', () => {
+    expect(
+      problemsOf({ ...validProductionEnvironment(), MFA_REQUIRED_FOR_STAFF: 'false' }),
+    ).toContain('MFA_REQUIRED_FOR_STAFF: must be true in production (staff accounts require MFA)');
+    expect(
+      problemsOf({ ...validProductionEnvironment(), MFA_REQUIRED_FOR_STAFF: undefined }),
+    ).toContain('MFA_REQUIRED_FOR_STAFF: must be true in production (staff accounts require MFA)');
   });
 
   it('refuses API docs in production', () => {

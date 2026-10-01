@@ -1,9 +1,17 @@
 import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+import { CustomerRepository } from './repositories/customer.repository';
+import { CUSTOMER_MODEL, customerSchema } from './schemas/customer.schema';
+import { CustomersService } from './services/customers.service';
 
 /**
- * `customers` — Identity domain (documentation/architecture.md §5).
- * Structure only: no controllers, services or collections yet. Implemented in Phase 2
- * (documentation/implementation-plan.md), following the module layout in project-structure.md §2.
+ * `customers` â€” Identity domain (documentation/architecture.md Â§5). Owns the `customers`
+ * collection (customer profile of a CUSTOMER user). Profile endpoints arrive with the customer
+ * account features.
  */
-@Module({})
+@Module({
+  imports: [MongooseModule.forFeature([{ name: CUSTOMER_MODEL, schema: customerSchema }])],
+  providers: [CustomerRepository, CustomersService],
+  exports: [CustomersService],
+})
 export class CustomersModule {}

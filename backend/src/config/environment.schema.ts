@@ -34,16 +34,28 @@ export const environmentShape = z.object({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   API_DOCS_ENABLED: booleanFlag.optional(),
 
+  /** Reverse proxies / load balancers in front of the API, so `request.ip` is the real client. */
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
+
   MONGODB_URI: z
     .string()
     .regex(/^mongodb(\+srv)?:\/\//, 'must be a mongodb:// or mongodb+srv:// URI'),
   REDIS_URL: z.string().regex(/^rediss?:\/\//, 'must be a redis:// or rediss:// URL'),
+  /** Namespace of rate-limit and lockout keys (BullMQ uses QUEUE_PREFIX). */
+  REDIS_KEY_PREFIX: z
+    .string()
+    .regex(/^[a-z0-9-]+$/, 'lowercase letters, digits and dashes only')
+    .default('abra'),
 
   JWT_ACCESS_SECRET: z.string().min(32, 'must be at least 32 characters').optional(),
   JWT_ACCESS_PRIVATE_KEY: optionalText,
   JWT_ACCESS_PUBLIC_KEY: optionalText,
   JWT_ACCESS_TTL_SECONDS: positiveInt,
   REFRESH_TOKEN_TTL_DAYS: positiveInt,
+  /** Shorter refresh-token lifetime for staff, operator staff and partner users. */
+  REFRESH_TOKEN_TTL_DAYS_STAFF: positiveInt.default(7),
+  /** Domain attribute of the web refresh-token cookie; unset = host-only cookie. */
+  AUTH_COOKIE_DOMAIN: optionalText,
   JWT_ISSUER: z.string().min(1),
   JWT_AUDIENCE: z.string().min(1),
   FIELD_ENCRYPTION_KEY: base64Key32Bytes,
@@ -54,9 +66,19 @@ export const environmentShape = z.object({
   OTP_MAX_SENDS_PER_WINDOW: positiveInt,
   OTP_SEND_WINDOW_SECONDS: positiveInt,
   OTP_HASH_SECRET: z.string().min(32, 'must be at least 32 characters'),
+  /** Minimum time between two OTP messages to the same number. */
+  OTP_RESEND_COOLDOWN_SECONDS: positiveInt.default(30),
+  /** Per-IP send limit in the OTP window; higher than per number because carriers share IPs. */
+  OTP_MAX_SENDS_PER_IP_PER_WINDOW: positiveInt.default(20),
   LOGIN_MAX_FAILED_ATTEMPTS: positiveInt,
   LOGIN_LOCKOUT_SECONDS: positiveInt,
+  /** Sign-in attempts (any identifier) allowed per IP within LOGIN_LOCKOUT_SECONDS. */
+  LOGIN_MAX_ATTEMPTS_PER_IP_PER_WINDOW: positiveInt.default(50),
   MFA_TOTP_ISSUER: z.string().min(1),
+  /** STAFF accounts must enrol TOTP before their session can do anything else. */
+  MFA_REQUIRED_FOR_STAFF: booleanFlag.default(false),
+  /** Lifetime of the token that links a password login to its MFA step. */
+  MFA_CHALLENGE_TTL_SECONDS: positiveInt.default(300),
 
   QUEUE_PREFIX: z.string().regex(/^[a-z0-9-]+$/, 'lowercase letters, digits and dashes only'),
   QUEUE_DEFAULT_ATTEMPTS: positiveInt,

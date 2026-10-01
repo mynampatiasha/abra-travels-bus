@@ -1,9 +1,18 @@
 import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+import { MySessionsController } from './controllers/my-sessions.controller';
+import { AuthSessionRepository } from './repositories/auth-session.repository';
+import { AUTH_SESSION_MODEL, authSessionSchema } from './schemas/auth-session.schema';
+import { SessionsService } from './services/sessions.service';
 
 /**
- * `sessions` — Identity domain (documentation/architecture.md §5).
- * Structure only: no controllers, services or collections yet. Implemented in Phase 2
- * (documentation/implementation-plan.md), following the module layout in project-structure.md §2.
+ * `sessions` â€” Identity domain (documentation/architecture.md Â§5). Owns `auth_sessions`: signed-in
+ * devices, refresh-token rotation and reuse detection, revocation.
  */
-@Module({})
+@Module({
+  imports: [MongooseModule.forFeature([{ name: AUTH_SESSION_MODEL, schema: authSessionSchema }])],
+  controllers: [MySessionsController],
+  providers: [AuthSessionRepository, SessionsService],
+  exports: [SessionsService],
+})
 export class SessionsModule {}

@@ -7,17 +7,28 @@ export const API_ERROR_STATUS = {
   MALFORMED_REQUEST: 400,
   UNAUTHENTICATED: 401,
   TOKEN_EXPIRED: 401,
+  /** Wrong identifier or password. The same answer whether or not the account exists. */
+  INVALID_CREDENTIALS: 401,
+  /** OTP wrong, expired, already used, or out of attempts — deliberately not distinguished. */
+  OTP_INVALID: 401,
+  MFA_INVALID: 401,
   PERMISSIONS_CHANGED: 401,
   PERMISSION_DENIED: 403,
+  ACCOUNT_DISABLED: 403,
+  /** The session may only complete MFA enrolment until MFA is enabled. */
+  MFA_ENROLLMENT_REQUIRED: 403,
   SCOPE_MISSING: 403,
   RESOURCE_NOT_FOUND: 404,
   METHOD_NOT_ALLOWED: 405,
   SEAT_NOT_AVAILABLE: 409,
   SEAT_LOCK_EXPIRED: 409,
   INVALID_STATE_TRANSITION: 409,
+  ALREADY_REGISTERED: 409,
   PAYLOAD_TOO_LARGE: 413,
   UNSUPPORTED_MEDIA_TYPE: 415,
   IDEMPOTENCY_KEY_REUSED: 422,
+  /** Too many failed sign-in attempts; `details.retryAfterSeconds` says when to try again. */
+  ACCOUNT_LOCKED: 423,
   COUPON_INVALID: 422,
   COUPON_USAGE_EXCEEDED: 422,
   PAYMENT_AMOUNT_MISMATCH: 422,
