@@ -6,8 +6,8 @@ Docker Desktop (WSL 2 backend). Docker's data disk lives on `D:\Docker\wsl-data`
 |---|---|---|---|
 | MongoDB 8 (replica set `rs0`) | abra-mongodb | `127.0.0.1:27017` | `abra_mongodb_data`, `abra_mongodb_config` |
 | Redis 7.4 (AOF, noeviction) | abra-redis | `127.0.0.1:6379` | `abra_redis_data` |
-| Backend API (Phase 2) | abra-backend-api | `127.0.0.1:4000` | — (profile `application`) |
-| BullMQ worker (Phase 2) | abra-backend-worker | — | — (profile `application`) |
+| Backend API (optional) | abra-backend-api | `127.0.0.1:4000` | — (profile `application`) |
+| BullMQ worker + outbox relay (optional) | abra-backend-worker | — | — (profile `application`) |
 
 All services share the `abra_network` Docker network.
 
@@ -32,6 +32,19 @@ docker compose -f infrastructure/docker-compose.development.yml down
 ```
 
 `down` keeps the data. `down -v` **deletes MongoDB and Redis data** — only use it to reset the development database on purpose.
+
+### Backend in Docker (optional)
+
+The backend normally runs on Windows (`npm run start:dev` and `npm run worker:dev` in `backend/`). To run API and worker in containers instead (needs `backend/.env.development`, created by `npm run env:create-development`):
+
+```powershell
+docker compose -f infrastructure/docker-compose.development.yml --env-file infrastructure/.env --profile application up -d --build
+```
+```powershell
+docker compose -f infrastructure/docker-compose.development.yml --env-file infrastructure/.env --profile application stop backend-api backend-worker
+```
+
+Do not run the Windows and the Docker backend at the same time on port 4000. Production image: `docker build --target production -t abra-travels-backend backend` (see `documentation/background-jobs.md`).
 
 If the Docker Desktop window does not open, the engine can be started from the terminal with `docker desktop start`.
 

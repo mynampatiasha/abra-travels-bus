@@ -13,6 +13,7 @@
     "@nestjs/mongoose": "^12.0.0",
     "@nestjs/platform-express": "^12.1.2",
     "@nestjs/swagger": "^12.0.2",
+    "bullmq": "^6.3.10",
     "helmet": "^8.3.0",
     "ioredis": "^6.0.0",
     "mongoose": "^9.10.3",
@@ -56,11 +57,15 @@
     "test:watch": "node --experimental-vm-modules --disable-warning=ExperimentalWarning node_modules/jest/bin/jest.js --watch",
     "test:cov": "node --experimental-vm-modules --disable-warning=ExperimentalWarning node_modules/jest/bin/jest.js --coverage",
     "test:e2e": "node --experimental-vm-modules --disable-warning=ExperimentalWarning node_modules/jest/bin/jest.js --config jest.e2e.config.js --runInBand",
-    "env:create-development": "node scripts/create-development-env.mjs"
+    "env:create-development": "node scripts/create-development-env.mjs",
+    "worker": "nest start --entryFile worker",
+    "worker:dev": "nest start --watch --entryFile worker",
+    "worker:prod": "node dist/worker"
   },
   "allowScripts": {
     "@parcel/watcher": false,
     "@scarf/scarf": false,
-    "unrs-resolver": false
+    "unrs-resolver": false,
+    "msgpackr-extract": false
   }
 }

@@ -93,11 +93,12 @@ Grouped by domain. Each module owns its collections; other modules call its **se
 - `interceptors` — response envelope, idempotency, audit trail, request logging with redaction.
 - `filters` — `ApiExceptionFilter` → `{ success:false, error:{ code, message, details, requestId } }`.
 - `database` — `TransactionRunner` (session + retry on `TransientTransactionError`), `ScopedRepository` base that injects the operator filter.
-- `events` — in-process domain event bus → transactional outbox → BullMQ.
+- `events` — transactional outbox (`OutboxService.record`) → outbox relay → BullMQ `domain-events` queue → handlers registered per event type.
+- `queues` — `QueueRegistry` (the only creator of BullMQ queues, recreates a queue whose initialisation failed) and queue health for readiness.
 
 ## 7. Transactional outbox
 
-Domain events (`booking.confirmed`, `trip.delayed`, ...) are written to the `outbox_events` collection **inside the same transaction** as the state change. An outbox relay worker publishes them to BullMQ queues (notifications, partner webhooks, analytics, settlement). This guarantees that no confirmed booking misses its notification and no notification is sent for a rolled-back booking.
+Domain events (`booking.confirmed`, `trip.delayed`, ...) are written to the `outbox_events` collection **inside the same transaction** as the state change. An outbox relay worker publishes them to BullMQ queues (notifications, partner webhooks, analytics, settlement). This guarantees that no confirmed booking misses its notification and no notification is sent for a rolled-back booking. Implementation, retry and Redis-recovery behaviour: [background-jobs.md](background-jobs.md).
 
 ## 8. Deployment architecture
 

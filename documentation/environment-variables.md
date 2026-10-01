@@ -21,6 +21,8 @@ Files `.env.development`, `.env.test`, `.env.staging`, `.env.production` are **n
 | LOGIN_MAX_FAILED_ATTEMPTS / LOGIN_LOCKOUT_SECONDS | 5 / 900 | yes |
 | MFA_TOTP_ISSUER | Abra Travels | yes |
 | QUEUE_PREFIX / QUEUE_DEFAULT_ATTEMPTS / QUEUE_BACKOFF_DELAY_MS / WORKER_CONCURRENCY | abra / 5 / 5000 / 5 | yes |
+| QUEUE_LAG_ALERT_MS | 60000 (oldest waiting job age that marks a queue as lagging in readiness) | no (default) |
+| OUTBOX_POLL_INTERVAL_MS / OUTBOX_BATCH_SIZE / OUTBOX_LEASE_MS / OUTBOX_MAX_PUBLISH_ATTEMPTS | 1000 / 100 / 30000 / 20 | no (defaults) |
 | FIELD_ENCRYPTION_KEY | 32-byte base64 (bank details, licences) | yes |
 | PAYMENT_GATEWAY | razorpay \| development | yes |
 | RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET / RAZORPAY_WEBHOOK_SECRET | — | if razorpay |

@@ -33,6 +33,7 @@ MongoDB (replica set), Redis, BullMQ workers, Socket.IO, S3-compatible storage.
 | [authorization.md](documentation/authorization.md) | RBAC, granular permissions, user overrides, data scope |
 | [state-machines.md](documentation/state-machines.md) | Seat, booking, payment, trip, refund, settlement states |
 | [seat-locking.md](documentation/seat-locking.md) | Master inventory, atomic seat lock, booking confirmation |
+| [background-jobs.md](documentation/background-jobs.md) | BullMQ queues, worker process, event outbox and relay, Redis recovery, readiness, backend Docker image |
 | [payment-flow.md](documentation/payment-flow.md) | Payment, webhooks, verification, refunds, reconciliation |
 | [notification-architecture.md](documentation/notification-architecture.md) | Event queue, SMS, email, WhatsApp, push, templates |
 | [whatsapp-architecture.md](documentation/whatsapp-architecture.md) | Customer, operator and admin bots, AI guardrails |

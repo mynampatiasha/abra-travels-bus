@@ -3,20 +3,11 @@ import { NestFactory } from '@nestjs/core';
 import { type NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { AppConfigService } from './config/app-config.service';
-import { EnvironmentValidationError, loadEnvironment } from './config/environment-loader';
+import { exitOnInvalidEnvironment } from './config/exit-on-invalid-environment';
 import { configureHttpApplication } from './configure-http-application';
 
 async function bootstrap(): Promise<void> {
-  // Validate configuration before anything connects; the message names keys, never values
-  try {
-    loadEnvironment();
-  } catch (error) {
-    if (error instanceof EnvironmentValidationError) {
-      process.stderr.write(`${error.message}\n\nThe backend was not started.\n`);
-      process.exit(1);
-    }
-    throw error;
-  }
+  exitOnInvalidEnvironment('backend');
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true });
   configureHttpApplication(app);

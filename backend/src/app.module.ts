@@ -4,8 +4,10 @@ import { createLoggerOptions } from './common/logging/logger-options.factory';
 import { AppConfigModule } from './config/app-config.module';
 import { AppConfigService } from './config/app-config.service';
 import { DatabaseModule } from './database/database.module';
+import { EventsModule } from './events/events.module';
 import { DOMAIN_MODULES } from './modules/domain-modules';
 import { HealthModule } from './modules/health/health.module';
+import { QueueModule } from './queues/queue.module';
 import { RedisModule } from './redis/redis.module';
 
 @Module({
@@ -14,6 +16,8 @@ import { RedisModule } from './redis/redis.module';
     LoggerModule.forRootAsync({ inject: [AppConfigService], useFactory: createLoggerOptions }),
     DatabaseModule,
     RedisModule,
+    QueueModule,
+    EventsModule,
     HealthModule,
     ...DOMAIN_MODULES,
   ],

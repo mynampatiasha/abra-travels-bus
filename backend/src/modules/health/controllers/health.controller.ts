@@ -25,7 +25,10 @@ export class HealthController {
   @Get('ready')
   @ApiOperation({
     summary: 'Readiness probe',
-    description: 'Public. MongoDB and Redis are reachable. Returns 503 SERVICE_UNAVAILABLE if not.',
+    description:
+      'Public. MongoDB, Redis, BullMQ queues and the event outbox are reachable; returns 503 ' +
+      'SERVICE_UNAVAILABLE if not. Queue depth/lag, connected workers and outbox backlog are ' +
+      'reported in details; worker-side problems appear as warnings without failing readiness.',
   })
   @ApiResponse({ status: 200, description: 'All dependencies are up' })
   @ApiResponse({ status: 503, description: 'At least one dependency is down' })
@@ -34,6 +37,7 @@ export class HealthController {
     if (!report.ready) {
       throw new ApiException('SERVICE_UNAVAILABLE', 'Service is not ready', {
         checks: report.checks,
+        warnings: report.warnings,
       });
     }
     return report;

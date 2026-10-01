@@ -59,8 +59,10 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # ── Application services (Phase 2+) ─────────────────────────────────────────
-  # Disabled until the backend exists. Start them with:  --profile application up -d
+  # ── Application services ─────────────────────────────────────────────────────
+  # Optional: the backend normally runs on Windows (npm run start:dev / worker:dev) against the
+  # two services above. To run it in Docker instead:  --profile application up -d --build
+  # Needs backend/.env.development (npm run env:create-development in backend/).
   backend-api:
     profiles: ["application"]
     build:
@@ -79,6 +81,14 @@ services:
       - ../backend/src:/app/src
     networks:
       - abra_network
+    healthcheck:
+      # Liveness only; it never depends on MongoDB or Redis
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/health/live').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 90s
+      retries: 5
+    stop_grace_period: 30s
     depends_on:
       mongodb:
         condition: service_healthy
@@ -97,6 +107,7 @@ services:
     environment:
       MONGODB_URI: mongodb://mongodb:27017/abra_travels?directConnection=true
       REDIS_URL: redis://redis:6379
+    stop_grace_period: 30s
     volumes:
       - ../backend/src:/app/src
     networks:

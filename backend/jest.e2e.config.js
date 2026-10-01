@@ -9,4 +9,6 @@ module.exports = {
   ...baseConfig,
   testRegex: '.*\.e2e-spec\.ts$',
   testTimeout: 30000,
+  // Always drops the e2e database and test queue keys, even if a suite failed before its own cleanup
+  globalTeardown: '<rootDir>/jest.e2e.global-teardown.js',
 };

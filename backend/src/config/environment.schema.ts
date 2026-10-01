@@ -62,6 +62,16 @@ export const environmentShape = z.object({
   QUEUE_DEFAULT_ATTEMPTS: positiveInt,
   QUEUE_BACKOFF_DELAY_MS: positiveInt,
   WORKER_CONCURRENCY: positiveInt,
+  /** Queue whose oldest waiting job is older than this is reported as lagging in readiness. */
+  QUEUE_LAG_ALERT_MS: positiveInt.default(60_000),
+
+  // Transactional outbox relay (architecture.md §7)
+  OUTBOX_POLL_INTERVAL_MS: positiveInt.default(1_000),
+  OUTBOX_BATCH_SIZE: positiveInt.default(100),
+  /** How long a relay may hold a claimed event before another relay can take it over. */
+  OUTBOX_LEASE_MS: positiveInt.default(30_000),
+  /** Publish attempts before an event is parked as FAILED (kept, logged, requeueable). */
+  OUTBOX_MAX_PUBLISH_ATTEMPTS: positiveInt.default(20),
 
   PAYMENT_GATEWAY: z.enum(['razorpay', 'development']),
   RAZORPAY_KEY_ID: optionalText,

@@ -1,0 +1,41 @@
+# Keep the build context small and free of secrets. Only package files, config and src are needed.
+
+# Secrets and local configuration — never in an image
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+service-account*.json
+
+# Host dependencies and build output (installed / built inside the image)
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Local data and uploads
+storage/
+logs/
+*.log
+dump/
+*.archive
+*.bson
+
+# Tests are not part of the production build (tsconfig.build.json excludes them too)
+jest*.js
+
+# Tooling and VCS
+.git
+.gitignore
+.dockerignore
+Dockerfile
+.prettierrc
+.prettierignore
+eslint.config.mjs
+.vscode/
+.idea/
+scripts/

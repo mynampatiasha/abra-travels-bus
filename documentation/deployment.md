@@ -6,7 +6,8 @@
 
 ## Local development
 
-- Backend: `npm run start:dev` (API) and `npm run worker:dev` (workers).
+- Backend: `npm run start:dev` (API) and `npm run worker:dev` (workers), after `npm run env:create-development` once. Alternatively both run in Docker with the Compose profile `application` (see `infrastructure/README.md`).
+- Image: `backend/Dockerfile` builds one image for API and worker ([background-jobs.md](background-jobs.md) §7).
 - MongoDB **replica set** + Redis, either:
   - `infrastructure/docker-compose.development.yml` (Docker Desktop), or
   - MongoDB Atlas free cluster + Upstash/Memurai Redis, via `MONGODB_URI` / `REDIS_URL`.

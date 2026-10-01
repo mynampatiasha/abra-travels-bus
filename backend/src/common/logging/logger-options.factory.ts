@@ -1,4 +1,5 @@
 import { type IncomingMessage, type ServerResponse } from 'node:http';
+import { createRequire } from 'node:module';
 import { type Params } from 'nestjs-pino';
 import { type AppConfigService } from '../../config/app-config.service';
 
@@ -34,9 +35,27 @@ function pathWithoutQuery(url: string | undefined): string | undefined {
   return url?.split('?')[0];
 }
 
+/**
+ * pino-pretty is a devDependency: the production image does not contain it. If that image is run
+ * with NODE_ENV=development (local verification), logging falls back to JSON instead of crashing.
+ */
+export function prettyPrinterInstalled(
+  resolve: (id: string) => string = createRequire(__filename).resolve,
+): boolean {
+  try {
+    resolve('pino-pretty');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Structured JSON logs with requestId; human-readable output only in local development. */
-export function createLoggerOptions(config: AppConfigService): Params {
-  const prettyOutput = config.get('NODE_ENV') === 'development';
+export function createLoggerOptions(
+  config: AppConfigService,
+  prettyAvailable: boolean = prettyPrinterInstalled(),
+): Params {
+  const prettyOutput = config.get('NODE_ENV') === 'development' && prettyAvailable;
 
   return {
     pinoHttp: {

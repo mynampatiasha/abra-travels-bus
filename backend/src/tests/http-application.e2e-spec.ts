@@ -46,11 +46,27 @@ describe('HTTP application (e2e)', () => {
     expect(response.body).toEqual({ success: true, data: { status: 'ok' }, meta: { requestId } });
   });
 
-  it('GET /health/ready reports MongoDB and Redis up', async () => {
+  it('GET /health/ready reports MongoDB, Redis, queues and outbox up', async () => {
     const response = await request(server).get('/health/ready').expect(200);
     expect((response.body as SuccessBody).data).toMatchObject({
       ready: true,
-      checks: { mongodb: { status: 'up' }, redis: { status: 'up' } },
+      checks: {
+        mongodb: { status: 'up' },
+        redis: { status: 'up' },
+        queues: {
+          status: 'up',
+          details: {
+            'domain-events': {
+              waiting: expect.any(Number) as unknown,
+              oldestWaitingAgeMs: expect.any(Number) as unknown,
+              workers: expect.any(Number) as unknown,
+            },
+          },
+        },
+        outbox: { status: 'up', details: { pending: expect.any(Number) as unknown } },
+      },
+      // No worker runs in this test, so readiness stays 200 and the problem is a warning
+      warnings: expect.arrayContaining(['queue domain-events: no worker connected']) as unknown,
     });
   });
 

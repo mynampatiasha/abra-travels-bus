@@ -55,9 +55,10 @@ backend/src/
 ├── integrations/
 │   ├── payment/               payment-gateway.interface.ts, razorpay-payment-gateway.ts, development-payment-gateway.ts
 │   ├── whatsapp/  sms/  email/  push/  maps/  ai/  storage/
-├── events/                    domain-event.types.ts, outbox.repository.ts, outbox-relay.worker.ts
+├── queues/                    queue-names.ts, queue-registry.service.ts, queue-health.service.ts, bullmq-connection.factory.ts
+├── events/                    domain-event.types.ts, outbox.service.ts, outbox.repository.ts, outbox-relay.service.ts, domain-event-handler.registry.ts
 ├── gateways/                  live-tracking.gateway.ts, inventory-updates.gateway.ts, admin-alerts.gateway.ts
-├── workers/                   seat-lock-expiry.worker.ts, notification-dispatch.worker.ts, partner-webhook-delivery.worker.ts ...
+├── workers/                   queue-worker-host.service.ts, outbox-relay.worker.ts, domain-event-dispatch.processor.ts; later seat-lock-expiry.worker.ts, notification-dispatch.worker.ts ...
 └── modules/<module-name>/
 ```
 
