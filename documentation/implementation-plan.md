@@ -27,7 +27,8 @@ Phases 2–6 plus basic notifications (email/SMS) = MVP: customer booking, opera
 2. ✅ MongoDB connection + `TransactionRunner` + index bootstrap + `ScopedRepository` (2026-09-30). BullMQ queues with Redis-outage recovery, worker entry point, transactional outbox + relay, readiness (queues, outbox), backend Docker image — implemented and verified 2026-10-01 ([background-jobs.md](background-jobs.md)).
 3. `authentication` + `users` + `sessions` modules, OTP with development SMS adapter.
    RBAC foundation (permission catalogue, 12 roles, user overrides, data-scope integration, PermissionGuard, `/me/permissions`, administration endpoints, audit trail) — implemented and verified 2026-10-01 ([authorization.md](authorization.md)).
-4. `packages/shared_*` Flutter packages and Abra theme.
+4. ✅ `packages/shared_*` Flutter packages (core, models, validation, network, authentication, permissions, storage, theme, localization, ui) in a pub workspace — implemented and tested 2026-10-05. Flutter permission checks are for visibility only; the backend enforces access.
+   Known dependency for step 6: there is no Super Admin bootstrap yet (no way to create the first administrator account), so the Admin app cannot be signed in to against a fresh database until that is built in the backend.
 5. Customer app: splash, language selection, login, OTP, signup, home shell.
 6. Admin app: login, MFA, shell with permission-driven sidebar.
 7. CI workflow for backend + Flutter.

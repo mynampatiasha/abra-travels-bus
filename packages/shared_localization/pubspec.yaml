@@ -1,0 +1,25 @@
+name: shared_localization
+description: Localization foundation for every Abra Travels app - locale resolution, fallback, runtime switching, RTL, plurals, formatting and the shared translation resources.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.9.0
+  flutter: ">=3.35.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: any
+  shared_core:
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  assets:
+    - l10n/

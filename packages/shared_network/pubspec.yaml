@@ -1,0 +1,17 @@
+name: shared_network
+description: HTTP client for the Abra Travels API - envelope parsing, failure mapping, authentication headers, token refresh and safe logging.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.9.0
+
+dependencies:
+  dio: ^5.7.0
+  meta: ^1.16.0
+  shared_core:
+  shared_models:
+
+dev_dependencies:
+  test: ^1.25.0

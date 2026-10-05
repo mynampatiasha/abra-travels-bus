@@ -12,12 +12,16 @@ abra-travels/
 │   ├── partner_app/           Flutter
 │   └── public_website/        Next.js
 ├── packages/                  Dart packages (pub workspace)
-│   ├── shared_models/         DTOs mirrored from the API (json_serializable)
-│   ├── shared_network/        Dio client, auth interceptor, error mapping, idempotency keys
-│   ├── shared_authentication/ Token storage, session controller, permission service
-│   ├── shared_ui/             Abra theme, colours, status badges, tables, empty/error/loading states
-│   ├── shared_localization/   ARB files for 8 languages + runtime override loader
-│   └── shared_validation/     Phone, email, name, age validators
+│   ├── shared_core/           Pure Dart: app config, Result, failures, error codes, redacting logger, storage interfaces
+│   ├── shared_models/         Pure Dart: models mirrored from the API (hand-written JSON parsing, no code generation)
+│   ├── shared_validation/     Pure Dart: phone, email, password, OTP, name validators (form feedback only)
+│   ├── shared_network/        Dio client, response envelope, auth header, single refresh-and-retry, error mapping, idempotency keys
+│   ├── shared_authentication/ Token store, session manager (restore, OTP/password/MFA sign-in, refresh, sign-out), auth API
+│   ├── shared_permissions/    Backend permission/role keys (parity-tested against the backend catalogue), PermissionSet for UI visibility
+│   ├── shared_storage/        Keystore/Keychain secure store (tokens) and ordinary preferences (language, settings)
+│   ├── shared_theme/          Abra design tokens, light theme, status colours, breakpoints and responsive helpers
+│   ├── shared_localization/   Locale config, ARB resources loaded at runtime with fallback, formatters, RTL/LTR, locale controller
+│   └── shared_ui/             Buttons, cards, status badges, loading/empty/error/state views, confirm dialog
 ├── backend/                   NestJS
 ├── infrastructure/            docker-compose, mongo replica-set init, nginx, k6 load tests
 ├── documentation/             Architecture documents + api/openapi.yaml

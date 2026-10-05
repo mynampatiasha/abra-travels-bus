@@ -1,0 +1,23 @@
+name: shared_ui
+description: Reusable Abra Travels widgets - buttons, cards, badges, dialogs and the common screen states (loading, empty, error, no access, session ended).
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.9.0
+  flutter: ">=3.35.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  shared_core:
+  shared_localization:
+  shared_theme:
+  shared_validation:
+
+dev_dependencies:
+  flutter_localizations:
+    sdk: flutter
+  flutter_test:
+    sdk: flutter

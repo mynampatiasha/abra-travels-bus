@@ -1,0 +1,65 @@
+{
+  "@@locale": "en",
+
+  "commonOk": "OK",
+  "commonCancel": "Cancel",
+  "commonClose": "Close",
+  "commonContinue": "Continue",
+  "commonBack": "Back",
+  "commonSave": "Save",
+  "commonRetry": "Try again",
+  "commonLoading": "Loading…",
+  "commonSignIn": "Sign in",
+  "commonSignOut": "Sign out",
+  "commonRequestReference": "Reference: {requestId}",
+  "@commonRequestReference": {
+    "description": "Support reference shown under an error message.",
+    "placeholders": { "requestId": { "type": "String" } }
+  },
+  "commonRetryInSeconds": "{count, plural, one{Try again in # second} other{Try again in # seconds}}",
+  "@commonRetryInSeconds": {
+    "description": "Shown when the server asks the user to wait before retrying.",
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "languageFollowDevice": "Use device language",
+
+  "stateEmptyTitle": "Nothing here yet",
+  "stateEmptyMessage": "There is nothing to show at the moment.",
+  "stateErrorTitle": "Something went wrong",
+  "stateErrorMessage": "We could not complete this. Please try again.",
+  "stateNetworkTitle": "No internet connection",
+  "stateNetworkMessage": "Check your connection and try again.",
+  "stateTimeoutTitle": "This is taking too long",
+  "stateTimeoutMessage": "The request timed out. Please try again.",
+  "stateServerTitle": "Service unavailable",
+  "stateServerMessage": "Our service is having a problem. Please try again in a little while.",
+  "stateUnauthorizedTitle": "Sign in required",
+  "stateUnauthorizedMessage": "Please sign in to continue.",
+  "stateForbiddenTitle": "No access",
+  "stateForbiddenMessage": "You do not have permission to view this.",
+  "stateNotFoundTitle": "Not found",
+  "stateNotFoundMessage": "We could not find what you were looking for.",
+  "stateSessionExpiredTitle": "Session ended",
+  "stateSessionExpiredMessage": "For your security you have been signed out. Please sign in again.",
+  "stateRateLimitedTitle": "Too many attempts",
+  "stateRateLimitedMessage": "Please wait a moment before trying again.",
+  "stateSuccessTitle": "Done",
+
+  "validationRequired": "This field is required.",
+  "validationInvalidPhone": "Enter a valid mobile number.",
+  "validationInvalidEmail": "Enter a valid email address.",
+  "validationPasswordTooShort": "Use at least {min} characters.",
+  "@validationPasswordTooShort": {
+    "placeholders": { "min": { "type": "int" } }
+  },
+  "validationPasswordTooLong": "Use at most {max} characters.",
+  "@validationPasswordTooLong": {
+    "placeholders": { "max": { "type": "int" } }
+  },
+  "validationPasswordTooSimple": "Choose a password that is harder to guess.",
+  "validationPasswordContainsIdentifier": "Your password must not contain your email address or phone number.",
+  "validationInvalidCode": "Enter the code exactly as you received it.",
+  "validationNameTooShort": "Enter your full name.",
+  "validationNameTooLong": "This name is too long."
+}

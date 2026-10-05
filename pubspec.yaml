@@ -1,0 +1,23 @@
+name: abra_travels_workspace
+description: Pub workspace for the Abra Travels Flutter apps and shared packages.
+publish_to: none
+
+environment:
+  sdk: ^3.9.0
+
+# Shared packages consumed by the customer, operator, driver, admin and partner apps.
+# Apps are added here (apps/<name>) when they are created.
+workspace:
+  - packages/shared_core
+  - packages/shared_models
+  - packages/shared_validation
+  - packages/shared_storage
+  - packages/shared_network
+  - packages/shared_authentication
+  - packages/shared_permissions
+  - packages/shared_theme
+  - packages/shared_localization
+  - packages/shared_ui
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
