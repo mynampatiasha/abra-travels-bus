@@ -1,24 +1,31 @@
 import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
 import { AppConfigService } from '../../config/app-config.service';
 import { DevelopmentWhatsAppProvider } from './development-whatsapp.provider';
 import { MetaCloudWhatsAppProvider } from './meta-cloud-whatsapp.provider';
-import { WHATSAPP_PROVIDER, type WhatsAppProvider } from './whatsapp-provider.interface';
+import {
+  WHATSAPP_PROVIDER,
+  WhatsAppDeliveryError,
+  type WhatsAppProvider,
+} from './whatsapp-provider.interface';
+import { WHATSAPP_SETTINGS_MODEL, whatsAppSettingsSchema } from './whatsapp-settings.schema';
+import { WhatsAppSettingsStore } from './whatsapp-settings.store';
 
-function required(config: AppConfigService, key: Parameters<AppConfigService['get']>[0]): string {
-  const value = config.get(key);
-  // Configuration validation already requires these for WHATSAPP_PROVIDER=meta
-  if (typeof value !== 'string' || value.length === 0) throw new Error(`${key} is not configured`);
-  return value;
-}
-
-export function createWhatsAppProvider(config: AppConfigService): WhatsAppProvider {
+export function createWhatsAppProvider(
+  config: AppConfigService,
+  settings: Pick<WhatsAppSettingsStore, 'effective'>,
+): WhatsAppProvider {
   const selected = config.get('WHATSAPP_PROVIDER');
   switch (selected) {
     case 'meta':
-      return new MetaCloudWhatsAppProvider({
-        accessToken: required(config, 'WHATSAPP_ACCESS_TOKEN'),
-        phoneNumberId: required(config, 'WHATSAPP_PHONE_NUMBER_ID'),
-        apiVersion: required(config, 'WHATSAPP_GRAPH_API_VERSION'),
+      // Resolved for every message, so a credential changed by an administrator applies
+      // without a restart. Environment values are the fallback (validated at start-up).
+      return new MetaCloudWhatsAppProvider(async () => {
+        const { accessToken, phoneNumberId, apiVersion } = await settings.effective();
+        if (!accessToken || !phoneNumberId || !apiVersion) {
+          throw new WhatsAppDeliveryError('WhatsApp is not fully configured');
+        }
+        return { accessToken, phoneNumberId, apiVersion };
       });
     case 'development':
       if (config.isProduction) {
@@ -31,9 +38,17 @@ export function createWhatsAppProvider(config: AppConfigService): WhatsAppProvid
 }
 
 @Module({
-  providers: [
-    { provide: WHATSAPP_PROVIDER, inject: [AppConfigService], useFactory: createWhatsAppProvider },
+  imports: [
+    MongooseModule.forFeature([{ name: WHATSAPP_SETTINGS_MODEL, schema: whatsAppSettingsSchema }]),
   ],
-  exports: [WHATSAPP_PROVIDER],
+  providers: [
+    WhatsAppSettingsStore,
+    {
+      provide: WHATSAPP_PROVIDER,
+      inject: [AppConfigService, WhatsAppSettingsStore],
+      useFactory: createWhatsAppProvider,
+    },
+  ],
+  exports: [WHATSAPP_PROVIDER, WhatsAppSettingsStore],
 })
 export class WhatsAppModule {}

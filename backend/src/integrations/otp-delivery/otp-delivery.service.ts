@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { maskPhoneNumber } from '../../common/validation/contact-identifiers';
 import { AppConfigService } from '../../config/app-config.service';
 import {
@@ -6,6 +6,7 @@ import {
   type OtpDeliveryProvider,
   type OtpDeliveryRequest,
 } from './otp-delivery-provider.interface';
+import { WhatsAppSettingsStore } from '../whatsapp/whatsapp-settings.store';
 import { SmsOtpDeliveryProvider } from './sms-otp-delivery.provider';
 import { WhatsAppOtpDeliveryProvider } from './whatsapp-otp-delivery.provider';
 
@@ -23,6 +24,9 @@ export class OtpDeliveryFailedError extends Error {
  * channel is used only when the earlier ones failed. Exactly one message is sent per request —
  * never one on every channel.
  *
+ * Administrators can narrow that order without a deployment (WhatsAppSettingsStore): turning
+ * WhatsApp off skips it, and turning the SMS fallback off stops after WhatsApp.
+ *
  * Note: a provider that times out may still have delivered; the fallback then sends a second
  * message with the same code. That is accepted over leaving the customer without a code.
  */
@@ -33,6 +37,8 @@ export class OtpDeliveryService {
 
   constructor(
     private readonly config: AppConfigService,
+    @Inject(WhatsAppSettingsStore)
+    private readonly whatsAppSettings: Pick<WhatsAppSettingsStore, 'effective'>,
     whatsApp: WhatsAppOtpDeliveryProvider,
     sms: SmsOtpDeliveryProvider,
   ) {
@@ -53,10 +59,23 @@ export class OtpDeliveryService {
     return first;
   }
 
+  /** The configured channels after the administrator's WhatsApp settings are applied. */
+  async activeChannels(): Promise<OtpDeliveryChannel[]> {
+    const configured = this.channels;
+    if (!configured.includes('WHATSAPP')) return configured;
+    const { enabled, otpFallbackToSms } = await this.whatsAppSettings.effective();
+    if (!enabled) {
+      const others = configured.filter((channel) => channel !== 'WHATSAPP');
+      // WhatsApp was the only channel: keep it rather than leave no way to deliver a code
+      return others.length > 0 ? others : configured;
+    }
+    return otpFallbackToSms ? configured : configured.filter((channel) => channel !== 'SMS');
+  }
+
   /** Delivers on the first channel that accepts the message and returns that channel. */
   async deliver(request: OtpDeliveryRequest): Promise<OtpDeliveryChannel> {
     const attempted: OtpDeliveryChannel[] = [];
-    for (const channel of this.channels) {
+    for (const channel of await this.activeChannels()) {
       const provider = this.providers[channel];
       attempted.push(channel);
       try {

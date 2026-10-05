@@ -11,6 +11,7 @@ import { WhatsAppOtpDeliveryProvider } from '../../../integrations/otp-delivery/
 import { DevelopmentSmsProvider } from '../../../integrations/sms/development-sms.provider';
 import { type SmsProvider } from '../../../integrations/sms/sms-provider.interface';
 import { DevelopmentWhatsAppProvider } from '../../../integrations/whatsapp/development-whatsapp.provider';
+import { whatsAppSettingsOf } from '../../../integrations/whatsapp/tests/whatsapp-settings.fixture';
 import { type WhatsAppProvider } from '../../../integrations/whatsapp/whatsapp-provider.interface';
 import {
   type OtpChallengeRepository,
@@ -81,9 +82,11 @@ function setup(
     OTP_HASH_SECRET: 'unit-test-otp-hash-secret-0123456789abcdef',
     OTP_DELIVERY_CHANNELS: options.channels ?? ['whatsapp', 'sms'],
   });
+  const settings = whatsAppSettingsOf(config);
   const delivery = new OtpDeliveryService(
     config,
-    new WhatsAppOtpDeliveryProvider(whatsApp, config),
+    settings,
+    new WhatsAppOtpDeliveryProvider(whatsApp, settings),
     new SmsOtpDeliveryProvider(sms),
   );
   const service = new OtpService(

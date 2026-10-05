@@ -13,6 +13,10 @@ export interface MetaCloudWhatsAppSettings {
   timeoutMs?: number;
 }
 
+/** Fixed settings, or a function that resolves the settings in use for each message. */
+export type MetaCloudWhatsAppSettingsSource =
+  MetaCloudWhatsAppSettings | (() => Promise<MetaCloudWhatsAppSettings>);
+
 type FetchFunction = typeof fetch;
 
 const GRAPH_API_ORIGIN = 'https://graph.facebook.com';
@@ -37,11 +41,13 @@ export class MetaCloudWhatsAppProvider implements WhatsAppProvider {
   readonly providerKey = 'meta-cloud';
 
   constructor(
-    private readonly settings: MetaCloudWhatsAppSettings,
+    private readonly settingsSource: MetaCloudWhatsAppSettingsSource,
     private readonly fetchFn: FetchFunction = fetch,
   ) {}
 
   async sendTemplate(message: WhatsAppTemplateMessage): Promise<void> {
+    const settings =
+      typeof this.settingsSource === 'function' ? await this.settingsSource() : this.settingsSource;
     const components: Array<Record<string, unknown>> = [
       {
         type: 'body',
@@ -60,11 +66,11 @@ export class MetaCloudWhatsAppProvider implements WhatsAppProvider {
     let response: Response;
     try {
       response = await this.fetchFn(
-        `${GRAPH_API_ORIGIN}/${this.settings.apiVersion}/${this.settings.phoneNumberId}/messages`,
+        `${GRAPH_API_ORIGIN}/${settings.apiVersion}/${settings.phoneNumberId}/messages`,
         {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${this.settings.accessToken}`,
+            Authorization: `Bearer ${settings.accessToken}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
@@ -79,7 +85,7 @@ export class MetaCloudWhatsAppProvider implements WhatsAppProvider {
               components,
             },
           }),
-          signal: AbortSignal.timeout(this.settings.timeoutMs ?? DEFAULT_TIMEOUT_MS),
+          signal: AbortSignal.timeout(settings.timeoutMs ?? DEFAULT_TIMEOUT_MS),
         },
       );
     } catch (error) {

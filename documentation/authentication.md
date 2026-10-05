@@ -41,9 +41,29 @@ OtpService → OtpDeliveryService ─┬→ WhatsAppOtpDeliveryProvider → What
                                  └→ SmsOtpDeliveryProvider      → SmsProvider ────────→ DevelopmentSmsProvider      (real SMS provider: open decision)
 ```
 
-- **WhatsApp:** the code goes out as an approved WhatsApp *authentication template* (`WHATSAPP_OTP_TEMPLATE_NAME`, `WHATSAPP_OTP_TEMPLATE_LANGUAGE`) through the Meta Cloud API (`WHATSAPP_GRAPH_API_VERSION`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`): body placeholder and "copy code" button both carry the code. Credentials come from the environment only. The Meta adapter is contract-tested against the documented request format; **it has not been run against a live WhatsApp Business account yet.** Provider errors are logged with HTTP status and Meta's numeric error code only — never the code, the number or Meta's free text.
+- **WhatsApp:** the code goes out as an approved WhatsApp *authentication template* (`WHATSAPP_OTP_TEMPLATE_NAME`, `WHATSAPP_OTP_TEMPLATE_LANGUAGE`) through the Meta Cloud API (`WHATSAPP_GRAPH_API_VERSION`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`): body placeholder and "copy code" button both carry the code. Credentials come from the environment, or from the settings a super administrator saves (below), which take precedence. The Meta adapter is contract-tested against the documented request format; **it has not been run against a live WhatsApp Business account yet.** Provider errors are logged with HTTP status and Meta's numeric error code only — never the code, the number or Meta's free text.
 - **Development:** the development WhatsApp and SMS adapters send nothing; they keep messages in memory (for tests) and write them (with the code) to the server log **only** when `NODE_ENV=development`. Both refuse to start in production. A real SMS provider is an open business decision.
 - **Events:** no authentication event is published yet. When customer engagement is built, OTP and sign-in events go through the transactional outbox (`OutboxService`) like every other domain event, so authentication never calls marketing or notification code directly.
+
+**Administrator settings (implemented, Step 10B).** The WhatsApp configuration can be changed without a deployment through `GET` / `PUT /settings/integrations/whatsapp` (collection `whatsapp_settings`, one document):
+
+| Field | Effect |
+|---|---|
+| `enabled` | `false` skips WhatsApp; codes go by SMS. If WhatsApp is the only configured channel it stays in use. |
+| `otpFallbackToSms` | `false` stops after WhatsApp: no SMS is sent when WhatsApp fails. |
+| `phoneNumberId`, `accessToken`, `otpTemplateName`, `otpTemplateLanguage` | Replace the corresponding `WHATSAPP_*` environment value for the next message. `null` returns to the environment value. |
+| `businessAccountId` | Informational (WABA id). |
+
+- Reading needs `settings.read` (SUPER_ADMIN, ADMIN); changing needs `settings.update` (SUPER_ADMIN only) and a `reason`.
+- The access token is write-only: stored with AES-256-GCM field encryption, never returned. The API shows `{ configured, source: ADMIN | ENVIRONMENT | NONE, lastFour }` (`lastFour` only for a token saved through the API).
+- Every change is written to the audit trail (`settings.whatsapp.changed`) with before/after values, `accessTokenSet` and `accessTokenChanged` flags, and never the token or its last characters.
+- The response includes `status` (`READY`, `DISABLED`, `INCOMPLETE`) and the names of missing settings. `WHATSAPP_PROVIDER` itself (meta or development) and `OTP_DELIVERY_CHANNELS` stay deployment configuration.
+- Settings are cached for 15 seconds per backend instance; the instance that handled the change applies it at once.
+- **The Admin Portal page for this does not exist yet** (the Admin app is not built). The API is what that page will call; customer apps never call it and never receive WhatsApp credentials.
+
+**Customer app behaviour.** The backend answers `OTP_INVALID` for a wrong, expired, used, replaced or exhausted code on purpose. The app tells "expired" apart by its own countdown from `expiresInSeconds`; `RATE_LIMITED` and `ACCOUNT_LOCKED` show the wait from `retryAfterSeconds`.
+
+**Authentication events for later use.** Sign-in, sign-out, code requested/verified/failed are not published as events yet. When the notification and engagement modules are built they subscribe to outbox events raised here (`CUSTOMER_REGISTERED`, `LOGIN_SUCCESS`, `LOGOUT`, `OTP_REQUESTED`, `OTP_VERIFIED`, `OTP_FAILED`); authentication does not call them directly.
 
 ## 4. Passwords and lockout
 
@@ -95,6 +115,15 @@ DELETE /me/sessions/:sessionId auth    revoke one of my sessions (another user's
 `device` is `{ clientType: MOBILE | WEB (default MOBILE), deviceName? }`. "Forgot password" is `POST /auth/otp/send` with `purpose: PASSWORD_RESET` followed by `POST /auth/password/reset`. Tokens: `{ tokenType: 'Bearer', accessToken, accessTokenExpiresInSeconds, refreshToken, refreshTokenExpiresAt, sessionId, mfaEnrollmentRequired, user }`.
 
 Error codes: `UNAUTHENTICATED`, `TOKEN_EXPIRED`, `PERMISSIONS_CHANGED`, `INVALID_CREDENTIALS`, `OTP_INVALID`, `MFA_INVALID` (401) · `ACCOUNT_DISABLED`, `MFA_ENROLLMENT_REQUIRED`, `PERMISSION_DENIED` (403) · `ALREADY_REGISTERED` (409) · `ACCOUNT_LOCKED` (423) · `RATE_LIMITED` (429) · `SERVICE_UNAVAILABLE` (503).
+
+### Not implemented: Google and Apple sign-in
+
+Both are approved product requirements for the customer app and are **not built**. The backend has no endpoint that accepts a Google or Apple identity token, so the app shows no such buttons. What is needed first:
+
+- `POST /auth/google` and `POST /auth/apple` (public): the app sends the identity token obtained from the official Google / Apple SDK; the backend verifies signature, issuer, audience (our client ids), expiry and nonce against the provider's published keys, then answers like `/auth/otp/verify`.
+- Identity linking on the user: a list of `{ provider, subject }` pairs. An account is found by provider subject, never by e-mail alone. A first sign-in with a provider e-mail that matches an existing account does not merge automatically; the customer links the provider from a signed-in session or proves the phone by OTP. Apple private-relay addresses are stored as given and treated as the customer's e-mail for that provider only.
+- Configuration: Google OAuth client ids (Android, iOS), Apple Services ID / team / key id. These are not in the repository.
+- Apple requires offering Sign in with Apple wherever another third-party sign-in is offered on iOS, so the two ship together.
 
 ### Deferred
 

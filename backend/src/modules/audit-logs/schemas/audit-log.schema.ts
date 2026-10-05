@@ -9,6 +9,7 @@ export const AUDIT_ACTIONS = [
   'user.permission-override.set',
   'user.permission-override.removed',
   'user.data-scope.changed',
+  'settings.whatsapp.changed',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

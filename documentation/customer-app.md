@@ -7,10 +7,10 @@ Flutter app for customers (Android and iOS), in `apps/customer_app`. This docume
 | Milestone | Scope | Status |
 |---|---|---|
 | 10A | Foundation: bootstrap, configuration, router, authentication gate, shell, theme, localization, error handling | Done (2026-10-05) |
-| 10B | Sign-in, OTP, session handling screens | Not started |
+| 10B | Sign-in with mobile number and one-time code, session handling, sign-out | Done (2026-10-05). Google and Apple sign-in: not built, blocked on backend |
 | 10C–10K | Home, search, seats, booking, payment, trips, tracking, Women Safety, notifications, profile, hardening | Not started |
 
-After 10A the app starts, checks a stored session, guards every route and switches language. **It has no customer feature yet.** Every screen except the splash, language and "not found" screens is a stand-in that states "Not available yet" and has no controls. Sign-in is one of those stand-ins, so nobody can sign in through the UI until 10B.
+After 10B a customer can sign in with a mobile number and a one-time code, stay signed in across restarts, and sign out. **There is still no travel feature.** Home, My trips and Support, and every screen of the later milestones, are stand-ins that state "Not available yet" and have no controls. The Profile section shows who is signed in, the language setting and sign-out only.
 
 ## 2. Structure
 
@@ -94,13 +94,30 @@ The guard decides what is *shown*. It is not a security control: the backend aut
 
 Tokens are stored only by `shared_authentication` in the Keystore/Keychain (`shared_storage`), never in preferences, URLs or logs. Android backup is disabled for the app so session data does not leave the device.
 
+### Sign-in (10B)
+
+1. **Mobile number** (`/login`). India (+91) is the only country offered; a country is one entry in `SignInCountry.supported` plus the backend's phone rules. The number is checked on the device, then `POST /auth/otp/send`. The button shows progress and ignores further taps; when the backend asks to wait, the button stays disabled for that time and shows the countdown.
+2. **Verification code** (`/otp`). The screen says where the code went (WhatsApp, or SMS when the backend fell back) and shows the number masked. The code is verified by `POST /auth/otp/verify`; a new account is created by the backend on first sign-in. Resend is offered only after `resendAfterSeconds`; expiry follows `expiresInSeconds`. Both countdowns are computed from the clock and the server's values, so they stay correct after the app was in the background.
+3. On success the shared session manager stores the tokens in secure storage and the router opens the screen the customer was heading to (the `from` location survives both steps and "Change number").
+
+The app never generates, stores or logs the code: it exists in the input field until it is submitted. The sign-in state is kept in memory only, so after the app is closed the customer starts again from the number.
+
+Messages shown for failures: incorrect code, expired code, too many attempts (rate limit or lockout, with the wait), account cannot use this app, account disabled, code could not be sent, no connection, timeout, service problem. Server text is never shown.
+
+Not supported yet: accounts with two-step verification (customers cannot enable it today; the app says so instead of failing silently), password sign-in, the profile step of registration (name, e-mail, terms and marketing consent — the backend creates the account from the phone alone), and links to the terms and privacy policy (those pages do not exist yet and are required before store submission).
+
+The requested `authenticating / refreshing / error` states exist as: `AuthUnknown`, `AuthSignedOut`, `AuthSignedIn` in the shared session manager (the only owner of the session), plus `isSending` / `isVerifying` / `problem` in the sign-in controller. Token refresh is invisible to the UI and handled inside the shared API client.
+
+**Sign-out** (Profile → Sign out, with confirmation) calls `POST /auth/logout` and always clears the session on the device, also when the server cannot be reached or already ended the session.
+
 ## 6. Route map
 
 | Location | Access | Screen in 10A | Delivered in |
 |---|---|---|---|
 | `/splash` | public | Splash (real) | 10A |
 | `/language` | public | Language selection (real) | 10A |
-| `/onboarding`, `/login`, `/otp` | signed-out only | stand-in | 10B |
+| `/login`, `/otp` | signed-out only | Mobile number, verification code (real) | 10B |
+| `/onboarding` | signed-out only | stand-in (no content defined yet) | — |
 | `/home` | signed in, shell tab | stand-in | 10C |
 | `/search`, `/search/results`, `/bus/:id`, `/trip/:id` | signed in | stand-in | 10D |
 | `/seats` | signed in | stand-in | 10E |
@@ -108,7 +125,8 @@ Tokens are stored only by `shared_authentication` in the Keystore/Keychain (`sha
 | `/payment`, `/booking-success`, `/ticket/:id` | signed in | stand-in | 10G |
 | `/my-trips` (shell tab), `/my-trips/:id`, `/cancel-booking` | signed in | stand-in | 10H |
 | `/live-tracking`, `/women-safety` | signed in | stand-in | 10I |
-| `/support` (shell tab), `/profile` (shell tab), `/settings`, `/account-delete` | signed in | stand-in | 10J |
+| `/profile` (shell tab) | signed in | Who is signed in, language, sign-out (real); the rest in 10J | 10B / 10J |
+| `/support` (shell tab), `/settings`, `/account-delete` | signed in | stand-in | 10J |
 | anything else | — | "Not found" with a link to home | 10A |
 
 Rules for the booking and payment flow (to be applied when those screens are built): a step that creates or changes server state is entered with `go`, not `push`, so that Back cannot return to it and repeat it; the flow's state comes from the backend booking, never from navigation arguments alone.
@@ -149,7 +167,9 @@ Nothing else is declared in 10A and nothing is requested at start-up. Location, 
 
 Existing and used in 10A: `GET /api/v1/me`, `POST /api/v1/auth/refresh` (through the shared session manager).
 
-Existing and needed for 10B: the authentication endpoints of [authentication.md](authentication.md) (OTP send/verify, password sign-in, registration, MFA, logout, sessions).
+Existing and used in 10B: `POST /auth/otp/send`, `POST /auth/otp/verify`, `POST /auth/logout`.
+
+Missing for sign-in: `POST /auth/google` and `POST /auth/apple` (see [authentication.md](authentication.md) §7). Until they exist the app offers the mobile number only.
 
 **Not existing yet — these block the later milestones.** The backend currently contains authentication, users, sessions and RBAC only.
 

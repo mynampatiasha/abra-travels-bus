@@ -17,6 +17,7 @@ Legend: **U** = unique index, **I** = index, **TTL** = expiring index.
 | `permissions` | key (`bookings.cancel`), module, action, description, audience[], isSensitive | U key |
 | `permission_overrides` | userId, permissionKey, effect (`ALLOW`,`DENY`), reason, grantedBy | U userId+permissionKey |
 | `auth_sessions` | userId, refreshTokenHash, tokenFamilyId, deviceName, ip, userAgent, expiresAt, revokedAt | I userId, TTL expiresAt |
+| `whatsapp_settings` | key (`default`), enabled, businessAccountId, phoneNumberId, accessTokenEncrypted, accessTokenLastFour, otpTemplateName, otpTemplateLanguage, otpFallbackToSms, updatedByUserId | U key |
 | `otp_challenges` | target (phone/email), purpose, codeHash, attempts, expiresAt, consumedAt | I target+purpose, TTL expiresAt |
 | `customers` | userId, emergencyContacts[], notificationPreferences, safetyPreferences, marketingConsent | U userId |
 | `saved_passengers` | customerId, name, age, gender | I customerId |

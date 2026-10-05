@@ -4,6 +4,7 @@ import { DevelopmentWhatsAppProvider } from '../development-whatsapp.provider';
 import { MetaCloudWhatsAppProvider } from '../meta-cloud-whatsapp.provider';
 import { createWhatsAppProvider } from '../whatsapp.module';
 import { type WhatsAppTemplateMessage } from '../whatsapp-provider.interface';
+import { whatsAppSettingsOf } from './whatsapp-settings.fixture';
 
 const MESSAGE: WhatsAppTemplateMessage = {
   to: '+919876543210',
@@ -41,24 +42,32 @@ describe('createWhatsAppProvider', () => {
     WHATSAPP_GRAPH_API_VERSION: 'v23.0',
   };
 
+  const create = (config: ReturnType<typeof configOf>) =>
+    createWhatsAppProvider(config, whatsAppSettingsOf(config));
+
   it('builds the Meta Cloud provider from configuration', () => {
-    expect(createWhatsAppProvider(configOf(meta))).toBeInstanceOf(MetaCloudWhatsAppProvider);
+    const config = configOf(meta);
+    expect(createWhatsAppProvider(config, whatsAppSettingsOf(config))).toBeInstanceOf(
+      MetaCloudWhatsAppProvider,
+    );
   });
 
   it('builds the development provider outside production and refuses it in production', () => {
-    expect(
-      createWhatsAppProvider(configOf({ WHATSAPP_PROVIDER: 'development', NODE_ENV: 'test' })),
-    ).toBeInstanceOf(DevelopmentWhatsAppProvider);
+    expect(create(configOf({ WHATSAPP_PROVIDER: 'development', NODE_ENV: 'test' }))).toBeInstanceOf(
+      DevelopmentWhatsAppProvider,
+    );
     expect(() =>
-      createWhatsAppProvider(
-        configOf({ WHATSAPP_PROVIDER: 'development', NODE_ENV: 'production' }),
-      ),
+      create(configOf({ WHATSAPP_PROVIDER: 'development', NODE_ENV: 'production' })),
     ).toThrow('cannot be used in production');
   });
 
-  it('refuses a Meta provider whose settings are missing', () => {
-    expect(() =>
-      createWhatsAppProvider(configOf({ ...meta, WHATSAPP_GRAPH_API_VERSION: undefined })),
-    ).toThrow('WHATSAPP_GRAPH_API_VERSION is not configured');
+  it('a Meta provider whose settings are incomplete refuses to send, without calling Meta', async () => {
+    const fetchSpy = jest.spyOn(globalThis, 'fetch');
+    const provider = create(configOf({ ...meta, WHATSAPP_ACCESS_TOKEN: undefined }));
+    await expect(provider.sendTemplate(MESSAGE)).rejects.toThrow(
+      'WhatsApp is not fully configured',
+    );
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
   });
 });
