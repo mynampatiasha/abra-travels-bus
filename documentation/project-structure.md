@@ -81,6 +81,8 @@ modules/bookings/
 
 ## 3. Flutter app layout (feature-first)
 
+The layout below is the target. What exists today in the customer app is described in [customer-app.md](customer-app.md).
+
 ```
 apps/customer_app/lib/
 ├── main.dart

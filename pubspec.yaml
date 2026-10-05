@@ -5,9 +5,10 @@ publish_to: none
 environment:
   sdk: ^3.9.0
 
-# Shared packages consumed by the customer, operator, driver, admin and partner apps.
-# Apps are added here (apps/<name>) when they are created.
+# Apps and the shared packages they consume. Further apps are added here
+# (apps/<name>) when they are created.
 workspace:
+  - apps/customer_app
   - packages/shared_core
   - packages/shared_models
   - packages/shared_validation

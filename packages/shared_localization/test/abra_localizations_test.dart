@@ -199,6 +199,36 @@ void main() {
     });
   });
 
+  group('MergedTranslationSource', () {
+    final shared = MemoryTranslationSource({
+      'en': {'commonRetry': 'Try again', 'commonOk': 'OK'},
+      'hi': <String, String>{},
+    });
+    final app = MemoryTranslationSource({
+      'en': {'homeTitle': 'Home', 'commonOk': 'Okay'},
+    });
+    const english = Locale('en');
+
+    test('merges the messages of all sources; the first source wins', () async {
+      final merged = MergedTranslationSource([app, shared]);
+      expect(await merged.load(english), {
+        'commonRetry': 'Try again',
+        'commonOk': 'Okay',
+        'homeTitle': 'Home',
+      });
+    });
+
+    test('a locale that only some sources have is still found', () async {
+      final merged = MergedTranslationSource([app, shared]);
+      expect(await merged.load(const Locale('hi')), isEmpty);
+    });
+
+    test('a locale no source has is absent, so the fallback applies', () async {
+      final merged = MergedTranslationSource([app, shared]);
+      expect(await merged.load(const Locale('ta')), isNull);
+    });
+  });
+
   group('delegate', () {
     final config = AbraLocaleConfig();
 

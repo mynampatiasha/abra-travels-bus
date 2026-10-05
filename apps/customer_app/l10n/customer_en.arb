@@ -1,0 +1,41 @@
+{
+  "@@locale": "en",
+  "appName": "Abra Travels",
+
+  "navHome": "Home",
+  "navMyTrips": "My trips",
+  "navSupport": "Support",
+  "navProfile": "Profile",
+  "navMainLabel": "Main sections",
+
+  "startupCheckingSession": "Getting things ready…",
+  "startupFailedTitle": "The app could not start",
+  "startupFailedMessage": "Close the app and open it again. If this keeps happening, update the app from the store.",
+
+  "languageTitle": "Language",
+  "languageChangeAction": "Change language",
+  "languageSelected": "Selected",
+
+  "unavailableLabel": "Not available yet",
+  "unavailableMessage": "This part of the app has not been built yet. Nothing on this screen works.",
+
+  "routeOnboardingTitle": "Welcome",
+  "routeLoginTitle": "Sign in",
+  "routeOtpTitle": "Verification code",
+  "routeSearchTitle": "Search buses",
+  "routeSearchResultsTitle": "Search results",
+  "routeBusTitle": "Bus details",
+  "routeTripTitle": "Trip details",
+  "routeSeatsTitle": "Choose seats",
+  "routePassengerDetailsTitle": "Passenger details",
+  "routeBookingReviewTitle": "Review booking",
+  "routePaymentTitle": "Payment",
+  "routeBookingSuccessTitle": "Booking",
+  "routeTicketTitle": "Ticket",
+  "routeMyTripDetailTitle": "Trip",
+  "routeCancelBookingTitle": "Cancel booking",
+  "routeLiveTrackingTitle": "Live tracking",
+  "routeWomenSafetyTitle": "Women Safety",
+  "routeSettingsTitle": "Settings",
+  "routeAccountDeleteTitle": "Delete account"
+}

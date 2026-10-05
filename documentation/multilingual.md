@@ -4,6 +4,7 @@ Languages at launch: English (`en`, default), Kannada (`kn`), Telugu (`te`), Hin
 
 ## Flutter
 
+- Each app adds its own messages in `apps/<app>/l10n/<app>_<locale>.arb`; they are merged with the shared ones at start-up (`MergedTranslationSource`).
 - `packages/shared_localization` holds ARB files (`l10n/app_en.arb`, `app_kn.arb`, ...). They are loaded at runtime (not `gen-l10n`), so a language is added as data: an ARB file plus an entry in `AbraLocaleConfig`. Any BCP-47 locale is accepted (script and region included); layout direction (RTL/LTR) follows the locale.
 - Lookup order per key: region (`es-MX`) → language (`es`) → English. English is complete; the seven other launch languages currently ship without translations and show English until reviewed translations are supplied (no machine-made text is bundled).
 - Keys are constants in `AbraStrings`; tests keep them identical to `app_en.arb` and reject unknown keys or changed placeholders in other languages.

@@ -87,3 +87,30 @@ class MemoryTranslationSource implements TranslationSource {
   Future<Map<String, String>?> load(Locale locale) async =>
       _messages[LocaleTags.of(locale)];
 }
+
+/// Several sources seen as one: the messages of every source that has the
+/// locale are merged, and for a key defined more than once the source
+/// listed first wins. Lets an app add its own resource files to the
+/// shared ones:
+///
+/// ```dart
+/// MergedTranslationSource([
+///   AssetTranslationSource(package: null, filePrefix: 'customer_'),
+///   AssetTranslationSource(),
+/// ])
+/// ```
+class MergedTranslationSource implements TranslationSource {
+  const MergedTranslationSource(this.sources);
+
+  final List<TranslationSource> sources;
+
+  @override
+  Future<Map<String, String>?> load(Locale locale) async {
+    Map<String, String>? merged;
+    for (final source in sources.reversed) {
+      final messages = await source.load(locale);
+      if (messages != null) (merged ??= <String, String>{}).addAll(messages);
+    }
+    return merged;
+  }
+}
