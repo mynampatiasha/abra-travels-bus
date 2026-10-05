@@ -320,19 +320,10 @@ void main() {
       final app = TestApp(stored: storedSession);
       await app.pump(tester);
 
-      for (final location in ['/home', '/my-trips', '/support', '/profile']) {
+      for (final location in ['/home', '/my-trips', '/support']) {
         await open(tester, location);
         expect(find.text(notBuiltLabel), findsOneWidget, reason: location);
       }
-    });
-
-    testWidgets('sign-in says so (delivered in milestone 10B)', (tester) async {
-      final app = TestApp();
-      await app.pump(tester);
-
-      expect(find.byType(FeatureUnavailableScreen), findsOneWidget);
-      expect(find.text('Sign in'), findsWidgets);
-      expect(find.text(notBuiltLabel), findsOneWidget);
     });
   });
 

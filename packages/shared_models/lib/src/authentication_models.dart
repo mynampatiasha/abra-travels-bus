@@ -1,5 +1,6 @@
 import 'package:meta/meta.dart';
 
+import 'enums.dart';
 import 'json_reader.dart';
 import 'user_profile.dart';
 
@@ -86,6 +87,8 @@ final class OtpDispatch {
   const OtpDispatch({
     required this.expiresInSeconds,
     required this.resendAfterSeconds,
+    required this.codeLength,
+    required this.channel,
   });
 
   factory OtpDispatch.fromJson(JsonMap json) {
@@ -93,9 +96,17 @@ final class OtpDispatch {
     return OtpDispatch(
       expiresInSeconds: reader.integer('expiresInSeconds'),
       resendAfterSeconds: reader.integer('resendAfterSeconds'),
+      codeLength: reader.integer('codeLength'),
+      channel: OtpDeliveryChannel.fromWire(reader.string('channel')),
     );
   }
 
   final int expiresInSeconds;
   final int resendAfterSeconds;
+
+  /// Number of digits of the code.
+  final int codeLength;
+
+  /// Where the code was sent (WhatsApp, or SMS as fallback). Never the code.
+  final OtpDeliveryChannel channel;
 }

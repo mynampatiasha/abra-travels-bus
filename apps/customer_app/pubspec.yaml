@@ -15,19 +15,21 @@ dependencies:
     sdk: flutter
   flutter_riverpod: ^3.0.0
   go_router: ^16.0.0
+  meta: ^1.16.0
   shared_authentication:
   shared_core:
   shared_localization:
+  shared_models:
   shared_network:
   shared_storage:
   shared_theme:
   shared_ui:
+  shared_validation:
 
 dev_dependencies:
   dio: ^5.7.0
   flutter_test:
     sdk: flutter
-  shared_models:
 
 flutter:
   uses-material-design: true

@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../app/providers.dart';
+import '../features/authentication/login_screen.dart';
+import '../features/authentication/otp_screen.dart';
 import '../features/language/language_screen.dart';
+import '../features/profile/profile_screen.dart';
 import '../features/startup/splash_screen.dart';
 import '../features/unavailable/feature_unavailable_screen.dart';
 import '../features/unavailable/page_not_found_screen.dart';
@@ -35,6 +38,14 @@ final customerRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SplashScreen(),
       ),
       GoRoute(
+        path: AppRoutes.login,
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.otp,
+        builder: (context, state) => const OtpScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.language,
         builder: (context, state) => const LanguageScreen(),
       ),
@@ -47,8 +58,9 @@ final customerRouterProvider = Provider<GoRouter>((ref) {
               routes: <RouteBase>[
                 GoRoute(
                   path: tab.path,
-                  builder: (context, state) =>
-                      FeatureUnavailableBody(titleKey: tab.labelKey),
+                  builder: (context, state) => tab.path == AppRoutes.profile
+                      ? const ProfileScreen()
+                      : FeatureUnavailableBody(titleKey: tab.labelKey),
                   routes: <RouteBase>[
                     if (tab.path == AppRoutes.myTrips)
                       _notBuilt(':id', CustomerStrings.routeMyTripDetailTitle),
@@ -61,8 +73,6 @@ final customerRouterProvider = Provider<GoRouter>((ref) {
       // Not built yet. Each entry is replaced by its real screen in the
       // milestone that delivers the feature; until then the screen says so.
       _notBuilt(AppRoutes.onboarding, CustomerStrings.routeOnboardingTitle),
-      _notBuilt(AppRoutes.login, CustomerStrings.routeLoginTitle),
-      _notBuilt(AppRoutes.otp, CustomerStrings.routeOtpTitle),
       GoRoute(
         path: AppRoutes.search,
         builder: (context, state) => const FeatureUnavailableScreen(

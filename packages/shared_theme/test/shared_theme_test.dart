@@ -115,6 +115,20 @@ void main() {
       expect(status.danger.foreground, AbraColors.danger);
     });
 
+    test('outlined and text button labels are readable on the page '
+        'background', () {
+      for (final style in [
+        theme.outlinedButtonTheme.style!,
+        theme.textButtonTheme.style!,
+      ]) {
+        final label = style.foregroundColor!.resolve(<WidgetState>{})!;
+        expect(label, AbraColors.blueDark);
+        for (final background in [AbraColors.lightGray, AbraColors.white]) {
+          expect(contrast(label, background), greaterThanOrEqualTo(4.5));
+        }
+      }
+    });
+
     test('buttons are at least 48 px high and inputs are outlined', () {
       final filled = theme.filledButtonTheme.style!.minimumSize!.resolve(
         <WidgetState>{},

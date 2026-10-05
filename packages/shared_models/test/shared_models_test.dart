@@ -254,8 +254,21 @@ void main() {
       final dispatch = OtpDispatch.fromJson(const <String, Object?>{
         'expiresInSeconds': 300,
         'resendAfterSeconds': 30,
+        'codeLength': 6,
+        'channel': 'WHATSAPP',
       });
       expect(dispatch.resendAfterSeconds, 30);
+      expect(dispatch.codeLength, 6);
+      expect(dispatch.channel, OtpDeliveryChannel.whatsApp);
+      expect(
+        OtpDispatch.fromJson(const <String, Object?>{
+          'expiresInSeconds': 300,
+          'resendAfterSeconds': 30,
+          'codeLength': 6,
+          'channel': 'EMAIL',
+        }).channel,
+        OtpDeliveryChannel.unknown,
+      );
 
       final session = SessionSummary.fromJson(const <String, Object?>{
         'id': 's1',

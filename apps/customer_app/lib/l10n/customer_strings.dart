@@ -15,6 +15,32 @@ abstract final class CustomerStrings {
   static const languageTitle = 'languageTitle';
   static const languageChangeAction = 'languageChangeAction';
   static const languageSelected = 'languageSelected';
+  static const authLoginHeading = 'authLoginHeading';
+  static const authLoginSubtitle = 'authLoginSubtitle';
+  static const authPhoneLabel = 'authPhoneLabel';
+  static const authPhoneCountryCode = 'authPhoneCountryCode';
+  static const authSendCode = 'authSendCode';
+  static const authSessionEndedNotice = 'authSessionEndedNotice';
+  static const authOtpHeading = 'authOtpHeading';
+  static const authOtpSentWhatsApp = 'authOtpSentWhatsApp';
+  static const authOtpSentSms = 'authOtpSentSms';
+  static const authOtpSent = 'authOtpSent';
+  static const authOtpCodeLabel = 'authOtpCodeLabel';
+  static const authOtpVerify = 'authOtpVerify';
+  static const authOtpResend = 'authOtpResend';
+  static const authOtpResendIn = 'authOtpResendIn';
+  static const authOtpResent = 'authOtpResent';
+  static const authOtpChangeNumber = 'authOtpChangeNumber';
+  static const authErrorCodeIncorrect = 'authErrorCodeIncorrect';
+  static const authErrorCodeExpired = 'authErrorCodeExpired';
+  static const authErrorTooManyAttempts = 'authErrorTooManyAttempts';
+  static const authErrorNotCustomerAccount = 'authErrorNotCustomerAccount';
+  static const authErrorAccountDisabled = 'authErrorAccountDisabled';
+  static const authErrorDeliveryFailed = 'authErrorDeliveryFailed';
+  static const authErrorTwoStepNotSupported = 'authErrorTwoStepNotSupported';
+  static const profileSignedInAs = 'profileSignedInAs';
+  static const profileSignOutConfirmTitle = 'profileSignOutConfirmTitle';
+  static const profileSignOutConfirmMessage = 'profileSignOutConfirmMessage';
   static const unavailableLabel = 'unavailableLabel';
   static const unavailableMessage = 'unavailableMessage';
   static const routeOnboardingTitle = 'routeOnboardingTitle';
@@ -50,6 +76,32 @@ abstract final class CustomerStrings {
     languageTitle,
     languageChangeAction,
     languageSelected,
+    authLoginHeading,
+    authLoginSubtitle,
+    authPhoneLabel,
+    authPhoneCountryCode,
+    authSendCode,
+    authSessionEndedNotice,
+    authOtpHeading,
+    authOtpSentWhatsApp,
+    authOtpSentSms,
+    authOtpSent,
+    authOtpCodeLabel,
+    authOtpVerify,
+    authOtpResend,
+    authOtpResendIn,
+    authOtpResent,
+    authOtpChangeNumber,
+    authErrorCodeIncorrect,
+    authErrorCodeExpired,
+    authErrorTooManyAttempts,
+    authErrorNotCustomerAccount,
+    authErrorAccountDisabled,
+    authErrorDeliveryFailed,
+    authErrorTwoStepNotSupported,
+    profileSignedInAs,
+    profileSignOutConfirmTitle,
+    profileSignOutConfirmMessage,
     unavailableLabel,
     unavailableMessage,
     routeOnboardingTitle,

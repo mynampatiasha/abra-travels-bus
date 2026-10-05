@@ -139,6 +139,8 @@ void main() {
             ? FakeResponse.ok(<String, Object?>{
                 'expiresInSeconds': 300,
                 'resendAfterSeconds': 30,
+                'codeLength': 6,
+                'channel': 'WHATSAPP',
               })
             : FakeResponse.ok(tokens(1));
       });
@@ -560,6 +562,8 @@ void main() {
         'auth/otp/send' => FakeResponse.ok(<String, Object?>{
           'expiresInSeconds': 300,
           'resendAfterSeconds': 30,
+          'codeLength': 6,
+          'channel': 'WHATSAPP',
         }),
         _ => FakeResponse.ok(<String, Object?>{}),
       };

@@ -98,6 +98,9 @@ abstract final class AbraTheme {
           minimumSize: minimumButtonSize,
           padding: buttonPadding,
           shape: buttonShape,
+          // Brand blue as label text on the gray page background is below
+          // 4.5:1, so button labels use its darker shade.
+          foregroundColor: AbraColors.blueDark,
           side: const BorderSide(color: AbraColors.blue),
           textStyle: textTheme.labelLarge,
         ),
@@ -106,6 +109,7 @@ abstract final class AbraTheme {
         style: TextButton.styleFrom(
           minimumSize: const Size(48, AbraSizes.minTouchTarget),
           shape: buttonShape,
+          foregroundColor: AbraColors.blueDark,
           textStyle: textTheme.labelLarge,
         ),
       ),

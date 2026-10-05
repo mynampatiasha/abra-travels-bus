@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:customer_app/app/customer_app.dart';
 import 'package:customer_app/app/providers.dart';
 import 'package:customer_app/bootstrap/app_dependencies.dart';
+import 'package:customer_app/features/authentication/otp_sign_in_controller.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -72,6 +73,18 @@ const storedSession = <String, String>{
   AuthTokenStore.sessionIdKey: 'session-1',
 };
 
+/// What the backend answers to `POST /auth/otp/send`.
+FakeResponse otpSentResponse({
+  String channel = 'WHATSAPP',
+  int expiresInSeconds = 300,
+  int resendAfterSeconds = 30,
+}) => FakeResponse.ok(<String, Object?>{
+  'expiresInSeconds': expiresInSeconds,
+  'resendAfterSeconds': resendAfterSeconds,
+  'codeLength': 6,
+  'channel': channel,
+});
+
 DioException connectionError(RecordedRequest request) => DioException(
   requestOptions: request.options,
   type: DioExceptionType.connectionError,
@@ -133,9 +146,14 @@ class TestApp {
   List<String> get requestedPaths =>
       adapter.requests.map((request) => request.path).toList();
 
-  Widget build() => ProviderScope(
+  /// [clock] replaces the device clock for countdowns (the test clock in
+  /// widget tests).
+  Widget build({DateTime Function()? clock}) => ProviderScope(
     key: _scopeKey,
-    overrides: [appDependenciesProvider.overrideWithValue(dependencies)],
+    overrides: [
+      appDependenciesProvider.overrideWithValue(dependencies),
+      if (clock != null) signInClockProvider.overrideWithValue(clock),
+    ],
     child: const CustomerApp(),
   );
 
@@ -147,7 +165,7 @@ class TestApp {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = size;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(build());
+    await tester.pumpWidget(build(clock: tester.binding.clock.now));
     await tester.pumpAndSettle();
   }
 

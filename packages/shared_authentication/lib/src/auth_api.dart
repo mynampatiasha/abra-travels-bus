@@ -18,7 +18,7 @@ final class RegistrationRequest {
   /// E.164 phone number verified by [code].
   final String phone;
 
-  /// The SIGN_IN code received by SMS.
+  /// The SIGN_IN code received on WhatsApp or by SMS.
   final String code;
   final String name;
   final String? email;

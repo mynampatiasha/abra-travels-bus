@@ -96,6 +96,20 @@ enum SessionClientType {
       values.firstWhere((v) => v.wireValue == value, orElse: () => unknown);
 }
 
+/// Where the backend sent a one-time code (`OTP_DELIVERY_CHANNELS`).
+enum OtpDeliveryChannel {
+  whatsApp('WHATSAPP'),
+  sms('SMS'),
+  unknown('UNKNOWN');
+
+  const OtpDeliveryChannel(this.wireValue);
+
+  final String wireValue;
+
+  static OtpDeliveryChannel fromWire(String value) =>
+      values.firstWhere((v) => v.wireValue == value, orElse: () => unknown);
+}
+
 /// Purpose of a one-time code.
 enum OtpPurpose {
   signIn('SIGN_IN'),
