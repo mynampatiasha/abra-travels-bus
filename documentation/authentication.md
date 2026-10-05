@@ -33,7 +33,17 @@ Phone OTP sign-in is accepted only for CUSTOMER and DRIVER accounts; other user 
 
 Send limits (Redis, fail closed — `SERVICE_UNAVAILABLE` if Redis is down): `OTP_MAX_SENDS_PER_WINDOW` (3) per number and `OTP_MAX_SENDS_PER_IP_PER_WINDOW` (20) per IP per `OTP_SEND_WINDOW_SECONDS` (15 minutes), plus `OTP_RESEND_COOLDOWN_SECONDS` (30) between two codes to one number. `PASSWORD_RESET` codes are only delivered to active accounts, but the response is identical either way (no account enumeration).
 
-The development SMS adapter sends nothing; it writes the message (with the code) to the server log **only** when `NODE_ENV=development` and refuses to start in production. A real SMS provider is an open business decision.
+**Delivery channel (implemented, Step 10B).** `OtpService` hands the code to `OtpDeliveryService`, which tries the channels of `OTP_DELIVERY_CHANNELS` in order (default `whatsapp,sms`): the first provider that accepts the message wins, and a later channel is used **only when the earlier ones failed**. Exactly one message is sent per request, never one on every channel. If no channel accepts the message, the request answers `SERVICE_UNAVAILABLE` and the stored code is made unusable. The response says which channel was used (`channel: WHATSAPP | SMS`) and how many digits to expect (`codeLength`); it never contains the code. A provider that times out may still have delivered, in which case the fallback sends a second message with the same code — accepted over leaving the customer without a code.
+
+```
+OtpService → OtpDeliveryService ─┬→ WhatsAppOtpDeliveryProvider → WhatsAppProvider ─┬→ MetaCloudWhatsAppProvider   (WHATSAPP_PROVIDER=meta)
+   (limits, hashing, expiry)     │                                                   └→ DevelopmentWhatsAppProvider (development / test only)
+                                 └→ SmsOtpDeliveryProvider      → SmsProvider ────────→ DevelopmentSmsProvider      (real SMS provider: open decision)
+```
+
+- **WhatsApp:** the code goes out as an approved WhatsApp *authentication template* (`WHATSAPP_OTP_TEMPLATE_NAME`, `WHATSAPP_OTP_TEMPLATE_LANGUAGE`) through the Meta Cloud API (`WHATSAPP_GRAPH_API_VERSION`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`): body placeholder and "copy code" button both carry the code. Credentials come from the environment only. The Meta adapter is contract-tested against the documented request format; **it has not been run against a live WhatsApp Business account yet.** Provider errors are logged with HTTP status and Meta's numeric error code only — never the code, the number or Meta's free text.
+- **Development:** the development WhatsApp and SMS adapters send nothing; they keep messages in memory (for tests) and write them (with the code) to the server log **only** when `NODE_ENV=development`. Both refuse to start in production. A real SMS provider is an open business decision.
+- **Events:** no authentication event is published yet. When customer engagement is built, OTP and sign-in events go through the transactional outbox (`OutboxService`) like every other domain event, so authentication never calls marketing or notification code directly.
 
 ## 4. Passwords and lockout
 
@@ -63,7 +73,7 @@ All paths are under `/api/v1`. Every endpoint requires a valid access token unle
 ### Implemented (step 7)
 
 ```
-POST   /auth/otp/send          public  { phone, purpose: SIGN_IN | PASSWORD_RESET }  → { expiresInSeconds, resendAfterSeconds }
+POST   /auth/otp/send          public  { phone, purpose: SIGN_IN | PASSWORD_RESET }  → { expiresInSeconds, resendAfterSeconds, codeLength, channel: WHATSAPP | SMS }
 POST   /auth/otp/verify        public  { phone, code, device? }                      → tokens, or { mfaRequired, mfaToken } (creates the customer on first use)
 POST   /auth/register          public  { phone, code, name, email?, password?, preferredLanguage?, acceptTerms: true, marketingConsent?, device? } → tokens
 POST   /auth/login             public  { identifier, password, device? }             → tokens, or { mfaRequired, mfaToken }

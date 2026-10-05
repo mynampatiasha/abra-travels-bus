@@ -57,14 +57,20 @@ export class AuthenticationController {
   @HttpCode(200)
   @ZodApiBody(RequestOtpDto)
   @ApiOperation({
-    summary: 'Send a verification code by SMS',
+    summary: 'Send a verification code (WhatsApp, or SMS as fallback)',
     description:
-      'Public. purpose SIGN_IN (default) or PASSWORD_RESET. The response is the same whether or ' +
-      'not an account exists for the number. Limited per number and per IP, with a cooldown ' +
-      'between sends. The code is never returned by the API.',
+      'Public. purpose SIGN_IN (default) or PASSWORD_RESET. The code is sent on the first ' +
+      'configured channel that accepts it (OTP_DELIVERY_CHANNELS, default WhatsApp then SMS); ' +
+      'exactly one message is sent. The response is the same whether or not an account exists ' +
+      'for the number. Limited per number and per IP, with a cooldown between sends. The code ' +
+      'is never returned by the API.',
   })
-  @ApiResponse({ status: 200, description: 'expiresInSeconds, resendAfterSeconds' })
+  @ApiResponse({
+    status: 200,
+    description: 'expiresInSeconds, resendAfterSeconds, codeLength, channel (WHATSAPP | SMS)',
+  })
   @ApiResponse({ status: 429, description: 'RATE_LIMITED (details.retryAfterSeconds)' })
+  @ApiResponse({ status: 503, description: 'SERVICE_UNAVAILABLE (no channel could deliver)' })
   sendOtp(@Body() body: RequestOtpDto, @Req() request: Request): Promise<OtpRequestResult> {
     return this.otpLogin.requestCode(body.phone, body.purpose, clientRequestInfo(request));
   }

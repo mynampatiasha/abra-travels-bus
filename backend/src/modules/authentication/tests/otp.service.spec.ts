@@ -5,8 +5,13 @@ import {
   configOf,
   InMemoryRateLimiter,
 } from '../../../common/rate-limit/tests/in-memory-rate-limiter.fixture';
+import { OtpDeliveryService } from '../../../integrations/otp-delivery/otp-delivery.service';
+import { SmsOtpDeliveryProvider } from '../../../integrations/otp-delivery/sms-otp-delivery.provider';
+import { WhatsAppOtpDeliveryProvider } from '../../../integrations/otp-delivery/whatsapp-otp-delivery.provider';
 import { DevelopmentSmsProvider } from '../../../integrations/sms/development-sms.provider';
 import { type SmsProvider } from '../../../integrations/sms/sms-provider.interface';
+import { DevelopmentWhatsAppProvider } from '../../../integrations/whatsapp/development-whatsapp.provider';
+import { type WhatsAppProvider } from '../../../integrations/whatsapp/whatsapp-provider.interface';
 import {
   type OtpChallengeRepository,
   type StoredOtpChallenge,
@@ -58,29 +63,49 @@ class InMemoryOtpChallenges {
   }
 }
 
-function setup(sms: SmsProvider = new DevelopmentSmsProvider(false)) {
+function setup(
+  options: { whatsApp?: WhatsAppProvider; sms?: SmsProvider; channels?: string[] } = {},
+) {
+  const whatsApp = options.whatsApp ?? new DevelopmentWhatsAppProvider(false);
+  const sms = options.sms ?? new DevelopmentSmsProvider(false);
   const challenges = new InMemoryOtpChallenges();
   const limiter = new InMemoryRateLimiter();
+  const config = configOf({
+    OTP_LENGTH: 6,
+    OTP_TTL_SECONDS: 300,
+    OTP_MAX_VERIFY_ATTEMPTS: 5,
+    OTP_MAX_SENDS_PER_WINDOW: 3,
+    OTP_SEND_WINDOW_SECONDS: 900,
+    OTP_RESEND_COOLDOWN_SECONDS: 30,
+    OTP_MAX_SENDS_PER_IP_PER_WINDOW: 20,
+    OTP_HASH_SECRET: 'unit-test-otp-hash-secret-0123456789abcdef',
+    OTP_DELIVERY_CHANNELS: options.channels ?? ['whatsapp', 'sms'],
+  });
+  const delivery = new OtpDeliveryService(
+    config,
+    new WhatsAppOtpDeliveryProvider(whatsApp, config),
+    new SmsOtpDeliveryProvider(sms),
+  );
   const service = new OtpService(
     challenges as unknown as OtpChallengeRepository,
     limiter.asService(),
-    configOf({
-      OTP_LENGTH: 6,
-      OTP_TTL_SECONDS: 300,
-      OTP_MAX_VERIFY_ATTEMPTS: 5,
-      OTP_MAX_SENDS_PER_WINDOW: 3,
-      OTP_SEND_WINDOW_SECONDS: 900,
-      OTP_RESEND_COOLDOWN_SECONDS: 30,
-      OTP_MAX_SENDS_PER_IP_PER_WINDOW: 20,
-      OTP_HASH_SECRET: 'unit-test-otp-hash-secret-0123456789abcdef',
-    }),
-    sms,
+    config,
+    delivery,
   );
+  /** The code from the newest message to [phone] on either channel. */
   const codeSentTo = (phone: string): string => {
-    const body = (sms as DevelopmentSmsProvider).lastMessageTo(phone)?.body ?? '';
+    if (whatsApp instanceof DevelopmentWhatsAppProvider) {
+      const viaWhatsApp = whatsApp.lastMessageTo(phone)?.bodyParameters[0];
+      if (viaWhatsApp) return viaWhatsApp;
+    }
+    const body =
+      sms instanceof DevelopmentSmsProvider ? (sms.lastMessageTo(phone)?.body ?? '') : '';
     return /^(\d{6}) /.exec(body)?.[1] ?? '';
   };
-  return { challenges, limiter, service, sms, codeSentTo };
+  const messagesTo = (phone: string): number =>
+    (whatsApp instanceof DevelopmentWhatsAppProvider ? whatsApp.messagesTo(phone).length : 0) +
+    (sms instanceof DevelopmentSmsProvider ? sms.messagesTo(phone).length : 0);
+  return { challenges, limiter, service, whatsApp, sms, codeSentTo, messagesTo };
 }
 
 async function failure(work: Promise<unknown>): Promise<ApiException> {
@@ -108,11 +133,17 @@ describe('OtpService', () => {
     Logger.overrideLogger(false);
   });
 
-  it('sends the code by SMS, stores only a keyed hash, and never returns the code', async () => {
-    const { service, challenges, codeSentTo } = setup();
+  it('sends the code on WhatsApp, stores only a keyed hash, and never returns the code', async () => {
+    const { service, challenges, codeSentTo, sms } = setup();
     const result = await service.request(PHONE, 'SIGN_IN', CLIENT);
 
-    expect(result).toEqual({ expiresInSeconds: 300, resendAfterSeconds: 30 });
+    expect(result).toEqual({
+      expiresInSeconds: 300,
+      resendAfterSeconds: 30,
+      codeLength: 6,
+      channel: 'WHATSAPP',
+    });
+    expect((sms as DevelopmentSmsProvider).messagesTo(PHONE)).toHaveLength(0);
     const code = codeSentTo(PHONE);
     expect(code).toMatch(/^\d{6}$/);
     expect(JSON.stringify(result)).not.toContain(code);
@@ -188,14 +219,14 @@ describe('OtpService', () => {
   });
 
   it('allows 3 sends per number per window, then blocks until the window ends', async () => {
-    const { service, limiter, sms } = setup();
+    const { service, limiter, messagesTo } = setup();
     for (let send = 1; send <= 3; send++) {
       await service.request(PHONE, 'SIGN_IN', CLIENT);
       limiter.advanceSeconds(31);
     }
     const error = await failure(service.request(PHONE, 'SIGN_IN', CLIENT));
     expect(error.code).toBe('RATE_LIMITED');
-    expect((sms as DevelopmentSmsProvider).messagesTo(PHONE)).toHaveLength(3);
+    expect(messagesTo(PHONE)).toBe(3);
 
     // Another number is unaffected; the blocked number works again after the window
     await expect(service.request('+919000000002', 'SIGN_IN', CLIENT)).resolves.toBeDefined();
@@ -216,26 +247,54 @@ describe('OtpService', () => {
   });
 
   it('deliver:false answers like a real send but creates and sends nothing', async () => {
-    const { service, challenges, sms } = setup();
+    const { service, challenges, messagesTo } = setup();
     const result = await service.request(PHONE, 'PASSWORD_RESET', CLIENT, { deliver: false });
-    expect(result).toEqual({ expiresInSeconds: 300, resendAfterSeconds: 30 });
+    expect(result).toEqual({
+      expiresInSeconds: 300,
+      resendAfterSeconds: 30,
+      codeLength: 6,
+      channel: 'WHATSAPP',
+    });
     expect(challenges.challenges).toHaveLength(0);
-    expect((sms as DevelopmentSmsProvider).messagesTo(PHONE)).toHaveLength(0);
+    expect(messagesTo(PHONE)).toBe(0);
     // The limits still apply, so the answer cannot be used as an oracle either
     expect(
       (await failure(service.request(PHONE, 'PASSWORD_RESET', CLIENT, { deliver: false }))).code,
     ).toBe('RATE_LIMITED');
   });
 
-  it('when the SMS cannot be sent: SERVICE_UNAVAILABLE and the code is unusable', async () => {
-    const failing: SmsProvider = {
+  it('falls back to SMS when WhatsApp fails, sending exactly one usable code', async () => {
+    const failingWhatsApp: WhatsAppProvider = {
+      providerKey: 'failing',
+      sendTemplate: () => Promise.reject(new Error('meta down')),
+    };
+    const { service, codeSentTo, sms } = setup({ whatsApp: failingWhatsApp });
+    const result = await service.request(PHONE, 'SIGN_IN', CLIENT);
+    expect(result.channel).toBe('SMS');
+    expect((sms as DevelopmentSmsProvider).messagesTo(PHONE)).toHaveLength(1);
+    await expect(service.verify(PHONE, 'SIGN_IN', codeSentTo(PHONE))).resolves.toBeUndefined();
+  });
+
+  it('uses only the configured channels (SMS only)', async () => {
+    const { service, whatsApp, sms } = setup({ channels: ['sms'] });
+    expect((await service.request(PHONE, 'SIGN_IN', CLIENT)).channel).toBe('SMS');
+    expect((whatsApp as DevelopmentWhatsAppProvider).messagesTo(PHONE)).toHaveLength(0);
+    expect((sms as DevelopmentSmsProvider).messagesTo(PHONE)).toHaveLength(1);
+  });
+
+  it('when no channel can send: SERVICE_UNAVAILABLE and the code is unusable', async () => {
+    const failingSms: SmsProvider = {
       providerKey: 'failing',
       send: () => Promise.reject(new Error('provider timeout token=abc')),
     };
-    const { service, challenges } = setup(failing);
+    const failingWhatsApp: WhatsAppProvider = {
+      providerKey: 'failing',
+      sendTemplate: () => Promise.reject(new Error('meta down token=xyz')),
+    };
+    const { service, challenges } = setup({ whatsApp: failingWhatsApp, sms: failingSms });
     const error = await failure(service.request(PHONE, 'SIGN_IN', CLIENT));
     expect(error.code).toBe('SERVICE_UNAVAILABLE');
-    expect(error.message).not.toContain('token=abc');
+    expect(error.message).not.toMatch(/token=|meta down/);
     expect(challenges.challenges[0]?.consumedAt).toBeInstanceOf(Date);
   });
 });

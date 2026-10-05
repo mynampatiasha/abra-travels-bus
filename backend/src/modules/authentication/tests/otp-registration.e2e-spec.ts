@@ -7,6 +7,7 @@ import {
   errorCodeOf,
   expireOtpCooldowns,
   lastOtp,
+  nothingSentTo,
   seedPasswordUser,
   signInWithOtp,
   type Tokens,
@@ -57,7 +58,12 @@ describe('Authentication e2e: OTP, registration, guard, /me', () => {
         .post('/api/v1/auth/otp/send')
         .send({ phone: phone.slice(3) }) // national format is normalised
         .expect(200);
-      expect(dataOf(response)).toEqual({ expiresInSeconds: 300, resendAfterSeconds: 30 });
+      expect(dataOf(response)).toEqual({
+        expiresInSeconds: 300,
+        resendAfterSeconds: 30,
+        codeLength: 6,
+        channel: 'WHATSAPP',
+      });
       const code = lastOtp(context, phone);
       expect(JSON.stringify(response.body)).not.toContain(code);
     });
@@ -189,8 +195,13 @@ describe('Authentication e2e: OTP, registration, guard, /me', () => {
         .post('/api/v1/auth/otp/send')
         .send({ phone, purpose: 'PASSWORD_RESET' })
         .expect(200);
-      expect(dataOf(response)).toEqual({ expiresInSeconds: 300, resendAfterSeconds: 30 });
-      expect(context.sms.lastMessageTo(phone)).toBeUndefined();
+      expect(dataOf(response)).toEqual({
+        expiresInSeconds: 300,
+        resendAfterSeconds: 30,
+        codeLength: 6,
+        channel: 'WHATSAPP',
+      });
+      expect(nothingSentTo(context, phone)).toBe(true);
     });
 
     it('refuses OTP-only sign-in for staff accounts', async () => {

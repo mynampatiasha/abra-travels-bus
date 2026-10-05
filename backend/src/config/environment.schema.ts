@@ -22,6 +22,28 @@ const commaSeparatedOrigins = z
   )
   .pipe(z.array(z.url()).min(1));
 
+/**
+ * Ordered OTP delivery channels: the first that accepts the message is used, the next ones only
+ * when it fails. `whatsapp,sms` = WhatsApp, SMS as fallback. Exactly one message is sent.
+ */
+const otpDeliveryChannels = z
+  .string()
+  .min(1)
+  .transform((value) =>
+    value
+      .split(',')
+      .map((channel) => channel.trim().toLowerCase())
+      .filter((channel) => channel.length > 0),
+  )
+  .pipe(
+    z
+      .array(z.enum(['whatsapp', 'sms']))
+      .min(1)
+      .refine((channels) => new Set(channels).size === channels.length, {
+        message: 'must not list a channel twice',
+      }),
+  );
+
 const base64Key32Bytes = z.string().refine((value) => Buffer.from(value, 'base64').length === 32, {
   message: 'must be 32 random bytes encoded as base64',
 });
@@ -68,6 +90,7 @@ export const environmentShape = z.object({
   OTP_HASH_SECRET: z.string().min(32, 'must be at least 32 characters'),
   /** Minimum time between two OTP messages to the same number. */
   OTP_RESEND_COOLDOWN_SECONDS: positiveInt.default(30),
+  OTP_DELIVERY_CHANNELS: otpDeliveryChannels.default(['whatsapp', 'sms']),
   /** Per-IP send limit in the OTP window; higher than per number because carriers share IPs. */
   OTP_MAX_SENDS_PER_IP_PER_WINDOW: positiveInt.default(20),
   LOGIN_MAX_FAILED_ATTEMPTS: positiveInt,
@@ -105,6 +128,21 @@ export const environmentShape = z.object({
   WHATSAPP_PHONE_NUMBER_ID: optionalText,
   WHATSAPP_APP_SECRET: optionalText,
   WHATSAPP_VERIFY_TOKEN: optionalText,
+  /** Meta Graph API version used for sending, e.g. `v23.0` (pinned on purpose). */
+  WHATSAPP_GRAPH_API_VERSION: z
+    .string()
+    .regex(/^v\d+\.\d+$/, 'must look like v23.0')
+    .optional(),
+  /** Approved WhatsApp authentication template that carries the one-time code. */
+  WHATSAPP_OTP_TEMPLATE_NAME: z
+    .string()
+    .regex(/^[a-z0-9_]+$/, 'lowercase letters, digits and underscores only')
+    .optional(),
+  /** Language code of that template, e.g. `en` or `en_US`. */
+  WHATSAPP_OTP_TEMPLATE_LANGUAGE: z
+    .string()
+    .regex(/^[a-z]{2,3}(_[A-Z]{2})?$/, 'must look like en or en_US')
+    .optional(),
 
   // Real SMS / email providers are an open business decision (implementation-plan.md);
   // their names are added here together with their adapters.

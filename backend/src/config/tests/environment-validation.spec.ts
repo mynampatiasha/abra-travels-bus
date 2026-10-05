@@ -35,6 +35,9 @@ function validProductionEnvironment(): Record<string, string | undefined> {
     WHATSAPP_PHONE_NUMBER_ID: 'b',
     WHATSAPP_APP_SECRET: 'c',
     WHATSAPP_VERIFY_TOKEN: 'd',
+    WHATSAPP_GRAPH_API_VERSION: 'v23.0',
+    WHATSAPP_OTP_TEMPLATE_NAME: 'abra_login_code',
+    WHATSAPP_OTP_TEMPLATE_LANGUAGE: 'en',
     PUSH_PROVIDER: 'fcm',
     FCM_SERVICE_ACCOUNT_JSON: '{}',
     MAPS_PROVIDER: 'osm',
@@ -114,6 +117,49 @@ describe('environment validation', () => {
     expect(
       problemsOf({ ...validProductionEnvironment(), MFA_REQUIRED_FOR_STAFF: undefined }),
     ).toContain('MFA_REQUIRED_FOR_STAFF: must be true in production (staff accounts require MFA)');
+  });
+
+  it('parses OTP delivery channels in order, defaulting to WhatsApp then SMS', () => {
+    expect(validateEnvironment(validTestEnvironment()).OTP_DELIVERY_CHANNELS).toEqual([
+      'whatsapp',
+      'sms',
+    ]);
+    expect(
+      validateEnvironment(validTestEnvironment({ OTP_DELIVERY_CHANNELS: ' SMS , whatsapp ' }))
+        .OTP_DELIVERY_CHANNELS,
+    ).toEqual(['sms', 'whatsapp']);
+    for (const invalid of ['email', 'whatsapp,whatsapp', ',']) {
+      expect(
+        problemsOf(validTestEnvironment({ OTP_DELIVERY_CHANNELS: invalid })).some((problem) =>
+          // a bad item is reported with its index: OTP_DELIVERY_CHANNELS.0
+          problem.startsWith('OTP_DELIVERY_CHANNELS'),
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it('requires the WhatsApp template settings for the Meta provider', () => {
+    const problems = problemsOf(
+      validTestEnvironment({
+        WHATSAPP_PROVIDER: 'meta',
+        WHATSAPP_ACCESS_TOKEN: 'token',
+        WHATSAPP_PHONE_NUMBER_ID: '1234567890',
+        WHATSAPP_APP_SECRET: 'secret',
+        WHATSAPP_VERIFY_TOKEN: 'verify',
+      }),
+    );
+    expect(problems).toEqual(
+      expect.arrayContaining([
+        'WHATSAPP_GRAPH_API_VERSION: required when WHATSAPP_PROVIDER=meta',
+        'WHATSAPP_OTP_TEMPLATE_NAME: required when WHATSAPP_PROVIDER=meta',
+        'WHATSAPP_OTP_TEMPLATE_LANGUAGE: required when WHATSAPP_PROVIDER=meta',
+      ]),
+    );
+    expect(
+      problemsOf(validTestEnvironment({ WHATSAPP_GRAPH_API_VERSION: '23' })).some((problem) =>
+        problem.startsWith('WHATSAPP_GRAPH_API_VERSION:'),
+      ),
+    ).toBe(true);
   });
 
   it('refuses API docs in production', () => {

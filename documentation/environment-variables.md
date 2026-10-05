@@ -21,6 +21,7 @@ Files `.env.development`, `.env.test`, `.env.staging`, `.env.production` are **n
 | OTP_LENGTH / OTP_TTL_SECONDS / OTP_MAX_VERIFY_ATTEMPTS | 6 / 300 / 5 | yes |
 | OTP_MAX_SENDS_PER_WINDOW / OTP_SEND_WINDOW_SECONDS | 3 / 900 | yes |
 | OTP_RESEND_COOLDOWN_SECONDS | 30 (minimum time between two codes to one number) | no (default) |
+| OTP_DELIVERY_CHANNELS | whatsapp,sms (tried in order; a later channel only when the earlier failed) | no (default) |
 | OTP_MAX_SENDS_PER_IP_PER_WINDOW | 20 (codes per IP per OTP window) | no (default) |
 | OTP_HASH_SECRET | 32-byte base64 pepper for OTP hashes | yes |
 | LOGIN_MAX_FAILED_ATTEMPTS / LOGIN_LOCKOUT_SECONDS | 5 / 900 | yes |
@@ -36,6 +37,7 @@ Files `.env.development`, `.env.test`, `.env.staging`, `.env.production` are **n
 | RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET / RAZORPAY_WEBHOOK_SECRET | — | if razorpay |
 | WHATSAPP_PROVIDER | meta \| development | yes |
 | WHATSAPP_ACCESS_TOKEN / WHATSAPP_PHONE_NUMBER_ID / WHATSAPP_APP_SECRET / WHATSAPP_VERIFY_TOKEN | — | if meta |
+| WHATSAPP_GRAPH_API_VERSION / WHATSAPP_OTP_TEMPLATE_NAME / WHATSAPP_OTP_TEMPLATE_LANGUAGE | v23.0 / abra_login_code / en (approved authentication template) | if meta |
 | SMS_PROVIDER / SMS_API_KEY / SMS_SENDER_ID / SMS_DLT_ENTITY_ID | — | if not development |
 | EMAIL_PROVIDER / EMAIL_API_KEY / EMAIL_FROM | — | if not development |
 | PUSH_PROVIDER / FCM_SERVICE_ACCOUNT_JSON | — | if fcm |

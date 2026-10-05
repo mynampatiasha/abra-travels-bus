@@ -3,7 +3,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { MongooseModule } from '@nestjs/mongoose';
 import { CryptoModule } from '../../common/crypto/crypto.module';
 import { RateLimitModule } from '../../common/rate-limit/rate-limit.module';
-import { SmsModule } from '../../integrations/sms/sms.module';
+import { OtpDeliveryModule } from '../../integrations/otp-delivery/otp-delivery.module';
 import { CustomersModule } from '../customers/customers.module';
 import { SessionsModule } from '../sessions/sessions.module';
 import { UsersModule } from '../users/users.module';
@@ -35,7 +35,7 @@ import { TokenRefreshService } from './services/token-refresh.service';
     MongooseModule.forFeature([{ name: OTP_CHALLENGE_MODEL, schema: otpChallengeSchema }]),
     CryptoModule,
     RateLimitModule,
-    SmsModule,
+    OtpDeliveryModule,
     UsersModule,
     CustomersModule,
     SessionsModule,

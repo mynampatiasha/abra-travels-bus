@@ -1,5 +1,5 @@
 import { randomInt } from 'node:crypto';
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Types } from 'mongoose';
 import { hmacSha256Hex, safeEqualHex, sha256Hex } from '../../../common/crypto/secure-hash';
 import { ApiException } from '../../../common/errors/api-exception';
@@ -7,7 +7,8 @@ import { type ClientRequestInfo } from '../../../common/http/client-request-info
 import { RateLimiterService } from '../../../common/rate-limit/rate-limiter.service';
 import { maskPhoneNumber } from '../../../common/validation/contact-identifiers';
 import { AppConfigService } from '../../../config/app-config.service';
-import { SMS_PROVIDER, type SmsProvider } from '../../../integrations/sms/sms-provider.interface';
+import { type OtpDeliveryChannel } from '../../../integrations/otp-delivery/otp-delivery-provider.interface';
+import { OtpDeliveryService } from '../../../integrations/otp-delivery/otp-delivery.service';
 import { OtpChallengeRepository } from '../repositories/otp-challenge.repository';
 import { type OtpPurpose } from '../schemas/otp-challenge.schema';
 
@@ -15,6 +16,10 @@ export interface OtpRequestResult {
   expiresInSeconds: number;
   /** Earliest time another code can be requested for this number. */
   resendAfterSeconds: number;
+  /** Number of digits of the code, so the app can size its input. */
+  codeLength: number;
+  /** Where the code was sent (WhatsApp, or SMS as fallback). Never the code itself. */
+  channel: OtpDeliveryChannel;
 }
 
 /** Uniformly random numeric code of `length` digits, from the OS CSPRNG. */
@@ -54,7 +59,7 @@ export class OtpService {
     private readonly challenges: OtpChallengeRepository,
     private readonly rateLimiter: RateLimiterService,
     private readonly config: AppConfigService,
-    @Inject(SMS_PROVIDER) private readonly sms: SmsProvider,
+    private readonly delivery: OtpDeliveryService,
   ) {}
 
   /**
@@ -74,6 +79,9 @@ export class OtpService {
     const result: OtpRequestResult = {
       expiresInSeconds: ttlSeconds,
       resendAfterSeconds: this.config.get('OTP_RESEND_COOLDOWN_SECONDS'),
+      codeLength: this.config.get('OTP_LENGTH'),
+      // What a successful send normally reports; replaced below when a code is really sent
+      channel: this.delivery.primaryChannel,
     };
     if (!options.deliver) return result;
 
@@ -94,13 +102,17 @@ export class OtpService {
     });
 
     try {
-      await this.sms.send({ to: phone, purpose: 'OTP', body: this.messageBody(code, ttlSeconds) });
+      result.channel = await this.delivery.deliver({
+        to: phone,
+        code,
+        expiresInSeconds: ttlSeconds,
+      });
     } catch (error) {
+      // No channel accepted the code: make it unusable so it cannot be guessed later
       await this.challenges.consume(id, new Date());
       this.logger.error(
         {
           phone: maskPhoneNumber(phone),
-          provider: this.sms.providerKey,
           message: error instanceof Error ? error.message : 'unknown',
         },
         'OTP message could not be sent',
@@ -159,14 +171,6 @@ export class OtpService {
     return hmacSha256Hex(
       this.config.get('OTP_HASH_SECRET'),
       `${challengeId.toHexString()}:${code}`,
-    );
-  }
-
-  private messageBody(code: string, ttlSeconds: number): string {
-    const minutes = Math.max(1, Math.round(ttlSeconds / 60));
-    return (
-      `${code} is your Abra Travels verification code. It expires in ${minutes} minutes. ` +
-      'Do not share it with anyone.'
     );
   }
 }
