@@ -1,4 +1,4 @@
-package com.abratravels.customer_app
+package com.abratravels.customer
 
 import io.flutter.embedding.android.FlutterActivity
 

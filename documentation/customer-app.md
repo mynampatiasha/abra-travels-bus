@@ -48,7 +48,16 @@ Features are added under `features/<name>/` with `screens/`, `widgets/`, `contro
 
 **Dependencies added by the app:** `flutter_riverpod`, `go_router`. Everything else comes from the shared packages.
 
-## 3. Configuration
+## 3. Application identifiers
+
+| Platform | Identifier |
+|---|---|
+| Android application ID (and namespace) | `com.abratravels.customer` |
+| iOS bundle ID | `com.abratravels.customer` (tests: `com.abratravels.customer.RunnerTests`) |
+
+These are the production identifiers and must not change once the app is published. The Dart package and folder remain `customer_app`.
+
+## 4. Configuration
 
 Passed at build time with `--dart-define`. Only public values; no secret is compiled into the app.
 
@@ -65,7 +74,7 @@ Rules enforced at start-up (an invalid build shows the start-up failure screen a
 
 Plain HTTP is allowed by the platforms only for that case: Android debug builds (`src/debug/AndroidManifest.xml`) and local-network addresses on iOS (`NSAllowsLocalNetworking`).
 
-## 4. Start-up and authentication gate
+## 5. Start-up and authentication gate
 
 1. `bootstrap` installs the error handlers, validates the configuration, opens storage and creates the services.
 2. The app shows the splash screen and asks the shared session manager to restore the session (`GET /api/v1/me` when tokens are stored; no request otherwise).
@@ -85,7 +94,7 @@ The guard decides what is *shown*. It is not a security control: the backend aut
 
 Tokens are stored only by `shared_authentication` in the Keystore/Keychain (`shared_storage`), never in preferences, URLs or logs. Android backup is disabled for the app so session data does not leave the device.
 
-## 5. Route map
+## 6. Route map
 
 | Location | Access | Screen in 10A | Delivered in |
 |---|---|---|---|
@@ -104,16 +113,23 @@ Tokens are stored only by `shared_authentication` in the Keystore/Keychain (`sha
 
 Rules for the booking and payment flow (to be applied when those screens are built): a step that creates or changes server state is entered with `go`, not `push`, so that Back cannot return to it and repeat it; the flow's state comes from the backend booking, never from navigation arguments alone.
 
-Open decision: whether signed-out visitors may search and browse buses before signing in. Today they cannot. Changing that means adding the locations to `AppRoutes.public`.
+### Guest browsing (product decision, 2026-10-05)
 
-## 6. Errors and offline behaviour
+Customers will be able to use the app without an account up to the point of booking:
+
+1. the app opens; a guest can search buses, view trips, bus details and seat availability;
+2. sign-in is required when the guest starts a booking action (selecting seats to hold, passenger details, payment, and everything about their own trips and profile).
+
+This is **not implemented**. It is delivered with the screens it concerns (10C–10E), which need backend search and inventory endpoints that do not exist yet. Until then every location except the public ones above requires sign-in. When those screens are built, their locations (`/home`, `/search`, `/search/results`, `/bus/:id`, `/trip/:id`, seat viewing) are added to `AppRoutes.public`, the start-up redirect for a signed-out user changes from `/login` to `/home`, and the matching backend endpoints must be public as well. Seat locking and everything after it stays behind sign-in.
+
+## 7. Errors and offline behaviour
 
 - **Uncaught errors** (framework, platform, async) are logged with their type and stack trace only. Messages are not logged because they can contain user input or server data. A widget that fails to build is replaced by a neutral box in release builds.
 - **Backend data** is shown through `AsyncValueView`, which renders exactly one of: loading, the failure state for the kind of failure (no connection, timeout, server problem, no access, not found, too many attempts, session ended), or the data. Retry appears only when retrying can help. Server error text is never shown; the request reference is.
 - **No connectivity plugin** is used. Whether the network works is learned from the request that fails, which is also the only reliable signal.
 - No crash-reporting service is connected yet. When one is chosen it plugs into `reportError`.
 
-## 7. Localization, theme, accessibility
+## 8. Localization, theme, accessibility
 
 - Messages: `AbraStrings` (shared) and `CustomerStrings` (app), from ARB files merged at start-up. No screen contains literal text. English is complete; Hindi, Telugu, Kannada, Tamil, Malayalam, Marathi and Bengali have no reviewed translations yet and show English.
 - The language follows the device until the user chooses one on `/language`; the choice is stored on the device and sent to the backend as `Accept-Language`. Layout direction follows the language.
@@ -121,7 +137,7 @@ Open decision: whether signed-out visitors may search and browse buses before si
 - Layout: `AbraPageContainer` and `AbraBreakpoint` (bottom bar below 600 px, side rail from 600 px).
 - Accessibility checks in the tests: Android and iOS tap-target size, labelled tap targets, text contrast, 2× text on a 320 px wide screen, rotation.
 
-## 8. Permissions
+## 9. Permissions
 
 | Permission | Platform | Why | When requested |
 |---|---|---|---|
@@ -129,7 +145,7 @@ Open decision: whether signed-out visitors may search and browse buses before si
 
 Nothing else is declared in 10A and nothing is requested at start-up. Location, camera and notification permissions are added with the feature that needs them, requested in context with an explanation, and listed here.
 
-## 9. Backend dependencies
+## 10. Backend dependencies
 
 Existing and used in 10A: `GET /api/v1/me`, `POST /api/v1/auth/refresh` (through the shared session manager).
 
@@ -139,7 +155,7 @@ Existing and needed for 10B: the authentication endpoints of [authentication.md]
 
 | Milestone | Missing backend capability |
 |---|---|
-| 10C Home | Cities/stops lookup, offers and banners, the customer's upcoming trip |
+| 10C Home | Cities/stops lookup, offers and banners (public, for guests), the customer's upcoming trip. **10C cannot start until these exist.** |
 | 10D Search | Trip search with filters and sorting, bus/trip details, boarding and dropping points |
 | 10E Seats | Seat layout and availability, seat locks with server expiry, real-time seat updates |
 | 10F Booking | Passenger rules, fare quote, coupons, booking creation |
@@ -150,9 +166,9 @@ Existing and needed for 10B: the authentication endpoints of [authentication.md]
 
 Each of those milestones stops at this boundary until its endpoints exist; the app will not ship invented contracts or fixture data.
 
-## 10. Not verified yet
+## 11. Not verified yet
 
-- Running on a device or emulator. The Android debug build succeeds and the widget tests start the real app, but no emulator is installed on the development machine.
-- The iOS build (needs macOS).
-- Application identifiers are the generated ones (`com.abratravels.customer_app` on Android, `com.abratravels.customerApp` on iOS). They must be confirmed before the first store upload because they cannot be changed afterwards. Release signing is not configured.
+- Running on a device or emulator: none is available on the development machine. The Android debug build succeeds and the widget tests start the real app.
+- The iOS build: not run, macOS is required; development is on Windows.
+- Release signing is not configured and nothing has been uploaded to a store.
 - App icon and launch screen are the Flutter defaults.
