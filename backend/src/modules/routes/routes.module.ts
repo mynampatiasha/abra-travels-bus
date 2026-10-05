@@ -1,9 +1,14 @@
 import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+import { ROUTE_MODEL, routeSchema } from './schemas/route.schema';
 
 /**
- * `routes` — Supply domain (documentation/architecture.md §5).
- * Structure only: no controllers, services or collections yet. Implemented in Phase 3
- * (documentation/implementation-plan.md), following the module layout in project-structure.md §2.
+ * `routes` â€” Supply domain (documentation/architecture.md Â§5). So far only the collection that trip
+ * discovery reads (documentation/discovery.md); the management API arrives with the operator
+ * portal (documentation/implementation-plan.md).
  */
-@Module({})
+@Module({
+  imports: [MongooseModule.forFeature([{ name: ROUTE_MODEL, schema: routeSchema }])],
+  exports: [MongooseModule],
+})
 export class RoutesModule {}

@@ -1,9 +1,18 @@
 import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+import { CitiesController } from './controllers/cities.controller';
+import { CityRepository } from './repositories/city.repository';
+import { CITY_MODEL, citySchema } from './schemas/city.schema';
+import { CitiesService } from './services/cities.service';
 
 /**
- * `cities` — Supply domain (documentation/architecture.md §5).
- * Structure only: no controllers, services or collections yet. Implemented in Phase 3
- * (documentation/implementation-plan.md), following the module layout in project-structure.md §2.
+ * `cities` â€” Supply domain (documentation/architecture.md Â§5). The catalogue of cities and
+ * its public lookup (documentation/discovery.md). Managing cities arrives with the admin portal.
  */
-@Module({})
+@Module({
+  imports: [MongooseModule.forFeature([{ name: CITY_MODEL, schema: citySchema }])],
+  controllers: [CitiesController],
+  providers: [CityRepository, CitiesService],
+  exports: [CitiesService, MongooseModule],
+})
 export class CitiesModule {}

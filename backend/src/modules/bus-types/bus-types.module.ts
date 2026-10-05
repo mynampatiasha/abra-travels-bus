@@ -1,9 +1,14 @@
 import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+import { BUS_TYPE_MODEL, busTypeSchema } from './schemas/bus-type.schema';
 
 /**
- * `bus-types` — Supply domain (documentation/architecture.md §5).
- * Structure only: no controllers, services or collections yet. Implemented in Phase 3
- * (documentation/implementation-plan.md), following the module layout in project-structure.md §2.
+ * `bus-types` â€” Supply domain (documentation/architecture.md Â§5). So far only the collection that trip
+ * discovery reads (documentation/discovery.md); the management API arrives with the operator
+ * portal (documentation/implementation-plan.md).
  */
-@Module({})
+@Module({
+  imports: [MongooseModule.forFeature([{ name: BUS_TYPE_MODEL, schema: busTypeSchema }])],
+  exports: [MongooseModule],
+})
 export class BusTypesModule {}
