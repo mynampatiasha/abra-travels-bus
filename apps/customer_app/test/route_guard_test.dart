@@ -20,11 +20,8 @@ String? go(AuthState auth, String location) =>
 
 /// Every location that needs a signed-in user.
 const protectedLocations = <String>[
-  '/home',
-  '/search',
-  '/search/results',
   '/bus/bus-7',
-  '/trip/trip-7',
+  '/trip/trip-7/seats',
   '/seats',
   '/passenger-details',
   '/booking-review',
@@ -74,29 +71,48 @@ void main() {
     test('sign-in remembers where the user was heading', () {
       expect(go(signedOut, '/ticket/tkt-1'), '/login?from=%2Fticket%2Ftkt-1');
       expect(
-        go(signedOut, '/search/results?date=2026-10-09'),
-        '/login?from=%2Fsearch%2Fresults%3Fdate%3D2026-10-09',
+        go(signedOut, '/my-trips?tab=past'),
+        '/login?from=%2Fmy-trips%3Ftab%3Dpast',
       );
-      expect(go(signedOut, '/home'), '/login');
     });
 
-    test('public locations are allowed', () {
+    test('sign-in screens and the language screen are open', () {
       for (final location in ['/login', '/otp', '/onboarding', '/language']) {
         expect(go(signedOut, location), isNull, reason: location);
       }
     });
 
-    test(
-      'after start-up the user goes to sign-in, keeping the destination',
-      () {
-        expect(go(signedOut, '/splash'), '/login');
-        expect(
-          go(signedOut, '/splash?from=%2Fmy-trips'),
-          '/login?from=%2Fmy-trips',
-        );
-        expect(go(signedOut, '/splash?from=%2Flanguage'), '/language');
-      },
-    );
+    test('a guest can look for buses and open a trip', () {
+      for (final location in [
+        '/home',
+        '/search',
+        '/search/city?field=from',
+        '/search/results?origin=a&destination=b&date=2026-10-09',
+        '/trip/66f0c0ffee0000000000abcd',
+      ]) {
+        expect(go(signedOut, location), isNull, reason: location);
+        expect(go(expired, location), isNull, reason: location);
+      }
+    });
+
+    test('nothing beyond the trip itself is open under /trip', () {
+      expect(AppRoutes.isPublic('/trip/t-1'), isTrue);
+      for (final path in ['/trip/t-1/seats', '/trip/t-1/book', '/trips/t-1']) {
+        expect(AppRoutes.isPublic(path), isFalse, reason: path);
+        expect(Uri.parse(go(signedOut, path)!).path, AppRoutes.login);
+      }
+    });
+
+    test('after start-up a guest lands on home, or on the public screen they '
+        'asked for; a personal screen leads to sign-in', () {
+      expect(go(signedOut, '/splash'), '/home');
+      expect(go(signedOut, '/splash?from=%2Flanguage'), '/language');
+      expect(go(signedOut, '/splash?from=%2Ftrip%2Ft-1'), '/trip/t-1');
+      expect(
+        go(signedOut, '/splash?from=%2Fmy-trips'),
+        '/login?from=%2Fmy-trips',
+      );
+    });
 
     test('a session that ended on the server is guarded the same way', () {
       expect(go(expired, '/payment'), '/login?from=%2Fpayment');
@@ -106,7 +122,13 @@ void main() {
 
   group('signed in', () {
     test('every location is allowed', () {
-      for (final location in [...protectedLocations, '/language']) {
+      for (final location in [
+        ...protectedLocations,
+        '/language',
+        '/home',
+        '/search/results',
+        '/trip/t-1',
+      ]) {
         expect(go(signedIn, location), isNull, reason: location);
       }
     });

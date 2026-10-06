@@ -21,9 +21,16 @@ class AbraCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final content = Padding(padding: padding, child: child);
+    final isLabelled = semanticLabel != null;
+    // With a label the card is announced as one thing: the label replaces
+    // what is inside, and carries the tap itself so it is not left on an
+    // unlabelled inner node.
     return Semantics(
+      container: isLabelled,
       label: semanticLabel,
       button: onTap != null,
+      onTap: isLabelled ? onTap : null,
+      excludeSemantics: isLabelled,
       child: Card(
         clipBehavior: Clip.antiAlias,
         child: onTap == null ? content : InkWell(onTap: onTap, child: content),

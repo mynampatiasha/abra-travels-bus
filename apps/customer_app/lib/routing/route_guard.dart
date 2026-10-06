@@ -27,7 +27,8 @@ abstract final class RouteGuard {
   static String? _signedOut(String path, Uri location) {
     if (path == AppRoutes.splash) {
       final target = returnTo(location);
-      if (target == null) return AppRoutes.login;
+      // Guests start on the home screen: looking for buses needs no account.
+      if (target == null) return AppRoutes.home;
       if (AppRoutes.isPublic(Uri.parse(target).path)) return target;
       return _to(AppRoutes.login, returnTo: target);
     }

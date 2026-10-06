@@ -35,12 +35,14 @@ const notBuiltLabel = 'Not available yet';
 
 void main() {
   group('start-up', () {
-    testWidgets('with no stored session the app opens sign-in without calling '
-        'the server', (tester) async {
+    testWidgets('with no stored session the app opens as a guest on the home '
+        'screen, without calling the server', (tester) async {
       final app = TestApp();
       await app.pump(tester);
 
-      expect(locationOf(tester), '/login');
+      expect(locationOf(tester), '/home');
+      expect(find.byType(AppShell), findsOneWidget);
+      expect(find.widgetWithText(TextButton, 'Sign in'), findsOneWidget);
       expect(app.requestedPaths, isEmpty);
       expect(app.sessionManager.state, const AuthSignedOut());
     });
@@ -57,15 +59,15 @@ void main() {
       expect(app.sessionManager.state, isA<AuthSignedIn>());
     });
 
-    testWidgets('a stored session the server rejects ends at sign-in and is '
-        'removed from the device', (tester) async {
+    testWidgets('a stored session the server rejects is removed from the '
+        'device; the app continues as a guest', (tester) async {
       final app = TestApp(
         stored: storedSession,
         handler: (_) async => FakeResponse.error(401, 'SESSION_REVOKED'),
       );
       await app.pump(tester);
 
-      expect(locationOf(tester), '/login');
+      expect(locationOf(tester), '/home');
       expect(
         app.sessionManager.state,
         const AuthSignedOut(SignedOutReason.sessionExpired),
@@ -74,6 +76,13 @@ void main() {
       expect(
         await app.secureStore.read(AuthTokenStore.refreshTokenKey),
         isNull,
+      );
+      // Personal sections now need sign-in, and say why.
+      await open(tester, '/my-trips');
+      expect(Uri.parse(locationOf(tester)).path, '/login');
+      expect(
+        find.text('Your session has ended. Please sign in again.'),
+        findsOneWidget,
       );
     });
 
@@ -128,7 +137,7 @@ void main() {
       final app = TestApp();
       await app.pump(tester);
 
-      for (final location in ['/home', '/payment', '/ticket/tkt-1']) {
+      for (final location in ['/my-trips', '/payment', '/ticket/tkt-1']) {
         await open(tester, location);
         expect(Uri.parse(locationOf(tester)).path, '/login', reason: location);
         expect(find.byType(AppShell), findsNothing);
@@ -182,15 +191,20 @@ void main() {
       expect(await app.secureStore.read(AuthTokenStore.accessTokenKey), isNull);
     });
 
-    testWidgets('signing out leaves the signed-in area', (tester) async {
+    testWidgets('signing out leaves the personal sections; the public home '
+        'stays open', (tester) async {
       final app = TestApp(stored: storedSession);
       await app.pump(tester);
+      await open(tester, '/my-trips');
+      expect(find.widgetWithText(TextButton, 'Sign in'), findsNothing);
 
       app.adapter.handler = (_) async => FakeResponse.ok(null);
       await app.run(tester, app.sessionManager.signOut());
+      expect(Uri.parse(locationOf(tester)).path, '/login');
 
-      expect(locationOf(tester), '/login');
-      expect(find.byType(AppShell), findsNothing);
+      await open(tester, '/home');
+      expect(locationOf(tester), '/home');
+      expect(find.widgetWithText(TextButton, 'Sign in'), findsOneWidget);
     });
   });
 
@@ -276,8 +290,6 @@ void main() {
       await app.pump(tester);
 
       for (final (location, title) in [
-        ('/search', 'Search buses'),
-        ('/search/results', 'Search results'),
         ('/bus/b-1', 'Bus details'),
         ('/seats', 'Choose seats'),
         ('/passenger-details', 'Passenger details'),
@@ -320,7 +332,7 @@ void main() {
       final app = TestApp(stored: storedSession);
       await app.pump(tester);
 
-      for (final location in ['/home', '/my-trips', '/support']) {
+      for (final location in ['/my-trips', '/support']) {
         await open(tester, location);
         expect(find.text(notBuiltLabel), findsOneWidget, reason: location);
       }

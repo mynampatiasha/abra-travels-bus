@@ -15,6 +15,7 @@ abstract final class AppRoutes {
 
   static const search = '/search';
   static const searchResults = '/search/results';
+  static const cityPicker = '/search/city';
   static const busPattern = '/bus/:id';
   static const tripPattern = '/trip/:id';
   static const seats = '/seats';
@@ -32,6 +33,25 @@ abstract final class AppRoutes {
 
   static String bus(String id) => '/bus/${Uri.encodeComponent(id)}';
   static String trip(String id) => '/trip/${Uri.encodeComponent(id)}';
+
+  /// The results of a search. City names travel with the ids so the screen
+  /// can show its heading before (and without) any result.
+  static String searchResultsFor({
+    required String fromId,
+    required String fromName,
+    required String toId,
+    required String toName,
+    required String date,
+  }) => Uri(
+    path: searchResults,
+    queryParameters: <String, String>{
+      'origin': fromId,
+      'originName': fromName,
+      'destination': toId,
+      'destinationName': toName,
+      'date': date,
+    },
+  ).toString();
   static String ticket(String id) => '/ticket/${Uri.encodeComponent(id)}';
   static String myTrip(String id) => '/my-trips/${Uri.encodeComponent(id)}';
 
@@ -43,13 +63,28 @@ abstract final class AppRoutes {
   /// sent on to the app.
   static const Set<String> signedOutOnly = <String>{onboarding, login, otp};
 
-  /// Locations open to everyone. **Every other location requires a signed-in
-  /// user**: a new route is protected unless it is added here on purpose.
+  /// Locations open to everyone, signed in or not. Guests can look for
+  /// buses and open a trip; everything personal (bookings, tickets, profile)
+  /// and every booking step requires sign-in. **A location that is not
+  /// listed here is protected**, including ones added later.
   static const Set<String> public = <String>{
     splash,
     language,
+    home,
+    search,
+    searchResults,
+    cityPicker,
     ...signedOutOnly,
   };
 
-  static bool isPublic(String path) => public.contains(path);
+  /// Public locations with an identifier in the path.
+  static const List<String> _publicPrefixes = <String>['/trip/'];
+
+  static bool isPublic(String path) =>
+      public.contains(path) ||
+      _publicPrefixes.any(
+        (prefix) =>
+            path.startsWith(prefix) &&
+            !path.substring(prefix.length).contains('/'),
+      );
 }

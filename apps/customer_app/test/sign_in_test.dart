@@ -123,6 +123,8 @@ void main() {
     backend = FakeAuthBackend();
     app = TestApp(handler: (request) => backend(request), stored: stored);
     await app.pump(tester, size: size);
+    // Guests start on the home screen; these tests are about signing in.
+    if (stored.isEmpty) await open(tester, '/login');
   }
 
   group('mobile number', () {
@@ -570,6 +572,7 @@ void main() {
     testWidgets('a session ended by the server is explained on the sign-in '
         'screen', (tester) async {
       await start(tester, stored: storedSession);
+      await open(tester, '/profile');
       await app.run(tester, app.sessionManager.onSessionRejected());
 
       expect(find.byType(LoginScreen), findsOneWidget);
@@ -620,6 +623,7 @@ void main() {
         'auth/refresh' => FakeResponse.error(401, 'UNAUTHENTICATED'),
         _ => FakeResponse.error(401, 'TOKEN_EXPIRED'),
       };
+      await open(tester, '/profile');
       final reload = app.sessionManager.reloadUser().then<Object?>(
         (_) => null,
         onError: (Object error) => error,

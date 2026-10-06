@@ -29,7 +29,8 @@ GET  /banners?placement=HOME_HERO                     public (only active + with
 POST /banners/:bannerId/events                        public  { type: IMPRESSION|CLICK }
 GET  /offers                                          public
 GET  /content/:slug                                   public
-GET  /trips/search?from=&to=&date=&passengers=        public  filters + sort
+GET  /trips/search?from=&to=&date=&passengers=        public  filters + sort + pagination (discovery.md)
+GET  /trips/search/filters?from=&to=&date=            public  filter values with counts
 GET  /trips/:tripId                                   public  bus, route, points, amenities, policy
 GET  /trips/:tripId/seat-map                          public  live seat states from master inventory (no PII)
 POST /trips/:tripId/seat-locks                        customer  Idempotency-Key

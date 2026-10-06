@@ -5,6 +5,7 @@ import 'package:customer_app/app/customer_app.dart';
 import 'package:customer_app/app/providers.dart';
 import 'package:customer_app/bootstrap/app_dependencies.dart';
 import 'package:customer_app/features/authentication/otp_sign_in_controller.dart';
+import 'package:customer_app/features/discovery/controllers/travel_dates.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -153,6 +154,7 @@ class TestApp {
     overrides: [
       appDependenciesProvider.overrideWithValue(dependencies),
       if (clock != null) signInClockProvider.overrideWithValue(clock),
+      if (clock != null) discoveryClockProvider.overrideWithValue(clock),
     ],
     child: const CustomerApp(),
   );

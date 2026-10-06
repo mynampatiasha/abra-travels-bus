@@ -44,7 +44,7 @@ Layout versions are never edited once any trip references them. Editing a layout
 | `cities` | name, slug, state, translations {kn, te, ...}, location (GeoJSON Point) | U slug, text name |
 | `locations` | operatorId?, cityId, name, address, landmark, location (Point), contactPhone, instructions | 2dsphere location, I cityId |
 | `routes` | operatorId, originCityId, destinationCityId, name, distanceKm, estimatedDurationMinutes, status | I operatorId, I originCityId+destinationCityId |
-| `route_stops` | routeId, operatorId, cityId, sequence, offsetMinutes, distanceFromOriginKm | U routeId+sequence |
+| `route_stops` | Embedded in `routes.stops` (cityId, sequence, offsetMinutes, distanceFromOriginKm); see [discovery.md](discovery.md) §3 for the trip fields added for search | — |
 | `route_points` | routeId, operatorId, locationId, cityId, pointType (`BOARDING`,`DROPPING`,`BOTH`), offsetMinutes | I routeId+pointType |
 | `schedules` | operatorId, routeId, busId, departureTimeLocal, recurrence {type:`DAILY`/`WEEKLY`/`DATES`, weekdays[], dates[]}, validFrom, validTo, holidayExceptions[], fareRuleSetId, status | I operatorId+status |
 

@@ -5,6 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../app/providers.dart';
 import '../features/authentication/login_screen.dart';
 import '../features/authentication/otp_screen.dart';
+import '../features/discovery/screens/city_picker_screen.dart';
+import '../features/discovery/screens/search_form.dart';
+import '../features/discovery/screens/search_results_screen.dart';
+import '../features/discovery/screens/trip_details_screen.dart';
 import '../features/language/language_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/startup/splash_screen.dart';
@@ -58,9 +62,11 @@ final customerRouterProvider = Provider<GoRouter>((ref) {
               routes: <RouteBase>[
                 GoRoute(
                   path: tab.path,
-                  builder: (context, state) => tab.path == AppRoutes.profile
-                      ? const ProfileScreen()
-                      : FeatureUnavailableBody(titleKey: tab.labelKey),
+                  builder: (context, state) => switch (tab.path) {
+                    AppRoutes.home => const SearchFormView(),
+                    AppRoutes.profile => const ProfileScreen(),
+                    _ => FeatureUnavailableBody(titleKey: tab.labelKey),
+                  },
                   routes: <RouteBase>[
                     if (tab.path == AppRoutes.myTrips)
                       _notBuilt(':id', CustomerStrings.routeMyTripDetailTitle),
@@ -75,15 +81,30 @@ final customerRouterProvider = Provider<GoRouter>((ref) {
       _notBuilt(AppRoutes.onboarding, CustomerStrings.routeOnboardingTitle),
       GoRoute(
         path: AppRoutes.search,
-        builder: (context, state) => const FeatureUnavailableScreen(
-          titleKey: CustomerStrings.routeSearchTitle,
-        ),
+        builder: (context, state) => const SearchScreen(),
         routes: <RouteBase>[
-          _notBuilt('results', CustomerStrings.routeSearchResultsTitle),
+          GoRoute(
+            path: 'results',
+            builder: (context, state) => SearchResultsScreen(
+              // A new search is a new screen: filters and sorting start over
+              key: ValueKey<String>(state.uri.toString()),
+              arguments: SearchResultsArguments.tryParse(state.uri),
+            ),
+          ),
+          GoRoute(
+            path: 'city',
+            builder: (context, state) => CityPickerScreen(
+              isOrigin: state.uri.queryParameters['field'] != 'to',
+            ),
+          ),
         ],
       ),
+      GoRoute(
+        path: AppRoutes.tripPattern,
+        builder: (context, state) =>
+            TripDetailsScreen(tripId: state.pathParameters['id'] ?? ''),
+      ),
       _notBuilt(AppRoutes.busPattern, CustomerStrings.routeBusTitle),
-      _notBuilt(AppRoutes.tripPattern, CustomerStrings.routeTripTitle),
       _notBuilt(AppRoutes.seats, CustomerStrings.routeSeatsTitle),
       _notBuilt(
         AppRoutes.passengerDetails,

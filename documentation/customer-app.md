@@ -8,9 +8,10 @@ Flutter app for customers (Android and iOS), in `apps/customer_app`. This docume
 |---|---|---|
 | 10A | Foundation: bootstrap, configuration, router, authentication gate, shell, theme, localization, error handling | Done (2026-10-05) |
 | 10B | Sign-in with mobile number and one-time code, session handling, sign-out | Done (2026-10-05). Google and Apple sign-in: not built, blocked on backend |
-| 10C–10K | Home, search, seats, booking, payment, trips, tracking, Women Safety, notifications, profile, hardening | Not started |
+| 10C | Discovery: home search form, city picker, travel date, search results with day switching, filters and sorting, trip details with boarding and dropping points; guest browsing ([discovery.md](discovery.md)) | Done (2026-10-06). No catalogue data can be entered yet |
+| 10E–10K | Seats, booking, payment, trips, tracking, Women Safety, notifications, profile, hardening | Not started |
 
-After 10B a customer can sign in with a mobile number and a one-time code, stay signed in across restarts, and sign out. **There is still no travel feature.** Home, My trips and Support, and every screen of the later milestones, are stand-ins that state "Not available yet" and have no controls. The Profile section shows who is signed in, the language setting and sign-out only.
+After 10C anyone can open the app, search buses between two cities on a date, filter and sort the results and open a trip, without signing in; a customer can sign in with a mobile number and a one-time code, stay signed in across restarts, and sign out. **Searching returns nothing on a real database yet, because the APIs that enter cities, buses and trips do not exist** (see [discovery.md](discovery.md)). Booking does not exist: trip details say so. My trips and Support, and every screen of the later milestones, are stand-ins that state "Not available yet" and have no controls. The Profile section shows who is signed in, the language setting and sign-out only.
 
 ## 2. Structure
 
@@ -80,12 +81,12 @@ Plain HTTP is allowed by the platforms only for that case: Android debug builds 
 2. The app shows the splash screen and asks the shared session manager to restore the session (`GET /api/v1/me` when tokens are stored; no request otherwise).
 3. The router leaves the splash screen when the result is known:
    - signed in → the location that was requested, or `/home`;
-   - signed out → `/login` (remembering the requested location);
+   - signed out → the public location that was requested, otherwise `/home` as a guest; a personal location leads to `/login` (remembering it);
    - server not reachable → the splash screen shows the failure with a retry. The stored session is kept.
 
 `RouteGuard` runs on every navigation and whenever the authentication state changes:
 
-- only `/splash`, `/onboarding`, `/login`, `/otp` and `/language` are public; **every other location, including ones added later, requires a signed-in user**;
+- public for everyone, signed in or not: `/splash`, `/language`, `/home`, `/search`, `/search/city`, `/search/results`, `/trip/:id` and the sign-in screens. **Every other location, including ones added later and anything below `/trip/:id/`, requires a signed-in user**;
 - a signed-out user is sent to `/login?from=<location>`; after sign-in the router opens `<location>`. Only in-app paths are accepted in `from`;
 - when the server ends the session (expired, revoked, refresh failed), the session manager clears the tokens and the user is taken to `/login` from wherever they are;
 - a signed-in user is not shown the sign-in screens.
@@ -118,8 +119,9 @@ The requested `authenticating / refreshing / error` states exist as: `AuthUnknow
 | `/language` | public | Language selection (real) | 10A |
 | `/login`, `/otp` | signed-out only | Mobile number, verification code (real) | 10B |
 | `/onboarding` | signed-out only | stand-in (no content defined yet) | — |
-| `/home` | signed in, shell tab | stand-in | 10C |
-| `/search`, `/search/results`, `/bus/:id`, `/trip/:id` | signed in | stand-in | 10D |
+| `/home` (shell tab), `/search` | public | Search form (real) | 10C |
+| `/search/city`, `/search/results`, `/trip/:id` | public | City picker, results, trip details (real) | 10C |
+| `/bus/:id` | signed in | stand-in (not used; trips are opened at `/trip/:id`) | — |
 | `/seats` | signed in | stand-in | 10E |
 | `/passenger-details`, `/booking-review` | signed in | stand-in | 10F |
 | `/payment`, `/booking-success`, `/ticket/:id` | signed in | stand-in | 10G |
@@ -131,14 +133,14 @@ The requested `authenticating / refreshing / error` states exist as: `AuthUnknow
 
 Rules for the booking and payment flow (to be applied when those screens are built): a step that creates or changes server state is entered with `go`, not `push`, so that Back cannot return to it and repeat it; the flow's state comes from the backend booking, never from navigation arguments alone.
 
-### Guest browsing (product decision, 2026-10-05)
+### Guest browsing (implemented in 10C)
 
-Customers will be able to use the app without an account up to the point of booking:
+Customers use the app without an account up to the point of booking:
 
-1. the app opens; a guest can search buses, view trips, bus details and seat availability;
-2. sign-in is required when the guest starts a booking action (selecting seats to hold, passenger details, payment, and everything about their own trips and profile).
+1. the app opens on Home; a guest can search buses, see the results and open a trip;
+2. sign-in is required for personal sections (My trips, Support, Profile) and for every booking step. The location the guest was heading to is kept through sign-in.
 
-This is **not implemented**. It is delivered with the screens it concerns (10C–10E), which need backend search and inventory endpoints that do not exist yet. Until then every location except the public ones above requires sign-in. When those screens are built, their locations (`/home`, `/search`, `/search/results`, `/bus/:id`, `/trip/:id`, seat viewing) are added to `AppRoutes.public`, the start-up redirect for a signed-out user changes from `/login` to `/home`, and the matching backend endpoints must be public as well. Seat locking and everything after it stays behind sign-in.
+A session that ends on the server while the customer is on a public screen leaves them there as a guest; the notice appears when they next reach sign-in. Seat viewing, seat locking and everything after them are not built; when they are, seat viewing joins the public locations and seat locking stays behind sign-in.
 
 ## 7. Errors and offline behaviour
 
@@ -175,8 +177,8 @@ Missing for sign-in: `POST /auth/google` and `POST /auth/apple` (see [authentica
 
 | Milestone | Missing backend capability |
 |---|---|
-| 10C Home | Cities/stops lookup, offers and banners (public, for guests), the customer's upcoming trip. **10C cannot start until these exist.** |
-| 10D Search | Trip search with filters and sorting, bus/trip details, boarding and dropping points |
+| Catalogue data | Admin APIs for cities, locations and bus types; operator APIs for buses, routes and trips; trip publishing. **Until these exist, search has nothing to return.** |
+| Home extras | Offers and banners, the customer's upcoming trip |
 | 10E Seats | Seat layout and availability, seat locks with server expiry, real-time seat updates |
 | 10F Booking | Passenger rules, fare quote, coupons, booking creation |
 | 10G Payment | Payment order, verification/webhook result, booking confirmation, ticket and QR payload |

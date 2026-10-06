@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_authentication/shared_authentication.dart';
 import 'package:shared_localization/shared_localization.dart';
 import 'package:shared_theme/shared_theme.dart';
 
+import '../app/providers.dart';
 import '../l10n/customer_strings.dart';
 import '../routing/app_routes.dart';
 
@@ -21,10 +24,11 @@ class AppShellTab {
   final IconData selectedIcon;
 }
 
-/// Frame of the signed-in app: the four main sections, as a bottom bar on
-/// phones and a side rail on tablets and wider. Each section keeps its own
-/// navigation history.
-class AppShell extends StatelessWidget {
+/// Frame of the app: the four main sections, as a bottom bar on phones and
+/// a side rail on tablets and wider. Each section keeps its own navigation
+/// history. Guests see the same frame: Home is open to them, and choosing a
+/// personal section leads to sign-in (the route guard decides).
+class AppShell extends ConsumerWidget {
   const AppShell({required this.navigationShell, super.key});
 
   final StatefulNavigationShell navigationShell;
@@ -63,12 +67,19 @@ class AppShell extends StatelessWidget {
   );
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AbraLocalizations.of(context);
     final current = navigationShell.currentIndex;
+    final isSignedIn = ref.watch(authStateProvider) is AuthSignedIn;
     final appBar = AppBar(
       title: Text(l10n.text(tabs[current].labelKey)),
       actions: <Widget>[
+        if (!isSignedIn)
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: AbraColors.white),
+            onPressed: () => context.push(AppRoutes.login),
+            child: Text(l10n.text(AbraStrings.commonSignIn)),
+          ),
         IconButton(
           icon: const Icon(Icons.language),
           tooltip: l10n.text(CustomerStrings.languageChangeAction),
