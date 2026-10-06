@@ -177,7 +177,7 @@ Missing for sign-in: `POST /auth/google` and `POST /auth/apple` (see [authentica
 
 | Milestone | Missing backend capability |
 |---|---|
-| Catalogue data | Admin APIs for cities, locations and bus types; operator APIs for buses, routes and trips; trip publishing. **Until these exist, search has nothing to return.** |
+| Catalogue data | The management API exists ([catalogue-management.md](catalogue-management.md)); there are no screens for it and no first administrator account, so search has nothing to return on a new database until data is entered through the API. |
 | Home extras | Offers and banners, the customer's upcoming trip |
 | 10E Seats | Seat layout and availability, seat locks with server expiry, real-time seat updates |
 | 10F Booking | Passenger rules, fare quote, coupons, booking creation |

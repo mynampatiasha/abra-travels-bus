@@ -55,6 +55,15 @@ POST /support/tickets   GET /me/support/tickets        me
 POST /assistant/messages                              me/public  AI assistant
 ```
 
+### Catalogue management (implemented; see catalogue-management.md)
+
+```
+/catalogue/cities  /catalogue/bus-types  /catalogue/operators  /catalogue/locations
+/catalogue/buses  /catalogue/routes  /catalogue/trips  (+ /publish, /cancel)
+```
+
+The operator and admin sections below are the original design; where they overlap with the catalogue (buses, routes, trips, operators) the `/catalogue/...` paths above are what exists.
+
 ### Operator (all filtered by data scope)
 
 ```

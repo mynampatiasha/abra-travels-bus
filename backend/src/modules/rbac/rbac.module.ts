@@ -15,6 +15,7 @@ import {
 } from './schemas/permission-override.schema';
 import { ROLE_MODEL, roleSchema } from './schemas/role.schema';
 import { AuthorizationAdministrationService } from './services/authorization-administration.service';
+import { AuditedChangeRunner } from './services/audited-change.service';
 import { AuthorizationService } from './services/authorization.service';
 import { EffectivePermissionsService } from './services/effective-permissions.service';
 import { EndpointAccessDeclarationCheck } from './services/endpoint-access-declaration.check';
@@ -51,11 +52,12 @@ import { SystemRolesSynchronizer } from './services/system-roles-synchronizer.se
     EffectivePermissionsService,
     AuthorizationService,
     AuthorizationAdministrationService,
+    AuditedChangeRunner,
     EndpointAccessDeclarationCheck,
     PermissionGuard,
     // Runs after the authentication guard (AuthenticationModule is registered first)
     { provide: APP_GUARD, useExisting: PermissionGuard },
   ],
-  exports: [AuthorizationService, EffectivePermissionsService],
+  exports: [AuthorizationService, EffectivePermissionsService, AuditedChangeRunner],
 })
 export class RbacModule {}

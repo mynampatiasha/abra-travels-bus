@@ -1,18 +1,22 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { RbacModule } from '../rbac/rbac.module';
+import { CitiesAdminController } from './controllers/cities-admin.controller';
 import { CitiesController } from './controllers/cities.controller';
 import { CityRepository } from './repositories/city.repository';
 import { CITY_MODEL, citySchema } from './schemas/city.schema';
+import { CitiesAdminService } from './services/cities-admin.service';
 import { CitiesService } from './services/cities.service';
 
 /**
- * `cities` — Supply domain (documentation/architecture.md §5). The catalogue of cities and
- * its public lookup (documentation/discovery.md). Managing cities arrives with the admin portal.
+ * `cities` — Supply domain (documentation/architecture.md §5). The catalogue of cities: its
+ * public lookup (documentation/discovery.md) and its management by platform staff
+ * (documentation/catalogue-management.md).
  */
 @Module({
-  imports: [MongooseModule.forFeature([{ name: CITY_MODEL, schema: citySchema }])],
-  controllers: [CitiesController],
-  providers: [CityRepository, CitiesService],
-  exports: [CitiesService, MongooseModule],
+  imports: [MongooseModule.forFeature([{ name: CITY_MODEL, schema: citySchema }]), RbacModule],
+  controllers: [CitiesController, CitiesAdminController],
+  providers: [CityRepository, CitiesService, CitiesAdminService],
+  exports: [CitiesService, CityRepository, MongooseModule],
 })
 export class CitiesModule {}

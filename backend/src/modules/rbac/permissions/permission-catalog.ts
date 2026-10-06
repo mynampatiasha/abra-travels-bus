@@ -113,6 +113,37 @@ export const BUS_PERMISSIONS = definePermissions('buses', {
   },
 });
 
+export const CATALOGUE_PERMISSIONS = definePermissions('catalogue', {
+  read: {
+    name: 'View the platform catalogue',
+    description: 'View cities and bus types, including inactive ones.',
+    grantableTo: PLATFORM_ONLY,
+  },
+  manage: {
+    name: 'Manage the platform catalogue',
+    description: 'Create, edit, enable and disable cities and bus types.',
+    grantableTo: PLATFORM_ONLY,
+  },
+});
+
+export const ROUTE_PERMISSIONS = definePermissions('routes', {
+  read: {
+    name: 'View routes',
+    description: 'View routes and boarding and dropping locations.',
+    grantableTo: PLATFORM_AND_OPERATOR,
+  },
+  create: {
+    name: 'Create routes',
+    description: 'Create routes and boarding and dropping locations.',
+    grantableTo: PLATFORM_AND_OPERATOR,
+  },
+  update: {
+    name: 'Edit routes',
+    description: 'Edit, enable and disable routes and boarding and dropping locations.',
+    grantableTo: PLATFORM_AND_OPERATOR,
+  },
+});
+
 export const TRIP_PERMISSIONS = definePermissions('trips', {
   read: { name: 'View trips', description: 'View trips.', grantableTo: EVERY_ACCOUNT_KIND },
   create: {
@@ -123,6 +154,11 @@ export const TRIP_PERMISSIONS = definePermissions('trips', {
   update: {
     name: 'Edit trips',
     description: 'Edit trips and update their status.',
+    grantableTo: PLATFORM_AND_OPERATOR,
+  },
+  publish: {
+    name: 'Publish trips',
+    description: 'Put a trip on sale so that customers can find it.',
     grantableTo: PLATFORM_AND_OPERATOR,
   },
   cancel: {
@@ -192,6 +228,12 @@ export const OPERATOR_PERMISSIONS = definePermissions('operators', {
     description: 'Edit operator profiles.',
     grantableTo: PLATFORM_AND_OPERATOR,
   },
+  approve: {
+    name: 'Approve and suspend operators',
+    description: 'Approve, reject, suspend and reactivate operators.',
+    grantableTo: PLATFORM_ONLY,
+    sensitive: true,
+  },
 });
 
 export const PARTNER_PERMISSIONS = definePermissions('partners', {
@@ -240,6 +282,8 @@ export const PERMISSION_CATALOG = {
   ...ROLE_PERMISSIONS,
   ...BOOKING_PERMISSIONS,
   ...BUS_PERMISSIONS,
+  ...CATALOGUE_PERMISSIONS,
+  ...ROUTE_PERMISSIONS,
   ...TRIP_PERMISSIONS,
   ...FARE_PERMISSIONS,
   ...REPORT_PERMISSIONS,

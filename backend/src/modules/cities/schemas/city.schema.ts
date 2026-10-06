@@ -18,6 +18,8 @@ export interface City {
   /** URL-safe unique key, e.g. `bengaluru`. */
   slug: string;
   state: string;
+  /** ISO 3166-1 alpha-2 country code. */
+  countryCode: string;
   /** Names in other languages by language code (`kn`, `hi`, ...). Missing = English name. */
   translations?: Record<string, string>;
   location?: GeoPoint;
@@ -37,6 +39,13 @@ export const citySchema = new Schema<City>(
     name: { type: String, required: true, trim: true, maxlength: 80 },
     slug: { type: String, required: true, lowercase: true, match: /^[a-z0-9-]+$/, maxlength: 80 },
     state: { type: String, required: true, trim: true, maxlength: 80 },
+    countryCode: {
+      type: String,
+      required: true,
+      uppercase: true,
+      match: /^[A-Z]{2}$/,
+      default: 'IN',
+    },
     translations: { type: Map, of: String, default: undefined },
     location: {
       type: { type: String, enum: ['Point'] },

@@ -2,7 +2,7 @@
 
 How a customer, signed in or not, finds a bus: choose two cities and a date, see the buses, filter and sort them, open one. Implemented in Step 10C (2026-10-06). Seat selection and everything after it are not part of this.
 
-**Important limitation: nothing can put cities, operators, buses or trips into the database yet.** The management APIs (admin for cities and bus types, operator portal for buses, routes and trips, trip publishing) are later steps. Discovery is complete and tested against seeded test data, but on a real database it returns no cities and no buses until those APIs exist. No sample data is shipped.
+Catalogue data (cities, operators, buses, routes, trips) is entered and published through the management API described in [catalogue-management.md](catalogue-management.md). There are no management screens yet and no sample data is shipped, so a new database has no buses until someone enters them through that API.
 
 ## 1. Flow
 
@@ -147,7 +147,7 @@ Code: `apps/customer_app/lib/features/discovery/` (`models`, `repositories`, `co
 
 ## 5. Not included
 
-- Entering catalogue data (see the limitation at the top).
+- Screens for entering catalogue data (the API exists: [catalogue-management.md](catalogue-management.md)).
 - Seat map, seat selection, booking, payment.
 - Offers, banners and "upcoming trip" on Home (no backend for them yet).
 - Ratings, cancellation policy and live tracking on trip details.

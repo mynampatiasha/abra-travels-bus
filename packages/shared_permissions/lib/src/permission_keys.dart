@@ -24,9 +24,15 @@ abstract final class PermissionKeys {
   static const busesCreate = 'buses.create';
   static const busesUpdate = 'buses.update';
   static const busesDelete = 'buses.delete';
+  static const catalogueRead = 'catalogue.read';
+  static const catalogueManage = 'catalogue.manage';
+  static const routesRead = 'routes.read';
+  static const routesCreate = 'routes.create';
+  static const routesUpdate = 'routes.update';
   static const tripsRead = 'trips.read';
   static const tripsCreate = 'trips.create';
   static const tripsUpdate = 'trips.update';
+  static const tripsPublish = 'trips.publish';
   static const tripsCancel = 'trips.cancel';
   static const faresRead = 'fares.read';
   static const faresCreate = 'fares.create';
@@ -38,6 +44,7 @@ abstract final class PermissionKeys {
   static const operatorsRead = 'operators.read';
   static const operatorsCreate = 'operators.create';
   static const operatorsUpdate = 'operators.update';
+  static const operatorsApprove = 'operators.approve';
   static const partnersRead = 'partners.read';
   static const partnersCreate = 'partners.create';
   static const partnersUpdate = 'partners.update';
@@ -66,9 +73,15 @@ abstract final class PermissionKeys {
     busesCreate,
     busesUpdate,
     busesDelete,
+    catalogueRead,
+    catalogueManage,
+    routesRead,
+    routesCreate,
+    routesUpdate,
     tripsRead,
     tripsCreate,
     tripsUpdate,
+    tripsPublish,
     tripsCancel,
     faresRead,
     faresCreate,
@@ -80,6 +93,7 @@ abstract final class PermissionKeys {
     operatorsRead,
     operatorsCreate,
     operatorsUpdate,
+    operatorsApprove,
     partnersRead,
     partnersCreate,
     partnersUpdate,

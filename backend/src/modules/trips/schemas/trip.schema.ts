@@ -93,6 +93,10 @@ export interface Trip {
   cancellationPolicyId?: Types.ObjectId;
   status: TripStatus;
   publishedAt?: Date;
+  cancelledAt?: Date;
+  cancellationReason?: string;
+  /** HH:mm local departure time as entered; kept so a draft can be edited. */
+  departureTimeLocal?: string;
   seatCounts: TripSeatCounts;
   createdAt?: Date;
   updatedAt?: Date;
@@ -161,6 +165,9 @@ export const tripSchema = new Schema<Trip>(
     cancellationPolicyId: { type: Schema.Types.ObjectId },
     status: { type: String, enum: TRIP_STATUSES, required: true, default: 'DRAFT' },
     publishedAt: { type: Date },
+    cancelledAt: { type: Date },
+    cancellationReason: { type: String, trim: true, maxlength: 300 },
+    departureTimeLocal: { type: String, match: /^\d{2}:\d{2}$/ },
     seatCounts: {
       type: new Schema<TripSeatCounts>(
         {

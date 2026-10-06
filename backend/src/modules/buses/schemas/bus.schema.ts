@@ -31,6 +31,11 @@ export interface Bus {
   name: string;
   busTypeId: Types.ObjectId;
   amenities: BusAmenity[];
+  /**
+   * Number of seats and berths sold on this bus. Catalogue information until seat layouts exist;
+   * then the active seat layout version is the authority.
+   */
+  seatCapacity?: number;
   /** Seat layout version used for new trips (seat inventory module). */
   activeSeatLayoutVersionId?: Types.ObjectId;
   status: BusStatus;
@@ -52,6 +57,7 @@ export const busSchema = new Schema<Bus>(
     name: { type: String, required: true, trim: true, maxlength: 80 },
     busTypeId: { type: Schema.Types.ObjectId, required: true },
     amenities: { type: [String], enum: BUS_AMENITIES, default: [] },
+    seatCapacity: { type: Number, min: 1, max: 100, validate: Number.isInteger },
     activeSeatLayoutVersionId: { type: Schema.Types.ObjectId },
     status: { type: String, enum: BUS_STATUSES, required: true, default: 'ACTIVE' },
   },
