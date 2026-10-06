@@ -163,7 +163,7 @@ Each entry: actor (user id, account kind, role keys), action, target (`entityTyp
 
 ## 10. Not implemented yet
 
-- Creating users and custom roles through the API, and the administration screens (Admin app).
-- Creating the first SUPER_ADMIN account in a new environment (an operational bootstrap step; no account is ever seeded).
+- Creating users and custom roles through the API, and their administration screens. (The management app exists for the catalogue: [admin-app.md](admin-app.md).)
+- (Done) The first SUPER_ADMIN account of a new environment is created with the bootstrap command: [admin-app.md](admin-app.md) §2. No account is ever seeded.
 - Partner API scopes (`trip:read`, `booking:create`, ...) — Phase 7.
 - Permissions and audit actions of business modules — added with each module.

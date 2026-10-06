@@ -2,7 +2,7 @@
 
 How a customer, signed in or not, finds a bus: choose two cities and a date, see the buses, filter and sort them, open one. Implemented in Step 10C (2026-10-06). Seat selection and everything after it are not part of this.
 
-Catalogue data (cities, operators, buses, routes, trips) is entered and published through the management API described in [catalogue-management.md](catalogue-management.md). There are no management screens yet and no sample data is shipped, so a new database has no buses until someone enters them through that API.
+Catalogue data (cities, operators, buses, routes, trips) is entered and published through the management API described in [catalogue-management.md](catalogue-management.md). No sample data is shipped, so a new database has no buses until someone enters them through that API.
 
 ## 1. Flow
 

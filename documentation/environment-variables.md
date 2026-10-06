@@ -53,3 +53,7 @@ Files `.env.development`, `.env.test`, `.env.staging`, `.env.production` are **n
 Next.js (`apps/public_website/.env.local`): `NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_BOOKING_APP_URL`, `NEXT_PUBLIC_SITE_URL`, `REVALIDATE_SECRET`.
 
 Production secrets live in the cloud secret manager and are injected at runtime.
+
+## First administrator (bootstrap command only)
+
+`BOOTSTRAP_SUPER_ADMIN_EMAIL`, `BOOTSTRAP_SUPER_ADMIN_NAME`, `BOOTSTRAP_SUPER_ADMIN_PASSWORD` are read only by `npm run bootstrap:super-admin` ([admin-app.md](admin-app.md) §2). They are not part of the API or worker configuration, are not validated at their start-up, and must be removed after the command has run.

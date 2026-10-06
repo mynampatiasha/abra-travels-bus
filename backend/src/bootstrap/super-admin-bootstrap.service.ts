@@ -43,7 +43,7 @@ export type BootstrapOutcome =
   | { created: false; reason: 'SUPER_ADMIN_EXISTS' };
 
 /**
- * Creates the first Super Admin of an installation (documentation/authorization.md §8).
+ * Creates the first Super Admin of an installation (documentation/admin-app.md §2).
  *
  * - Runs only from the command line (`npm run bootstrap:super-admin`); there is no HTTP endpoint.
  * - Does nothing when any account already holds the SUPER_ADMIN role, so it cannot be used to

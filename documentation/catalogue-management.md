@@ -2,7 +2,7 @@
 
 How cities, locations, operators, bus types, buses, routes and trips get into the system, and how a trip reaches customer search. Backend API, implemented 2026-10-06. It feeds the public discovery described in [discovery.md](discovery.md).
 
-**There is no management screen yet.** The Admin and Operator apps do not exist; this API is what their catalogue pages will call. Until then the catalogue is entered through the API directly (Swagger, or any HTTP client with a staff access token). **There is also still no way to create the first Super Admin account on a fresh database** (see §8).
+The management screens for this API are in the management app ([admin-app.md](admin-app.md)). The first Super Admin of an installation is created with the bootstrap command described there.
 
 ## 1. What is managed, and by whom
 
@@ -200,8 +200,6 @@ Steps 4 and 5 can be done by the operator's own administrator or manager once su
 
 ## 8. Not included
 
-- **Management screens.** No Admin or Operator app exists. Building them needs the Admin app foundation first (staff sign-in with password and two-step verification, permission-driven navigation), then the catalogue pages on top of this API.
-- **First administrator.** Nothing creates the first Super Admin on a fresh database, so on a new installation nobody can call this API yet. A bootstrap command is required before real use.
 - **Operator staff accounts.** Creating users for an operator is part of user management, not of this step.
 - Schedules and generating trips from them; changing the bus of a published trip; delays and the running states; completing a trip.
 - Seat layouts, seat inventory and per-seat fares. `seatCapacity` and `startingFarePaise` stand in for them and become derived values when those modules exist.

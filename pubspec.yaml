@@ -9,6 +9,7 @@ environment:
 # (apps/<name>) when they are created.
 workspace:
   - apps/customer_app
+  - apps/admin_app
   - packages/shared_core
   - packages/shared_models
   - packages/shared_validation
