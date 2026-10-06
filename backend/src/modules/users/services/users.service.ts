@@ -177,4 +177,45 @@ export class UsersService {
   consumeRecoveryCode(id: string, recoveryCodeHash: string): Promise<boolean> {
     return this.repository.consumeRecoveryCode(id, recoveryCodeHash);
   }
+
+  /**
+   * Creates a platform staff account with a password. Used by the Super Admin bootstrap; staff
+   * invited by an administrator arrive with user management.
+   */
+  async createStaff(
+    input: {
+      name: string;
+      email: string;
+      passwordHash: string;
+      roleIds: Types.ObjectId[];
+    },
+    session: ClientSession,
+  ): Promise<StoredUser> {
+    const now = new Date();
+    try {
+      return await this.repository.insert(
+        {
+          name: input.name,
+          email: input.email,
+          emailVerifiedAt: now,
+          passwordHash: input.passwordHash,
+          passwordChangedAt: now,
+          userType: 'STAFF',
+          roleIds: input.roleIds,
+          dataScope: { type: 'ALL', operatorIds: [] },
+          status: 'ACTIVE',
+          preferredLanguage: 'en',
+        },
+        { session },
+      );
+    } catch (error) {
+      if (!isDuplicateKeyError(error)) throw error;
+      throw new ApiException('ALREADY_REGISTERED', 'An account already exists for this email');
+    }
+  }
+
+  /** Number of accounts holding the role, whatever their status. */
+  countWithRole(roleId: Types.ObjectId, session?: ClientSession): Promise<number> {
+    return this.repository.countWithRole(roleId, { session });
+  }
 }

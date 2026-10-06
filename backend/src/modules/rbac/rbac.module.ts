@@ -58,6 +58,6 @@ import { SystemRolesSynchronizer } from './services/system-roles-synchronizer.se
     // Runs after the authentication guard (AuthenticationModule is registered first)
     { provide: APP_GUARD, useExisting: PermissionGuard },
   ],
-  exports: [AuthorizationService, EffectivePermissionsService, AuditedChangeRunner],
+  exports: [AuthorizationService, EffectivePermissionsService, AuditedChangeRunner, RoleRepository],
 })
 export class RbacModule {}

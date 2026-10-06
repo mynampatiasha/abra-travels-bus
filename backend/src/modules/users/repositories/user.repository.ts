@@ -35,6 +35,13 @@ export class UserRepository {
       .exec();
   }
 
+  countWithRole(roleId: Types.ObjectId, options: WriteOptions = {}): Promise<number> {
+    return this.model
+      .countDocuments({ roleIds: roleId })
+      .session(options.session ?? null)
+      .exec();
+  }
+
   async insert(user: Partial<User>, options: WriteOptions = {}): Promise<StoredUser> {
     const [created] = await this.model.create([user], { session: options.session });
     if (!created) throw new Error('User insert returned no document');

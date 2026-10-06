@@ -10,6 +10,7 @@ export const AUDIT_ACTIONS = [
   'user.permission-override.removed',
   'user.data-scope.changed',
   'settings.whatsapp.changed',
+  'user.super-admin.bootstrapped',
   'catalogue.created',
   'catalogue.updated',
   'catalogue.status-changed',

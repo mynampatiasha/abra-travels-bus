@@ -61,7 +61,9 @@
     "env:create-development": "node scripts/create-development-env.mjs",
     "worker": "nest start --entryFile worker",
     "worker:dev": "nest start --watch --entryFile worker",
-    "worker:prod": "node dist/worker"
+    "worker:prod": "node dist/worker",
+    "bootstrap:super-admin": "nest start --entryFile bootstrap-super-admin",
+    "bootstrap:super-admin:prod": "node dist/bootstrap-super-admin"
   },
   "allowScripts": {
     "@parcel/watcher": false,
