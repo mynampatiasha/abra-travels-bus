@@ -123,8 +123,11 @@ export function isAccessLevel(value: unknown): value is AccessLevel {
   return typeof value === 'string' && (ACCESS_LEVELS as readonly string[]).includes(value);
 }
 
-/** What the word "view" means in an action name; everything else changes data. */
-const VIEW_ACTIONS: ReadonlySet<string> = new Set(['read', 'view', 'list']);
+/**
+ * What the word "view" means in an action name; everything else changes data. `export` is a view
+ * action: the demos show Export CSV to every role that can open the page.
+ */
+const VIEW_ACTIONS: ReadonlySet<string> = new Set(['read', 'view', 'list', 'export']);
 const DELETE_ACTIONS: ReadonlySet<string> = new Set(['delete']);
 
 /** Every declared permission of one module, in declaration order (empty for an unbuilt module). */

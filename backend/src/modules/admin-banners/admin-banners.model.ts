@@ -43,6 +43,16 @@ export const BANNER_PERMISSIONS = definePermissions('banners', {
     grantableTo: PLATFORM_ONLY,
     sensitive: true,
   },
+  read: {
+    name: 'View banners',
+    description: 'Open the banners page and see banners and their numbers, without changing them.',
+    grantableTo: PLATFORM_ONLY,
+  },
+  export: {
+    name: 'Export banners',
+    description: 'Download the banner list and its analytics.',
+    grantableTo: PLATFORM_ONLY,
+  },
 });
 
 /** A promotional banner shown at the top of the customer app, managed by platform staff. */
