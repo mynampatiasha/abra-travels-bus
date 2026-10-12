@@ -14,89 +14,173 @@ import '../../core/format.dart';
 import '../../l10n/admin_strings.dart';
 import '../catalogue/catalogue_repository.dart';
 import '../catalogue/widgets/catalogue_common.dart';
-import '../catalogue/widgets/import_dialog.dart';
+import '../catalogue/widgets/record_actions.dart';
 import '../catalogue/widgets/resource_form.dart';
 import '../catalogue/widgets/resource_page.dart';
 import 'admin_banners_api.dart';
 
 /// Banners: the cards customers see sliding on the Home screen of the app.
 ///
-/// `banners.manage` opens the page and allows everything except deleting
-/// (add, edit, enable/disable, upload an image, import, export);
-/// `banners.delete` adds Delete. The backend enforces the same rules.
+/// `banners.read` opens the page and the export; `banners.manage` adds
+/// creating, editing, publishing, duplicating, archiving and moving up or
+/// down; `banners.delete` adds Delete (with Undo). The backend enforces the
+/// same rules. The page follows the demo: the same columns, buttons, form
+/// and wording.
 class AdminBannersPage extends ConsumerWidget {
   const AdminBannersPage({super.key});
 
+  static bool _opensOffer(JsonMap values) =>
+      (values['linkType'] ?? 'OFFER') == 'OFFER';
+  static bool _opensRoute(JsonMap values) =>
+      values['linkType'] == 'ROUTE_SEARCH';
+  static bool _opensOperator(JsonMap values) =>
+      values['linkType'] == 'OPERATOR';
+  static bool _opensLink(JsonMap values) => values['linkType'] == 'URL';
+
   static const _fields = <FieldSpec>[
-    TextSpec('title', AdminStrings.fieldTitle, isRequired: true),
+    TextSpec(
+      'title',
+      AdminStrings.fieldTitle,
+      isRequired: true,
+      fullWidth: true,
+    ),
     TextSpec(
       'subtitle',
       AdminStrings.fieldSubtitle,
-      maxLines: 2,
       clearable: true,
+      fullWidth: true,
     ),
-    TextSpec(
-      'buttonText',
-      AdminStrings.fieldButtonText,
-      clearable: true,
-      helpKey: AdminStrings.bannerButtonHelp,
+    ChoiceSpec(
+      'colourStyle',
+      AdminStrings.bnFieldColour,
+      BannerLabels.colourStyles,
+      isRequired: true,
     ),
     ChoiceSpec(
       'linkType',
-      AdminStrings.fieldLinkType,
-      BannerLabels.linkTypeChoices,
+      AdminStrings.bnFieldOpens,
+      BannerLabels.opens,
       isRequired: true,
     ),
     TextSpec(
-      'linkValue',
-      AdminStrings.fieldLinkValue,
-      clearable: true,
-      helpKeyOf: bannerLinkHintOf,
+      'offerCode',
+      AdminStrings.bnFieldOfferCode,
+      visibleWhen: _opensOffer,
     ),
-    ChoiceSpec(
-      'placement',
-      AdminStrings.fieldPlacement,
-      BannerLabels.placements,
+    RefSpec(
+      'routeFrom',
+      AdminStrings.bnFieldRouteFrom,
+      'cities?active=true',
+      nameOf,
       isRequired: true,
+      visibleWhen: _opensRoute,
     ),
-    ChoiceSpec(
-      'language',
-      AdminStrings.fieldLanguage,
-      BannerLabels.languages,
+    RefSpec(
+      'routeTo',
+      AdminStrings.bnFieldRouteTo,
+      'cities?active=true',
+      nameOf,
       isRequired: true,
+      visibleWhen: _opensRoute,
     ),
-    DateSpec('startsAt', AdminStrings.fieldStartDate),
-    DateSpec('endsAt', AdminStrings.fieldEndDate),
-    NumberSpec('sortOrder', AdminStrings.fieldSortOrder),
-    BoolSpec('isActive', AdminStrings.fieldActive),
-    TextSpec('externalImageUrl', AdminStrings.fieldImageUrl, clearable: true),
+    RefSpec(
+      'operatorId',
+      AdminStrings.bnFieldOperator,
+      'operators',
+      operatorNameOf,
+      isRequired: true,
+      fullWidth: true,
+      visibleWhen: _opensOperator,
+    ),
     TextSpec(
-      'externalDesktopImageUrl',
-      AdminStrings.fieldDesktopImageUrl,
-      clearable: true,
+      'linkUrl',
+      AdminStrings.bnFieldLink,
+      isRequired: true,
+      fullWidth: true,
+      visibleWhen: _opensLink,
     ),
+    ChoiceSpec(
+      'audience',
+      AdminStrings.bnFieldShownTo,
+      BannerLabels.audiences,
+      isRequired: true,
+    ),
+    DateSpec('startsAt', AdminStrings.bnFieldStarts),
+    DateSpec('endsAt', AdminStrings.bnFieldEnds),
+    NumberSpec('sortOrder', AdminStrings.bnFieldOrder),
   ];
 
-  static const _newBanner = <String, Object?>{
-    'linkType': 'NONE',
-    'placement': 'HOME_TOP',
-    'language': 'ALL',
-    'sortOrder': 0,
-    'isActive': true,
-  };
+  /// The form fields that are sent as they are.
+  static const _plainKeys = <String>[
+    'title',
+    'subtitle',
+    'colourStyle',
+    'audience',
+    'startsAt',
+    'endsAt',
+    'sortOrder',
+  ];
 
-  static Widget _nothing(BuildContext context, JsonMap record) =>
-      const SizedBox.shrink();
+  /// What a new banner starts with (as in the demo: starts today, ends in two
+  /// weeks, opens an offer, shown to everyone, order 5).
+  static JsonMap _newBanner() {
+    String day(DateTime time) => time.toIso8601String().substring(0, 10);
+    final today = DateTime.now();
+    return <String, Object?>{
+      'colourStyle': 'NAVY_BLUE',
+      'linkType': 'OFFER',
+      'audience': 'ALL',
+      'startsAt': day(today),
+      'endsAt': day(today.add(const Duration(days: 14))),
+      'sortOrder': 5,
+    };
+  }
 
-  /// A column that is only written to the export.
-  static ColumnSpec _exported(String labelKey, String Function(JsonMap) text) =>
-      ColumnSpec(labelKey, _nothing, text: text, exportOnly: true);
+  /// The form's values for an existing banner: the link value goes to the
+  /// field of its kind.
+  static JsonMap _formValuesOf(JsonMap banner) {
+    final type = '${banner['linkType']}';
+    final value = '${banner['linkValue'] ?? ''}';
+    final route = type == 'ROUTE_SEARCH' ? value.split(':') : const <String>[];
+    return <String, Object?>{
+      for (final key in _plainKeys)
+        if (banner[key] != null) key: banner[key],
+      // A banner that links nowhere (or to a screen) is shown as "An offer"
+      // without a code, like the demo.
+      'linkType': BannerLabels.opens.containsKey(type) ? type : 'OFFER',
+      'offerCode': type == 'OFFER' ? value : '',
+      'routeFrom': route.length == 2 ? route.first : '',
+      'routeTo': route.length == 2 ? route.last : '',
+      'operatorId': type == 'OPERATOR' ? value : '',
+      'linkUrl': type == 'URL' ? value : '',
+    };
+  }
 
-  /// Edit form values from a banner: the form's fields only.
-  static JsonMap _formValuesOf(JsonMap banner) => <String, Object?>{
-    for (final field in _fields)
-      if (banner[field.key] != null) field.key: banner[field.key],
-  };
+  /// The request body for the form's [values]: the link fields become one
+  /// link, and [published] decides draft or published.
+  static JsonMap _bodyOf(JsonMap values, {required bool published}) {
+    final type = '${values['linkType'] ?? 'OFFER'}';
+    var linkType = type;
+    var linkValue = '';
+    switch (type) {
+      case 'OFFER':
+        linkValue = '${values['offerCode'] ?? ''}'.trim();
+        if (linkValue.isEmpty) linkType = 'NONE';
+      case 'ROUTE_SEARCH':
+        linkValue = '${values['routeFrom']}:${values['routeTo']}';
+      case 'OPERATOR':
+        linkValue = '${values['operatorId']}';
+      case 'URL':
+        linkValue = '${values['linkUrl'] ?? ''}'.trim();
+    }
+    return <String, Object?>{
+      for (final key in _plainKeys)
+        if (values.containsKey(key)) key: values[key],
+      'linkType': linkType,
+      'linkValue': linkValue,
+      'isActive': published,
+    };
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -104,253 +188,310 @@ class AdminBannersPage extends ConsumerWidget {
     final access = ref.watch(accessProvider);
     final canManage = access.can(PermissionKeys.bannersManage);
     final canDelete = access.can(PermissionKeys.bannersDelete);
+    final canExport = access.can(PermissionKeys.bannersExport);
     final api = ref.read(bannersApiProvider);
+    final repository = ref.read(catalogueRepositoryProvider);
 
-    /// The add, edit and images forms: the fields (none for the images
-    /// form), both images and the preview. Save writes the banner, then
-    /// uploads or removes the images; an image that fails stays in the form
-    /// with its reason, and saving again retries it.
-    Future<bool> openForm(
-      BuildContext context, {
-      JsonMap? banner,
-      bool imagesOnly = false,
-    }) async {
+    void toast(String text) => ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(text)));
+
+    void reload() => ref.invalidate(resourceListProvider);
+
+    /// The New and Edit form: Cancel, Save draft and Publish. Both buttons
+    /// save the banner, then upload or remove the pictures; a picture that
+    /// fails stays in the form with its reason, and saving again retries it.
+    Future<bool> openForm(BuildContext context, {JsonMap? banner}) async {
       final images = BannerImagesController(api, banner);
       var current = banner;
+      var outcome = '';
+
+      Future<void> save(JsonMap values, {required bool published}) async {
+        final start = '${values['startsAt'] ?? ''}';
+        final end = '${values['endsAt'] ?? ''}';
+        if (start.isNotEmpty && end.isNotEmpty && end.compareTo(start) < 0) {
+          throw ResourceFormMessage(l10n.text(AdminStrings.bnEndBeforeStart));
+        }
+        final body = _bodyOf(values, published: published);
+        final before = current;
+        final saved = before == null
+            ? await api.create(<String, Object?>{
+                ...body,
+                'placement': 'HOME_TOP',
+                'language': 'ALL',
+                'buttonText': body['linkType'] == 'OFFER'
+                    ? l10n.text(AdminStrings.bnPreviewOfferButton)
+                    : '',
+              })
+            : await api.update('${before['id']}', body);
+        current = saved;
+        outcome = !published
+            ? 'DRAFT'
+            : saved['status'] == 'SCHEDULED'
+            ? 'SCHEDULED'
+            : 'PUBLISHED';
+        if (!await images.save(saved)) {
+          throw ResourceFormMessage(
+            l10n.text(AdminStrings.bannerImagesPartlySaved),
+          );
+        }
+      }
+
       final saved = await showResourceForm(
         context,
         title: l10n.text(
-          imagesOnly
-              ? AdminStrings.bannerUploadTitle
-              : banner == null
-              ? AdminStrings.bannerCreateTitle
-              : AdminStrings.bannerEditTitle,
+          banner == null ? AdminStrings.bnNewTitle : AdminStrings.bnEditTitle,
         ),
-        fields: imagesOnly ? const <FieldSpec>[] : _fields,
-        initial: banner == null ? _newBanner : _formValuesOf(banner),
-        extra: (context, values, isSaving) => BannerFormExtra(
-          images: images,
-          values: <String, Object?>{...?current, ...values},
-          enabled: !isSaving,
+        fields: _fields,
+        initial: banner == null ? _newBanner() : _formValuesOf(banner),
+        columns: 2,
+        width: 920,
+        submitLabel: l10n.text(AdminStrings.bnPublish),
+        onSubmit: (values) => save(values, published: true),
+        secondary: <FormAction>[
+          FormAction(
+            l10n.text(AdminStrings.bnSaveDraft),
+            (values) => save(values, published: false),
+          ),
+        ],
+        extra: (context, values, isSaving) =>
+            BannerFormExtra(images: images, enabled: !isSaving),
+        side: (context, values, isSaving) => ListenableBuilder(
+          listenable: images,
+          builder: (context, _) => BannerHomePreview(
+            values: values,
+            image: images.imageOf(BannerImageVariant.mobile),
+          ),
         ),
-        onSubmit: (values) async {
-          final before = current;
-          if (!imagesOnly) {
-            current = before == null
-                ? await api.create(values)
-                : await api.update('${before['id']}', values);
-          }
-          if (!await images.save(current!)) {
-            throw ResourceFormMessage(
-              l10n.text(AdminStrings.bannerImagesPartlySaved),
-            );
-          }
-        },
       );
-      // A banner created before an image failed is in the list even when
+      if (saved) {
+        toast(switch (outcome) {
+          'SCHEDULED' => l10n.text(
+            AdminStrings.bnToastScheduled,
+            <String, Object?>{'date': bannerDayOf(current?['startsAt'])},
+          ),
+          'PUBLISHED' => l10n.text(AdminStrings.bnToastPublished),
+          _ => l10n.text(AdminStrings.bnToastDraft),
+        });
+      }
+      // A banner created before a picture failed is in the list even when
       // the form is then closed.
       return saved || (banner == null && current != null);
     }
 
-    Future<bool> delete(BuildContext context, JsonMap banner) async {
+    /// A button of a row: runs it, says what happened (with Undo when there
+    /// is one) and reloads the list.
+    RowAction action(
+      String labelKey,
+      IconData icon,
+      Future<void> Function(JsonMap banner) run,
+      String doneKey, {
+      Future<void> Function(JsonMap banner)? undo,
+    }) => RowAction(labelKey, icon, (context, banner) async {
       final messenger = ScaffoldMessenger.of(context);
-      final confirmed = await showAbraConfirmDialog(
-        context,
-        title: l10n.text(AdminStrings.bannerDeleteTitle, <String, Object?>{
-          'name': bannerTitleOf(banner),
-        }),
-        message: l10n.text(AdminStrings.bannerDeleteMessage),
-        confirmLabel: l10n.text(AdminStrings.actionDelete),
-        isDestructive: true,
-      );
-      if (!confirmed) return false;
-      await api.delete('${banner['id']}');
-      // Every page and summary card of the list.
-      ref.invalidate(resourceListProvider);
+      try {
+        await run(banner);
+      } on Object catch (error) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(failureText(l10n, error))),
+        );
+        return false;
+      }
       messenger.showSnackBar(
-        SnackBar(content: Text(l10n.text(AdminStrings.bannerDeleted))),
+        SnackBar(
+          content: Text(l10n.text(doneKey)),
+          duration: deleteUndoTime,
+          action: undo == null
+              ? null
+              : SnackBarAction(
+                  label: l10n.text(AdminStrings.deleteUndo),
+                  onPressed: () async {
+                    await undo(banner);
+                    reload();
+                  },
+                ),
+        ),
       );
-      return false;
-    }
+      return true;
+    });
 
     String statusText(JsonMap r) =>
         BannerLabels.of(l10n, BannerLabels.statuses, r['status']);
 
+    String opensText(JsonMap r) {
+      final value = '${r['linkValue'] ?? ''}';
+      return switch ('${r['linkType']}') {
+        'OFFER' => l10n.text(AdminStrings.bnOpenOffer, <String, Object?>{
+          'code': value,
+        }),
+        'ROUTE_SEARCH' => l10n.text(AdminStrings.bnOpenRoute),
+        'OPERATOR' => l10n.text(AdminStrings.bnOpenOperator),
+        'URL' => l10n.text(AdminStrings.bnOpenUrl),
+        'SCREEN' => l10n.text(AdminStrings.bnOpenScreen),
+        _ => l10n.text(AdminStrings.bnOpenNone),
+      };
+    }
+
     return ResourcePage(
       path: bannersPath,
-      exportName: canManage ? 'banners' : null,
+      exportName: canExport ? 'banners' : null,
       stats: const <StatSpec>[
         StatSpec(
-          AdminStrings.bannerStatusLive,
+          AdminStrings.bnStatusPublished,
           <String, String>{'status': 'LIVE'},
           Icons.play_circle_outline,
           AbraColors.tealDark,
         ),
         StatSpec(
-          AdminStrings.bannerStatusScheduled,
+          AdminStrings.bnStatusScheduled,
           <String, String>{'status': 'SCHEDULED'},
           Icons.schedule,
           AbraColors.blue,
         ),
         StatSpec(
-          AdminStrings.bannerStatusExpired,
+          AdminStrings.bnStatusDraft,
+          <String, String>{'status': 'INACTIVE'},
+          Icons.edit_note,
+          AbraColors.navySecondary,
+        ),
+        StatSpec(
+          AdminStrings.bnStatusExpired,
           <String, String>{'status': 'EXPIRED'},
           Icons.history,
           AbraColors.textSecondary,
         ),
         StatSpec(
-          AdminStrings.statusInactive,
-          <String, String>{'status': 'INACTIVE'},
-          Icons.pause_circle_outline,
-          AbraColors.navySecondary,
+          AdminStrings.bnStatusArchived,
+          <String, String>{'status': 'ARCHIVED'},
+          Icons.inventory_2_outlined,
+          AbraColors.textSecondary,
         ),
       ],
       filters: const <FilterSpec>[
         SearchFilter('search', AdminStrings.bannerSearch),
-        ChoiceFilter('status', AdminStrings.fieldStatus, BannerLabels.statuses),
-        ChoiceFilter(
-          'placement',
-          AdminStrings.fieldPlacement,
-          BannerLabels.placements,
-        ),
-        ChoiceFilter(
-          'language',
-          AdminStrings.fieldLanguage,
-          BannerLabels.languages,
-        ),
-        DateRangeFilter('from', AdminStrings.fieldCreated, toParam: 'to'),
+        ChoiceFilter('status', AdminStrings.bnColStatus, BannerLabels.statuses),
       ],
-      importSpec: canManage
-          ? ImportSpec(
-              name: 'banners',
-              fields: _fields,
-              sampleRow: const <String>[
-                'Diwali sale',
-                'Up to 25% off on every route',
-                'Book now',
-                'OFFER',
-                'DIWALI25',
-                'HOME_TOP',
-                'ALL',
-                '2026-10-12',
-                '2026-10-31',
-                '1',
-                'yes',
-                '',
-                '',
-              ],
-              save: api.create,
-            )
-          : null,
       columns: <ColumnSpec>[
         ColumnSpec(
-          AdminStrings.fieldImage,
-          (_, r) => BannerThumbnail(
-            imageUri: api.imageUriOf(r),
-            hasDesktopImage:
-                api.imageUriOf(r, BannerImageVariant.desktop) != null,
-          ),
-        ),
-        ColumnSpec(
-          AdminStrings.fieldTitle,
+          AdminStrings.bnColBanner,
           (context, r) => _TitleCell(banner: r),
           text: (r) => plainText(r['title']),
         ),
-        _exported(AdminStrings.fieldSubtitle, (r) => plainText(r['subtitle'])),
-        _exported(
-          AdminStrings.fieldButtonText,
-          (r) => plainText(r['buttonText']),
-        ),
-        _exported(
-          AdminStrings.fieldLinkType,
-          (r) => BannerLabels.of(l10n, BannerLabels.linkTypes, r['linkType']),
-        ),
-        _exported(
-          AdminStrings.fieldLinkValue,
-          (r) => plainText(r['linkValue']),
-        ),
         ColumnSpec(
-          AdminStrings.fieldPlacement,
-          (_, r) => Text(
-            BannerLabels.of(l10n, BannerLabels.placements, r['placement']),
-          ),
-          text: (r) =>
-              BannerLabels.of(l10n, BannerLabels.placements, r['placement']),
-        ),
-        ColumnSpec(
-          AdminStrings.fieldLanguage,
-          (_, r) => Text(
-            BannerLabels.of(l10n, BannerLabels.languages, r['language']),
-          ),
-          text: (r) =>
-              BannerLabels.of(l10n, BannerLabels.languages, r['language']),
-        ),
-        ColumnSpec(
-          AdminStrings.fieldSchedule,
-          (_, r) => Text(bannerScheduleOf(l10n, r)),
-        ),
-        _exported(
-          AdminStrings.fieldStartDate,
-          (r) => bannerDayOf(r['startsAt']),
-        ),
-        _exported(AdminStrings.fieldEndDate, (r) => bannerDayOf(r['endsAt'])),
-        ColumnSpec(
-          AdminStrings.fieldSortOrder,
-          (_, r) => textCell(r['sortOrder']),
-          isNumeric: true,
-          text: (r) => plainText(r['sortOrder']),
-        ),
-        ColumnSpec(
-          AdminStrings.fieldStatus,
+          AdminStrings.bnColStatus,
           (_, r) => BannerStatusBadge(status: '${r['status']}'),
           text: statusText,
         ),
-        _exported(
-          AdminStrings.exportImageUrl,
-          (r) => api.imageUriOf(r)?.toString() ?? '',
+        ColumnSpec(
+          AdminStrings.bnColRuns,
+          (_, r) => Text(bannerRunsOf(l10n, r)),
+          text: (r) => bannerRunsOf(l10n, r),
         ),
-        _exported(
-          AdminStrings.exportDesktopImageUrl,
-          (r) =>
-              api.imageUriOf(r, BannerImageVariant.desktop)?.toString() ?? '',
+        ColumnSpec(
+          AdminStrings.bnColShownTo,
+          (_, r) => Text(
+            BannerLabels.of(l10n, BannerLabels.audiences, r['audience']),
+          ),
+          text: (r) =>
+              BannerLabels.of(l10n, BannerLabels.audiences, r['audience']),
         ),
-      ],
-      onCreate: canManage ? openForm : null,
-      rowActions: canManage || canDelete
-          ? (record) => <RowAction>[
-              RowAction(AdminStrings.actionPreview, Icons.visibility_outlined, (
-                context,
-                record,
-              ) async {
-                await showBannerPreviewDialog(context, api, record);
-                return false;
-              }),
-              if (canManage) ...<RowAction>[
-                RowAction(
-                  AdminStrings.actionEdit,
-                  Icons.edit_outlined,
-                  (context, record) => openForm(context, banner: record),
+        ColumnSpec(
+          AdminStrings.bnColOpens,
+          (_, r) => Text(opensText(r)),
+          text: opensText,
+        ),
+        ColumnSpec(
+          AdminStrings.bnColOrder,
+          (_, r) => Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Text('${r['sortOrder']}'),
+              if (canManage && r['status'] != 'ARCHIVED') ...<Widget>[
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  iconSize: 18,
+                  tooltip: l10n.text(AdminStrings.bnMoveUp),
+                  icon: const Icon(Icons.keyboard_arrow_up),
+                  onPressed: () async {
+                    await api.move('${r['id']}', up: true);
+                    reload();
+                  },
                 ),
-                RowAction(
-                  AdminStrings.actionUploadImage,
-                  Icons.add_photo_alternate_outlined,
-                  (context, record) =>
-                      openForm(context, banner: record, imagesOnly: true),
-                ),
-                activeToggleAction(
-                  ref,
-                  bannersPath,
-                  record,
-                  labelOf: bannerTitleOf,
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  iconSize: 18,
+                  tooltip: l10n.text(AdminStrings.bnMoveDown),
+                  icon: const Icon(Icons.keyboard_arrow_down),
+                  onPressed: () async {
+                    await api.move('${r['id']}', up: false);
+                    reload();
+                  },
                 ),
               ],
-              if (canDelete)
-                RowAction(
-                  AdminStrings.actionDelete,
-                  Icons.delete_outline,
-                  delete,
-                ),
-            ]
+            ],
+          ),
+          isNumeric: true,
+          text: (r) => plainText(r['sortOrder']),
+        ),
+      ],
+      createLabelKey: AdminStrings.bnNew,
+      onCreate: canManage ? (context) => openForm(context) : null,
+      rowActions: canManage || canDelete
+          ? (record) {
+              final archived = record['status'] == 'ARCHIVED';
+              final published = record['isActive'] == true;
+              return <RowAction>[
+                if (canManage && !archived) ...<RowAction>[
+                  RowAction(
+                    AdminStrings.actionEdit,
+                    Icons.edit_outlined,
+                    (context, record) => openForm(context, banner: record),
+                  ),
+                  if (published)
+                    action(
+                      AdminStrings.bnUnpublish,
+                      Icons.visibility_off_outlined,
+                      (b) => api.setPublished('${b['id']}', published: false),
+                      AdminStrings.bnToastUnpublished,
+                    )
+                  else
+                    action(
+                      AdminStrings.bnPublish,
+                      Icons.check_circle_outline,
+                      (b) => api.setPublished('${b['id']}', published: true),
+                      AdminStrings.bnToastPublished,
+                    ),
+                ],
+                if (canManage)
+                  action(
+                    AdminStrings.bnDuplicate,
+                    Icons.copy_outlined,
+                    (b) => api.duplicate('${b['id']}'),
+                    AdminStrings.bnToastDuplicated,
+                  ),
+                if (canManage && !archived)
+                  action(
+                    AdminStrings.bnArchive,
+                    Icons.archive_outlined,
+                    (b) => api.archive('${b['id']}'),
+                    AdminStrings.bnToastArchived,
+                    undo: (b) => api.unarchive('${b['id']}'),
+                  ),
+                if (canManage && archived)
+                  action(
+                    AdminStrings.bnUnarchive,
+                    Icons.unarchive_outlined,
+                    (b) => api.unarchive('${b['id']}'),
+                    AdminStrings.bnToastUnarchived,
+                  ),
+                if (canDelete)
+                  deleteAction(
+                    repository: repository,
+                    path: bannersPath,
+                    nameOf: bannerTitleOf,
+                  ),
+              ];
+            }
           : null,
     );
   }
@@ -394,8 +535,8 @@ class _TitleCell extends StatelessWidget {
   }
 }
 
-/// A banner status as a badge: Live teal, Scheduled blue, Expired grey,
-/// Inactive navy. The word is always shown; colour only supports it.
+/// A banner status as a badge: Published teal, Scheduled blue, Expired and
+/// Archived grey, Draft navy. The word is always shown; colour only supports it.
 class BannerStatusBadge extends StatelessWidget {
   const BannerStatusBadge({required this.status, super.key});
 
@@ -406,7 +547,8 @@ class BannerStatusBadge extends StatelessWidget {
     final (background, foreground) = switch (status) {
       'LIVE' => (AbraColors.tealContainer, AbraColors.tealDark),
       'SCHEDULED' => (AbraColors.blueContainer, AbraColors.blueDark),
-      'EXPIRED' => (AbraColors.lightGray, AbraColors.textSecondary),
+      'EXPIRED' ||
+      'ARCHIVED' => (AbraColors.lightGray, AbraColors.textSecondary),
       _ => (AbraColors.navyContainer, AbraColors.navySecondary),
     };
     return DecoratedBox(
@@ -646,19 +788,15 @@ class BannerImagesController extends ChangeNotifier {
   }
 }
 
-/// Below the banner fields: both images and the preview on each device.
+/// Below the banner fields: the pictures (desktop and phone), as in the demo.
 class BannerFormExtra extends StatelessWidget {
   const BannerFormExtra({
     required this.images,
-    required this.values,
     required this.enabled,
     super.key,
   });
 
   final BannerImagesController images;
-
-  /// The banner as typed so far.
-  final JsonMap values;
   final bool enabled;
 
   @override
@@ -673,19 +811,22 @@ class BannerFormExtra extends StatelessWidget {
           const Divider(),
           const SizedBox(height: AbraSpacing.sm),
           Text(
-            l10n.text(AdminStrings.bannerImagesTitle),
+            l10n.text(AdminStrings.bnPictures),
             style: textTheme.titleMedium,
           ),
           Text(
-            '${l10n.text(AdminStrings.bannerUploadIntro)} '
-            '${l10n.text(AdminStrings.bannerImageSafeArea)}',
+            l10n.text(AdminStrings.bnPictureHint),
             style: textTheme.bodySmall,
           ),
           const SizedBox(height: AbraSpacing.md),
           LayoutBuilder(
             builder: (context, constraints) {
+              // Desktop first, then phone, as in the demo
               final slots = <Widget>[
-                for (final variant in BannerImageVariant.values)
+                for (final variant in <BannerImageVariant>[
+                  BannerImageVariant.desktop,
+                  BannerImageVariant.mobile,
+                ])
                   _ImageSlotCard(
                     images: images,
                     variant: variant,
@@ -712,19 +853,76 @@ class BannerFormExtra extends StatelessWidget {
               );
             },
           ),
-          const SizedBox(height: AbraSpacing.lg),
-          Text(
-            l10n.text(AdminStrings.bannerPreviewTitle),
-            style: textTheme.titleMedium,
-          ),
-          const SizedBox(height: AbraSpacing.sm),
-          BannerResponsivePreview(
-            banner: values,
-            mobileImage: images.imageOf(BannerImageVariant.mobile),
-            desktopImage: images.imageOf(BannerImageVariant.desktop),
-          ),
         ],
       ),
+    );
+  }
+}
+
+/// The banner as it looks on the customer app home screen, while it is typed
+/// (the demo's "Customer app home" preview): the picture or the colour
+/// style, the title and subtitle, a "View offer" button when it opens an
+/// offer, and the carousel dots.
+class BannerHomePreview extends StatelessWidget {
+  const BannerHomePreview({required this.values, this.image, super.key});
+
+  /// The form values as typed so far.
+  final JsonMap values;
+  final ImageProvider? image;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AbraLocalizations.of(context);
+    final textTheme = Theme.of(context).textTheme;
+    final opensOffer =
+        (values['linkType'] ?? 'OFFER') == 'OFFER' &&
+        '${values['offerCode'] ?? ''}'.trim().isNotEmpty;
+    Widget dot({required bool active}) => Container(
+      width: active ? 18 : 6,
+      height: 6,
+      margin: const EdgeInsets.symmetric(horizontal: 2),
+      decoration: BoxDecoration(
+        color: active ? AbraColors.blue : AbraColors.border,
+        borderRadius: BorderRadius.circular(AbraRadius.pill),
+      ),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Text(
+          l10n.text(AdminStrings.bnPreviewHome),
+          style: textTheme.bodySmall?.copyWith(color: AbraColors.textSecondary),
+        ),
+        const SizedBox(height: AbraSpacing.sm),
+        BannerPreview(
+          title: '${values['title'] ?? ''}'.trim().isEmpty
+              ? 'Title'
+              : '${values['title']}',
+          subtitle: '${values['subtitle'] ?? ''}'.trim().isEmpty
+              ? 'Subtitle'
+              : '${values['subtitle']}',
+          buttonText: opensOffer
+              ? l10n.text(AdminStrings.bnPreviewOfferButton)
+              : null,
+          colourStyle: values['colourStyle'] as String?,
+          image: image,
+        ),
+        const SizedBox(height: AbraSpacing.sm),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            dot(active: true),
+            dot(active: false),
+            dot(active: false),
+          ],
+        ),
+        const SizedBox(height: AbraSpacing.sm),
+        Text(
+          l10n.text(AdminStrings.bnPreviewCaption),
+          textAlign: TextAlign.center,
+          style: textTheme.bodySmall,
+        ),
+      ],
     );
   }
 }
@@ -970,6 +1168,7 @@ class _BannerResponsivePreviewState extends State<BannerResponsivePreview> {
       title: bannerTitleOf(banner),
       subtitle: banner['subtitle'] as String?,
       buttonText: hasLink ? banner['buttonText'] as String? : null,
+      colourStyle: banner['colourStyle'] as String?,
       image: isPhone
           ? widget.mobileImage
           : widget.desktopImage ?? widget.mobileImage,
@@ -1034,6 +1233,7 @@ class BannerPreview extends StatelessWidget {
     this.subtitle,
     this.buttonText,
     this.image,
+    this.colourStyle,
     this.isWide = false,
     super.key,
   });
@@ -1042,6 +1242,16 @@ class BannerPreview extends StatelessWidget {
   final String? subtitle;
   final String? buttonText;
   final ImageProvider? image;
+
+  /// `NAVY_BLUE` (the default), `BLUE_SKY` or `GREEN_NAVY`: the colours shown
+  /// when there is no picture.
+  final String? colourStyle;
+
+  static List<Color> coloursOf(String? style) => switch (style) {
+    'BLUE_SKY' => const <Color>[AbraColors.deepBlue, AbraColors.skyBlue],
+    'GREEN_NAVY' => const <Color>[AbraColors.teal, AbraColors.navy],
+    _ => const <Color>[AbraColors.navy, AbraColors.blue],
+  };
 
   /// The tablet and desktop shape: 4:1, the button beside the text.
   final bool isWide;
@@ -1127,16 +1337,12 @@ class BannerPreview extends StatelessWidget {
           fit: StackFit.expand,
           children: <Widget>[
             // Also what shows while the image loads or when it cannot.
-            const DecoratedBox(
+            DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: <Color>[
-                    AbraColors.navy,
-                    AbraColors.blue,
-                    AbraColors.skyBlue,
-                  ],
+                  colors: coloursOf(colourStyle),
                 ),
               ),
             ),

@@ -9,6 +9,7 @@ import '../../../l10n/admin_strings.dart';
 import '../catalogue_repository.dart';
 import '../widgets/catalogue_common.dart';
 import '../widgets/import_dialog.dart';
+import '../widgets/record_actions.dart';
 import '../widgets/resource_form.dart';
 import '../widgets/resource_page.dart';
 
@@ -29,9 +30,9 @@ class CitiesPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AbraLocalizations.of(context);
-    final canManage = ref
-        .watch(accessProvider)
-        .can(PermissionKeys.catalogueManage);
+    final access = ref.watch(accessProvider);
+    final canManage = access.can(PermissionKeys.catalogueManage);
+    final canDelete = access.can(PermissionKeys.catalogueDelete);
     final repository = ref.read(catalogueRepositoryProvider);
 
     return ResourcePage(
@@ -127,23 +128,48 @@ class CitiesPage extends ConsumerWidget {
               onSubmit: (values) => repository.post('cities', values),
             )
           : null,
-      rowActions: canManage
-          ? (record) => <RowAction>[
-              RowAction(
-                AdminStrings.actionEdit,
-                Icons.edit_outlined,
-                (context, record) => showResourceForm(
-                  context,
-                  title: l10n.text(AdminStrings.cityEditTitle),
-                  fields: _fields,
-                  initial: record,
-                  onSubmit: (values) =>
-                      repository.put('cities/${record['id']}', values),
-                ),
+      rowActions: (record) => <RowAction>[
+        viewAction(
+          repository: repository,
+          path: 'cities',
+          titleOf: nameOf,
+          linesOf: (l10n, r) => <DetailLine>[
+            DetailLine(AdminStrings.fieldName, nameOf(r)),
+            DetailLine(AdminStrings.fieldState, '${r['state'] ?? ''}'),
+            DetailLine(
+              AdminStrings.fieldCountryCode,
+              '${r['countryCode'] ?? ''}',
+            ),
+            DetailLine(AdminStrings.fieldSlug, '${r['slug'] ?? ''}'),
+            DetailLine(AdminStrings.fieldPopular, yesNo(l10n, r['isPopular'])),
+            DetailLine(
+              AdminStrings.fieldStatus,
+              l10n.text(
+                r['isActive'] == true
+                    ? AdminStrings.statusActive
+                    : AdminStrings.statusInactive,
               ),
-              activeToggleAction(ref, 'cities', record),
-            ]
-          : null,
+            ),
+          ],
+        ),
+        if (canManage) ...<RowAction>[
+          RowAction(
+            AdminStrings.actionEdit,
+            Icons.edit_outlined,
+            (context, record) => showResourceForm(
+              context,
+              title: l10n.text(AdminStrings.cityEditTitle),
+              fields: _fields,
+              initial: record,
+              onSubmit: (values) =>
+                  repository.put('cities/${record['id']}', values),
+            ),
+          ),
+          activeToggleAction(ref, 'cities', record),
+        ],
+        if (canDelete)
+          deleteAction(repository: repository, path: 'cities', nameOf: nameOf),
+      ],
     );
   }
 }

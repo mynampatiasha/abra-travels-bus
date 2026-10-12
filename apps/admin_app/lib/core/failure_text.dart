@@ -10,6 +10,7 @@ const _explainedByServer = <String>{
   ApiErrorCodes.validationFailed,
   ApiErrorCodes.invalidStateTransition,
   ApiErrorCodes.alreadyRegistered,
+  ApiErrorCodes.resourceInUse,
   ApiErrorCodes.resourceNotFound,
 };
 

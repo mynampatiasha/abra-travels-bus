@@ -8,6 +8,7 @@ import '../../../app/providers.dart';
 import '../../../l10n/admin_strings.dart';
 import '../catalogue_repository.dart';
 import '../widgets/catalogue_common.dart';
+import '../widgets/record_actions.dart';
 import '../widgets/resource_form.dart';
 import '../widgets/resource_page.dart';
 
@@ -43,6 +44,7 @@ class LocationsPage extends ConsumerWidget {
     final access = ref.watch(accessProvider);
     final isPlatform = access.hasPlatformScope;
     final canUpdate = access.can(PermissionKeys.routesUpdate);
+    final canDelete = access.can(PermissionKeys.catalogueDelete);
     final repository = ref.read(catalogueRepositoryProvider);
     // Operator staff see the cities of the locations they can use through
     // the locations themselves; the city list is platform catalogue.
@@ -137,25 +139,58 @@ class LocationsPage extends ConsumerWidget {
               onSubmit: (values) => repository.post('locations', values),
             )
           : null,
-      rowActions: canUpdate
-          ? (record) => canChange(record)
-                ? <RowAction>[
-                    RowAction(
-                      AdminStrings.actionEdit,
-                      Icons.edit_outlined,
-                      (context, record) => showResourceForm(
-                        context,
-                        title: l10n.text(AdminStrings.locationEditTitle),
-                        fields: _detailFields,
-                        initial: record,
-                        onSubmit: (values) =>
-                            repository.put('locations/${record['id']}', values),
-                      ),
-                    ),
-                    activeToggleAction(ref, 'locations', record),
-                  ]
-                : const <RowAction>[]
-          : null,
+      rowActions: (record) => <RowAction>[
+        viewAction(
+          repository: repository,
+          path: 'locations',
+          titleOf: nameOf,
+          linesOf: (l10n, r) => <DetailLine>[
+            DetailLine(AdminStrings.fieldName, nameOf(r)),
+            DetailLine(AdminStrings.fieldAddress, '${r['address'] ?? ''}'),
+            DetailLine(
+              AdminStrings.fieldOwner,
+              l10n.text(
+                r['operatorId'] == null
+                    ? AdminStrings.ownerShared
+                    : AdminStrings.ownerOperator,
+              ),
+            ),
+            DetailLine(
+              AdminStrings.fieldInstructions,
+              '${r['instructions'] ?? ''}',
+            ),
+            DetailLine(
+              AdminStrings.fieldStatus,
+              l10n.text(
+                r['isActive'] == true
+                    ? AdminStrings.statusActive
+                    : AdminStrings.statusInactive,
+              ),
+            ),
+          ],
+        ),
+        if (canUpdate && canChange(record)) ...<RowAction>[
+          RowAction(
+            AdminStrings.actionEdit,
+            Icons.edit_outlined,
+            (context, record) => showResourceForm(
+              context,
+              title: l10n.text(AdminStrings.locationEditTitle),
+              fields: _detailFields,
+              initial: record,
+              onSubmit: (values) =>
+                  repository.put('locations/${record['id']}', values),
+            ),
+          ),
+          activeToggleAction(ref, 'locations', record),
+        ],
+        if (canDelete && canChange(record))
+          deleteAction(
+            repository: repository,
+            path: 'locations',
+            nameOf: nameOf,
+          ),
+      ],
     );
   }
 }

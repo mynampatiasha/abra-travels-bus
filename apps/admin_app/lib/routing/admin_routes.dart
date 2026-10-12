@@ -48,7 +48,7 @@ abstract final class AdminRoutes {
     buses: PermissionKeys.busesRead,
     routes: PermissionKeys.routesRead,
     trips: PermissionKeys.tripsRead,
-    banners: PermissionKeys.bannersManage,
+    banners: PermissionKeys.bannersRead,
   };
 
   /// Sections in the order they are listed.

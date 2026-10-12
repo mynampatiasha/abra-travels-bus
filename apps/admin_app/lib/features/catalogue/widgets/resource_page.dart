@@ -109,8 +109,13 @@ class ResourcePage extends ConsumerStatefulWidget {
     this.stats = const <StatSpec>[],
     this.exportName,
     this.importSpec,
+    this.createLabelKey = AdminStrings.listCreate,
     super.key,
   });
+
+  /// The message key of the create button ("Add" unless a page uses the demo's
+  /// own word, such as "New banner").
+  final String createLabelKey;
 
   /// Summary cards above the toolbar.
   final List<StatSpec> stats;
@@ -517,7 +522,7 @@ class _ResourcePageState extends ConsumerState<ResourcePage> {
                         ],
                         if (create != null) ...<Widget>[
                           AbraButton(
-                            label: l10n.text(AdminStrings.listCreate),
+                            label: l10n.text(widget.createLabelKey),
                             icon: Icons.add,
                             variant: AbraButtonVariant.primary,
                             onPressed: create,

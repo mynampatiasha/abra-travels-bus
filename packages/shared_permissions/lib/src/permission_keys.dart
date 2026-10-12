@@ -60,6 +60,15 @@ abstract final class PermissionKeys {
   static const settingsRead = 'settings.read';
   static const settingsUpdate = 'settings.update';
   static const auditRead = 'audit.read';
+  static const catalogueDelete = 'catalogue.delete';
+  static const catalogueExport = 'catalogue.export';
+  static const documentsDelete = 'documents.delete';
+  static const documentsExport = 'documents.export';
+  static const operatorsDelete = 'operators.delete';
+  static const operatorsExport = 'operators.export';
+  static const bannersRead = 'banners.read';
+  static const bannersExport = 'banners.export';
+  static const rolesManage = 'roles.manage';
 
   /// Every key above.
   static const Set<String> all = <String>{
@@ -116,5 +125,14 @@ abstract final class PermissionKeys {
     settingsRead,
     settingsUpdate,
     auditRead,
+    catalogueDelete,
+    catalogueExport,
+    documentsDelete,
+    documentsExport,
+    operatorsDelete,
+    operatorsExport,
+    bannersRead,
+    bannersExport,
+    rolesManage,
   };
 }

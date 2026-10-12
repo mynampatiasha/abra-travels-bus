@@ -9,6 +9,7 @@ import '../../../l10n/admin_strings.dart';
 import '../catalogue_repository.dart';
 import '../widgets/catalogue_common.dart';
 import '../widgets/import_dialog.dart';
+import '../widgets/record_actions.dart';
 import '../widgets/resource_form.dart';
 import '../widgets/resource_page.dart';
 
@@ -30,9 +31,9 @@ class BusTypesPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AbraLocalizations.of(context);
-    final canManage = ref
-        .watch(accessProvider)
-        .can(PermissionKeys.catalogueManage);
+    final access = ref.watch(accessProvider);
+    final canManage = access.can(PermissionKeys.catalogueManage);
+    final canDelete = access.can(PermissionKeys.catalogueDelete);
     final repository = ref.read(catalogueRepositoryProvider);
 
     return ResourcePage(
@@ -131,23 +132,51 @@ class BusTypesPage extends ConsumerWidget {
               onSubmit: (values) => repository.post('bus-types', values),
             )
           : null,
-      rowActions: canManage
-          ? (record) => <RowAction>[
-              RowAction(
-                AdminStrings.actionEdit,
-                Icons.edit_outlined,
-                (context, record) => showResourceForm(
-                  context,
-                  title: l10n.text(AdminStrings.busTypeEditTitle),
-                  fields: _editFields,
-                  initial: record,
-                  onSubmit: (values) =>
-                      repository.put('bus-types/${record['id']}', values),
-                ),
+      rowActions: (record) => <RowAction>[
+        viewAction(
+          repository: repository,
+          path: 'bus-types',
+          titleOf: nameOf,
+          linesOf: (l10n, r) => <DetailLine>[
+            DetailLine(AdminStrings.fieldName, nameOf(r)),
+            DetailLine(AdminStrings.fieldKey, '${r['key']}'),
+            DetailLine(AdminStrings.fieldAc, yesNo(l10n, r['isAc'])),
+            DetailLine(
+              AdminStrings.fieldBerthType,
+              optionLabel(l10n, CatalogueLabels.berthTypes, r['berthType']),
+            ),
+            DetailLine(
+              AdminStrings.fieldStatus,
+              l10n.text(
+                r['isActive'] == true
+                    ? AdminStrings.statusActive
+                    : AdminStrings.statusInactive,
               ),
-              activeToggleAction(ref, 'bus-types', record),
-            ]
-          : null,
+            ),
+          ],
+        ),
+        if (canManage) ...<RowAction>[
+          RowAction(
+            AdminStrings.actionEdit,
+            Icons.edit_outlined,
+            (context, record) => showResourceForm(
+              context,
+              title: l10n.text(AdminStrings.busTypeEditTitle),
+              fields: _editFields,
+              initial: record,
+              onSubmit: (values) =>
+                  repository.put('bus-types/${record['id']}', values),
+            ),
+          ),
+          activeToggleAction(ref, 'bus-types', record),
+        ],
+        if (canDelete)
+          deleteAction(
+            repository: repository,
+            path: 'bus-types',
+            nameOf: nameOf,
+          ),
+      ],
     );
   }
 }

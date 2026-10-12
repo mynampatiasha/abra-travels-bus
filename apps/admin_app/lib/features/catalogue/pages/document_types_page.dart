@@ -9,6 +9,7 @@ import '../../../l10n/admin_strings.dart';
 import '../catalogue_repository.dart';
 import '../widgets/catalogue_common.dart';
 import '../widgets/import_dialog.dart';
+import '../widgets/record_actions.dart';
 import '../widgets/resource_form.dart';
 import '../widgets/resource_page.dart';
 
@@ -54,9 +55,9 @@ class DocumentTypesPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AbraLocalizations.of(context);
-    final canManage = ref
-        .watch(accessProvider)
-        .can(PermissionKeys.documentsManage);
+    final access = ref.watch(accessProvider);
+    final canManage = access.can(PermissionKeys.documentsManage);
+    final canDelete = access.can(PermissionKeys.documentsDelete);
     final repository = ref.read(catalogueRepositoryProvider);
 
     return ResourcePage(
@@ -221,23 +222,76 @@ class DocumentTypesPage extends ConsumerWidget {
               onSubmit: (values) => repository.post('document-types', values),
             )
           : null,
-      rowActions: canManage
-          ? (record) => <RowAction>[
-              RowAction(
-                AdminStrings.actionEdit,
-                Icons.edit_outlined,
-                (context, record) => showResourceForm(
-                  context,
-                  title: l10n.text(AdminStrings.documentTypeEditTitle),
-                  fields: _editFields,
-                  initial: record,
-                  onSubmit: (values) =>
-                      repository.put('document-types/${record['id']}', values),
-                ),
+      rowActions: (record) => <RowAction>[
+        viewAction(
+          repository: repository,
+          path: 'document-types',
+          titleOf: nameOf,
+          linesOf: (l10n, r) => <DetailLine>[
+            DetailLine(AdminStrings.fieldName, nameOf(r)),
+            DetailLine(AdminStrings.fieldKey, '${r['key'] ?? ''}'),
+            DetailLine(
+              AdminStrings.fieldAppliesTo,
+              l10n.text(
+                r['appliesTo'] == 'BUS'
+                    ? AdminStrings.subjectBus
+                    : AdminStrings.subjectOperator,
               ),
-              activeToggleAction(ref, 'document-types', record),
-            ]
-          : null,
+            ),
+            DetailLine(
+              AdminStrings.fieldRequired,
+              yesNo(l10n, r['isRequired']),
+            ),
+            DetailLine(
+              AdminStrings.fieldRequiresExpiry,
+              yesNo(l10n, r['requiresExpiry']),
+            ),
+            DetailLine(
+              AdminStrings.fieldFileTypes,
+              ((r['allowedMimeTypes'] as List<Object?>?) ?? const <Object?>[])
+                  .join(', '),
+            ),
+            DetailLine(
+              AdminStrings.fieldMaxFileSize,
+              '${r['maxFileSizeMb'] ?? ''}',
+            ),
+            DetailLine(AdminStrings.fieldMaxFiles, '${r['maxFiles'] ?? ''}'),
+            DetailLine(
+              AdminStrings.fieldInstructions,
+              '${r['instructions'] ?? ''}',
+            ),
+            DetailLine(
+              AdminStrings.fieldStatus,
+              l10n.text(
+                r['isActive'] == true
+                    ? AdminStrings.statusActive
+                    : AdminStrings.statusInactive,
+              ),
+            ),
+          ],
+        ),
+        if (canManage) ...<RowAction>[
+          RowAction(
+            AdminStrings.actionEdit,
+            Icons.edit_outlined,
+            (context, record) => showResourceForm(
+              context,
+              title: l10n.text(AdminStrings.documentTypeEditTitle),
+              fields: _editFields,
+              initial: record,
+              onSubmit: (values) =>
+                  repository.put('document-types/${record['id']}', values),
+            ),
+          ),
+          activeToggleAction(ref, 'document-types', record),
+        ],
+        if (canDelete)
+          deleteAction(
+            repository: repository,
+            path: 'document-types',
+            nameOf: nameOf,
+          ),
+      ],
     );
   }
 }

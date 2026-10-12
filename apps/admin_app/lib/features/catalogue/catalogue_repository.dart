@@ -113,6 +113,12 @@ class CatalogueRepository {
     body: body,
   )).decodeObject((json) => json);
 
+  Future<JsonMap> patch(String path, JsonMap body) async =>
+      (await _client.patch(
+        _fullPath(path),
+        body: body,
+      )).decodeObject((json) => json);
+
   Future<void> delete(String path) => _client.delete(_fullPath(path));
 }
 

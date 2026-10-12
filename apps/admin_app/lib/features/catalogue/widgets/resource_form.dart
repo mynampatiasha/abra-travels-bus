@@ -12,12 +12,26 @@ import '../catalogue_repository.dart';
 
 /// One field of a management form.
 sealed class FieldSpec {
-  const FieldSpec(this.key, this.labelKey, {this.isRequired = false});
+  const FieldSpec(
+    this.key,
+    this.labelKey, {
+    this.isRequired = false,
+    this.fullWidth = false,
+    this.visibleWhen,
+  });
 
   /// Name of the field in the request body.
   final String key;
   final String labelKey;
   final bool isRequired;
+
+  /// In a two-column form: takes the whole row instead of half of it.
+  final bool fullWidth;
+
+  /// Shown only while this returns true for the values typed so far (the
+  /// offer code only when the banner opens an offer). A hidden field is not
+  /// checked and not sent.
+  final bool Function(JsonMap values)? visibleWhen;
 }
 
 class TextSpec extends FieldSpec {
@@ -25,6 +39,8 @@ class TextSpec extends FieldSpec {
     super.key,
     super.labelKey, {
     super.isRequired,
+    super.fullWidth,
+    super.visibleWhen,
     this.maxLines = 1,
     this.clearable = false,
     this.helpKey,
@@ -47,6 +63,7 @@ class NumberSpec extends FieldSpec {
     super.key,
     super.labelKey, {
     super.isRequired,
+    super.fullWidth,
     this.allowDecimal = false,
     this.scale = 1,
   });
@@ -60,7 +77,12 @@ class NumberSpec extends FieldSpec {
 /// A calendar day, sent as `YYYY-MM-DD`. Picked from a calendar; may be
 /// emptied again (when editing, emptying it sends `null`).
 class DateSpec extends FieldSpec {
-  const DateSpec(super.key, super.labelKey, {super.isRequired});
+  const DateSpec(
+    super.key,
+    super.labelKey, {
+    super.isRequired,
+    super.fullWidth,
+  });
 }
 
 class BoolSpec extends FieldSpec {
@@ -69,7 +91,14 @@ class BoolSpec extends FieldSpec {
 
 /// One of a fixed set of values; [options] maps each value to its label key.
 class ChoiceSpec extends FieldSpec {
-  const ChoiceSpec(super.key, super.labelKey, this.options, {super.isRequired});
+  const ChoiceSpec(
+    super.key,
+    super.labelKey,
+    this.options, {
+    super.isRequired,
+    super.fullWidth,
+    super.visibleWhen,
+  });
 
   final Map<String, String> options;
 }
@@ -82,6 +111,8 @@ class RefSpec extends FieldSpec {
     this.optionsPath,
     this.labelOf, {
     super.isRequired,
+    super.fullWidth,
+    super.visibleWhen,
   });
 
   final String optionsPath;
@@ -121,9 +152,23 @@ class ResourceFormMessage implements Exception {
 typedef ResourceFormExtra =
     Widget Function(BuildContext context, JsonMap values, bool isSaving);
 
+/// A second way to save a form, shown as a button beside the main one
+/// ("Save draft" beside "Publish"). It receives the same values.
+class FormAction {
+  const FormAction(this.label, this.onSubmit);
+
+  final String label;
+  final Future<void> Function(JsonMap values) onSubmit;
+}
+
 /// Opens a create or edit form. [onSubmit] receives the values to send;
 /// when it throws, the reason from the backend is shown in the form and the
 /// form stays open. Returns true when the form was saved.
+///
+/// [secondary] adds buttons beside the main one. [columns] 2 puts the fields
+/// side by side (a field with `fullWidth` takes the whole row). [side] is
+/// shown to the right of the fields on a wide dialog, below them otherwise
+/// (a preview). [width] is the width of the dialog.
 Future<bool> showResourceForm(
   BuildContext context, {
   required String title,
@@ -133,6 +178,10 @@ Future<bool> showResourceForm(
   String? submitLabel,
   String? message,
   ResourceFormExtra? extra,
+  ResourceFormExtra? side,
+  List<FormAction> secondary = const <FormAction>[],
+  int columns = 1,
+  double width = 640,
 }) async {
   final saved = await showDialog<bool>(
     context: context,
@@ -145,6 +194,10 @@ Future<bool> showResourceForm(
       submitLabel: submitLabel,
       message: message,
       extra: extra,
+      side: side,
+      secondary: secondary,
+      columns: columns,
+      width: width,
     ),
   );
   return saved ?? false;
@@ -159,9 +212,17 @@ class _ResourceFormDialog extends ConsumerStatefulWidget {
     this.submitLabel,
     this.message,
     this.extra,
+    this.side,
+    this.secondary = const <FormAction>[],
+    this.columns = 1,
+    this.width = 640,
   });
 
   final ResourceFormExtra? extra;
+  final ResourceFormExtra? side;
+  final List<FormAction> secondary;
+  final int columns;
+  final double width;
   final String title;
   final List<FieldSpec> fields;
   final JsonMap initial;
@@ -242,8 +303,10 @@ class _ResourceFormState extends ConsumerState<_ResourceFormDialog> {
     return null;
   }
 
+  bool _isShown(FieldSpec field) => field.visibleWhen?.call(_values) ?? true;
+
   bool _isValid(AbraLocalizations l10n) {
-    for (final field in widget.fields) {
+    for (final field in widget.fields.where(_isShown)) {
       if (field is RowsSpec) {
         final rows = _values[field.key]! as List<JsonMap>;
         if (rows.length < field.minRows) return false;
@@ -271,7 +334,7 @@ class _ResourceFormState extends ConsumerState<_ResourceFormDialog> {
   JsonMap _collect() {
     final isEdit = widget.initial.isNotEmpty;
     final body = <String, Object?>{};
-    for (final field in widget.fields) {
+    for (final field in widget.fields.where(_isShown)) {
       final value = _values[field.key];
       switch (field) {
         case RowsSpec():
@@ -301,7 +364,7 @@ class _ResourceFormState extends ConsumerState<_ResourceFormDialog> {
     return body;
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit([Future<void> Function(JsonMap values)? action]) async {
     final l10n = AbraLocalizations.of(context);
     if (!_isValid(l10n)) {
       setState(() => _showErrors = true);
@@ -312,7 +375,7 @@ class _ResourceFormState extends ConsumerState<_ResourceFormDialog> {
       _failure = null;
     });
     try {
-      await widget.onSubmit(_collect());
+      await (action ?? widget.onSubmit)(_collect());
       if (mounted) Navigator.of(context).pop(true);
     } on Object catch (error) {
       if (!mounted) return;
@@ -559,57 +622,111 @@ class _ResourceFormState extends ConsumerState<_ResourceFormDialog> {
     onChanged: _isSaving ? null : onChanged,
   );
 
+  /// A field with its spacing. Keyed: a message appearing above must not
+  /// shift what was typed from one field into the next.
+  Widget _fieldBox(FieldSpec field) => Padding(
+    key: ValueKey<String>(field.key),
+    padding: const EdgeInsets.only(bottom: AbraSpacing.md),
+    child: _field(field, _values),
+  );
+
+  /// The fields one below the other, or two to a row in a two-column form.
+  List<Widget> _fieldWidgets() {
+    final fields = widget.fields.where(_isShown).toList();
+    if (widget.columns < 2) {
+      return <Widget>[for (final f in fields) _fieldBox(f)];
+    }
+    final rows = <Widget>[];
+    var index = 0;
+    while (index < fields.length) {
+      final field = fields[index];
+      final next = index + 1 < fields.length ? fields[index + 1] : null;
+      if (field.fullWidth || next == null || next.fullWidth) {
+        rows.add(_fieldBox(field));
+        index += 1;
+      } else {
+        rows.add(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Expanded(child: _fieldBox(field)),
+              const SizedBox(width: AbraSpacing.md),
+              Expanded(child: _fieldBox(next)),
+            ],
+          ),
+        );
+        index += 2;
+      }
+    }
+    return rows;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AbraLocalizations.of(context);
     final danger = AbraStatusColors.from(context).danger;
+    final fields = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        if (widget.message != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AbraSpacing.md),
+            child: Text(widget.message!),
+          ),
+        if (_failure != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AbraSpacing.md),
+            child: Semantics(
+              container: true,
+              liveRegion: true,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: danger.container,
+                  borderRadius: AbraRadius.medium,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(AbraSpacing.md),
+                  child: Text(
+                    _failure!,
+                    style: TextStyle(color: danger.foreground),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ..._fieldWidgets(),
+        if (widget.extra != null) widget.extra!(context, _values, _isSaving),
+      ],
+    );
+    final side = widget.side?.call(context, _values, _isSaving);
+    // Beside the fields when the dialog fits next to a preview, below otherwise
+    final isWide = MediaQuery.sizeOf(context).width >= widget.width + 96;
     return AlertDialog(
       title: Text(widget.title),
       content: SizedBox(
-        width: 640,
+        width: widget.width,
         child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              if (widget.message != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AbraSpacing.md),
-                  child: Text(widget.message!),
+          child: side == null
+              ? fields
+              : isWide
+              ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Expanded(flex: 3, child: fields),
+                    const SizedBox(width: AbraSpacing.lg),
+                    Expanded(flex: 2, child: side),
+                  ],
+                )
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    fields,
+                    const SizedBox(height: AbraSpacing.md),
+                    side,
+                  ],
                 ),
-              if (_failure != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AbraSpacing.md),
-                  child: Semantics(
-                    container: true,
-                    liveRegion: true,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: danger.container,
-                        borderRadius: AbraRadius.medium,
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(AbraSpacing.md),
-                        child: Text(
-                          _failure!,
-                          style: TextStyle(color: danger.foreground),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              for (final field in widget.fields)
-                Padding(
-                  // Keyed: a message appearing above must not shift what was
-                  // typed from one field into the next.
-                  key: ValueKey<String>(field.key),
-                  padding: const EdgeInsets.only(bottom: AbraSpacing.md),
-                  child: _field(field, _values),
-                ),
-              if (widget.extra != null)
-                widget.extra!(context, _values, _isSaving),
-            ],
-          ),
         ),
       ),
       actions: <Widget>[
@@ -617,6 +734,12 @@ class _ResourceFormState extends ConsumerState<_ResourceFormDialog> {
           onPressed: _isSaving ? null : () => Navigator.of(context).pop(false),
           child: Text(l10n.text(AbraStrings.commonCancel)),
         ),
+        for (final action in widget.secondary)
+          AbraButton(
+            label: action.label,
+            variant: AbraButtonVariant.secondary,
+            onPressed: _isSaving ? null : () => _submit(action.onSubmit),
+          ),
         AbraButton(
           label: widget.submitLabel ?? l10n.text(AdminStrings.formSave),
           variant: AbraButtonVariant.primary,

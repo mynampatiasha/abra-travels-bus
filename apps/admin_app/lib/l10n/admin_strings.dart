@@ -471,6 +471,87 @@ abstract final class AdminStrings {
 
   static const listEmptyFilteredTitle = 'listEmptyFilteredTitle';
 
+  static const deleteTitle = 'deleteTitle';
+  static const deleteMessage = 'deleteMessage';
+  static const deleteDone = 'deleteDone';
+  static const deleteUndo = 'deleteUndo';
+  static const deleteRestored = 'deleteRestored';
+  static const bnSubtitle = 'bnSubtitle';
+  static const bnTabAll = 'bnTabAll';
+  static const bnNew = 'bnNew';
+  static const bnNewTitle = 'bnNewTitle';
+  static const bnEditTitle = 'bnEditTitle';
+  static const bnColBanner = 'bnColBanner';
+  static const bnColStatus = 'bnColStatus';
+  static const bnColRuns = 'bnColRuns';
+  static const bnColShownTo = 'bnColShownTo';
+  static const bnColOpens = 'bnColOpens';
+  static const bnColOrder = 'bnColOrder';
+  static const bnRunsAlways = 'bnRunsAlways';
+  static const bnRunsFrom = 'bnRunsFrom';
+  static const bnRunsUntil = 'bnRunsUntil';
+  static const bnRunsRange = 'bnRunsRange';
+  static const bnStatusDraft = 'bnStatusDraft';
+  static const bnStatusScheduled = 'bnStatusScheduled';
+  static const bnStatusPublished = 'bnStatusPublished';
+  static const bnStatusExpired = 'bnStatusExpired';
+  static const bnStatusArchived = 'bnStatusArchived';
+  static const bnAudAll = 'bnAudAll';
+  static const bnAudNew = 'bnAudNew';
+  static const bnAudSigned = 'bnAudSigned';
+  static const bnOpenOffer = 'bnOpenOffer';
+  static const bnOpenOfferNone = 'bnOpenOfferNone';
+  static const bnOpenRoute = 'bnOpenRoute';
+  static const bnOpenOperator = 'bnOpenOperator';
+  static const bnOpenUrl = 'bnOpenUrl';
+  static const bnOpenNone = 'bnOpenNone';
+  static const bnOpenScreen = 'bnOpenScreen';
+  static const bnFieldColour = 'bnFieldColour';
+  static const bnColourNavyBlue = 'bnColourNavyBlue';
+  static const bnColourBlueSky = 'bnColourBlueSky';
+  static const bnColourGreenNavy = 'bnColourGreenNavy';
+  static const bnFieldOpens = 'bnFieldOpens';
+  static const bnOptOffer = 'bnOptOffer';
+  static const bnOptRoute = 'bnOptRoute';
+  static const bnOptOperator = 'bnOptOperator';
+  static const bnOptLink = 'bnOptLink';
+  static const bnFieldOfferCode = 'bnFieldOfferCode';
+  static const bnFieldRouteFrom = 'bnFieldRouteFrom';
+  static const bnFieldRouteTo = 'bnFieldRouteTo';
+  static const bnFieldOperator = 'bnFieldOperator';
+  static const bnFieldLink = 'bnFieldLink';
+  static const bnFieldShownTo = 'bnFieldShownTo';
+  static const bnFieldStarts = 'bnFieldStarts';
+  static const bnFieldEnds = 'bnFieldEnds';
+  static const bnFieldOrder = 'bnFieldOrder';
+  static const bnSaveDraft = 'bnSaveDraft';
+  static const bnPublish = 'bnPublish';
+  static const bnUnpublish = 'bnUnpublish';
+  static const bnDuplicate = 'bnDuplicate';
+  static const bnArchive = 'bnArchive';
+  static const bnUnarchive = 'bnUnarchive';
+  static const bnMoveUp = 'bnMoveUp';
+  static const bnMoveDown = 'bnMoveDown';
+  static const bnEndBeforeStart = 'bnEndBeforeStart';
+  static const bnToastPublished = 'bnToastPublished';
+  static const bnToastScheduled = 'bnToastScheduled';
+  static const bnToastDraft = 'bnToastDraft';
+  static const bnToastUnpublished = 'bnToastUnpublished';
+  static const bnToastArchived = 'bnToastArchived';
+  static const bnToastUnarchived = 'bnToastUnarchived';
+  static const bnToastDuplicated = 'bnToastDuplicated';
+  static const bnPictures = 'bnPictures';
+  static const bnPictureDesktop = 'bnPictureDesktop';
+  static const bnPicturePhone = 'bnPicturePhone';
+  static const bnPictureHint = 'bnPictureHint';
+  static const bnPreviewHome = 'bnPreviewHome';
+  static const bnPreviewCaption = 'bnPreviewCaption';
+  static const bnPreviewOfferButton = 'bnPreviewOfferButton';
+  static const invEditTitle = 'invEditTitle';
+  static const invEditHint = 'invEditHint';
+  static const invFieldExpires = 'invFieldExpires';
+  static const invSearch = 'invSearch';
+  static const invSaved = 'invSaved';
   static const Set<String> all = <String>{
     appName,
     signInTitle,
@@ -1025,5 +1106,86 @@ abstract final class AdminStrings {
     exportDesktopImageUrl,
     linkOfferSoon,
     linkScreenSoon,
+    deleteTitle,
+    deleteMessage,
+    deleteDone,
+    deleteUndo,
+    deleteRestored,
+    bnSubtitle,
+    bnTabAll,
+    bnNew,
+    bnNewTitle,
+    bnEditTitle,
+    bnColBanner,
+    bnColStatus,
+    bnColRuns,
+    bnColShownTo,
+    bnColOpens,
+    bnColOrder,
+    bnRunsAlways,
+    bnRunsFrom,
+    bnRunsUntil,
+    bnRunsRange,
+    bnStatusDraft,
+    bnStatusScheduled,
+    bnStatusPublished,
+    bnStatusExpired,
+    bnStatusArchived,
+    bnAudAll,
+    bnAudNew,
+    bnAudSigned,
+    bnOpenOffer,
+    bnOpenOfferNone,
+    bnOpenRoute,
+    bnOpenOperator,
+    bnOpenUrl,
+    bnOpenNone,
+    bnOpenScreen,
+    bnFieldColour,
+    bnColourNavyBlue,
+    bnColourBlueSky,
+    bnColourGreenNavy,
+    bnFieldOpens,
+    bnOptOffer,
+    bnOptRoute,
+    bnOptOperator,
+    bnOptLink,
+    bnFieldOfferCode,
+    bnFieldRouteFrom,
+    bnFieldRouteTo,
+    bnFieldOperator,
+    bnFieldLink,
+    bnFieldShownTo,
+    bnFieldStarts,
+    bnFieldEnds,
+    bnFieldOrder,
+    bnSaveDraft,
+    bnPublish,
+    bnUnpublish,
+    bnDuplicate,
+    bnArchive,
+    bnUnarchive,
+    bnMoveUp,
+    bnMoveDown,
+    bnEndBeforeStart,
+    bnToastPublished,
+    bnToastScheduled,
+    bnToastDraft,
+    bnToastUnpublished,
+    bnToastArchived,
+    bnToastUnarchived,
+    bnToastDuplicated,
+    bnPictures,
+    bnPictureDesktop,
+    bnPicturePhone,
+    bnPictureHint,
+    bnPreviewHome,
+    bnPreviewCaption,
+    bnPreviewOfferButton,
+    invEditTitle,
+    invEditHint,
+    invFieldExpires,
+    invSearch,
+    invSaved,
   };
 }
