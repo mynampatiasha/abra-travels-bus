@@ -161,31 +161,32 @@ describe('Banners e2e: duplicate, archive, move', () => {
       const gone = await create({ title: 'Gone', sortOrder: 2 });
       await superAdmin.post(`${ADMIN}/${gone.id}/archive`).expect(201);
 
-      expect(await fetchOrder()).toEqual([a.id, b.id, c.id]);
+      // higher order shows first
+      expect(await fetchOrder()).toEqual([c.id, b.id, a.id]);
 
       const down = dataOf<OrderEntry[]>(
-        await superAdmin.patch(`${ADMIN}/order`, { id: a.id, direction: 'down' }).expect(200),
+        await superAdmin.patch(`${ADMIN}/order`, { id: c.id, direction: 'down' }).expect(200),
       );
-      expect(down.map((entry) => entry.id)).toEqual([b.id, a.id, c.id]);
-      expect(await fetchOrder()).toEqual([b.id, a.id, c.id]);
+      expect(down.map((entry) => entry.id)).toEqual([b.id, c.id, a.id]);
+      expect(await fetchOrder()).toEqual([b.id, c.id, a.id]);
 
       const up = dataOf<OrderEntry[]>(
-        await superAdmin.patch(`${ADMIN}/order`, { id: c.id, direction: 'up' }).expect(200),
+        await superAdmin.patch(`${ADMIN}/order`, { id: a.id, direction: 'up' }).expect(200),
       );
-      expect(up.map((entry) => entry.id)).toEqual([b.id, c.id, a.id]);
+      expect(up.map((entry) => entry.id)).toEqual([b.id, a.id, c.id]);
 
       // first up and last down are no-ops
       const same = dataOf<OrderEntry[]>(
         await superAdmin.patch(`${ADMIN}/order`, { id: b.id, direction: 'up' }).expect(200),
       );
-      expect(same.map((entry) => entry.id)).toEqual([b.id, c.id, a.id]);
+      expect(same.map((entry) => entry.id)).toEqual([b.id, a.id, c.id]);
 
       // the customer app shows the same order
       const shown = dataOf<PublicBannerBody[]>(await client(context).get(PUBLIC).expect(200));
-      expect(shown.map((entry) => entry.id)).toEqual([b.id, c.id, a.id]);
+      expect(shown.map((entry) => entry.id)).toEqual([b.id, a.id, c.id]);
 
       const entries = dataOf<{ action: string }[]>(
-        await superAdmin.get(`/api/v1/audit-logs?entityId=${a.id}&pageSize=50`).expect(200),
+        await superAdmin.get(`/api/v1/audit-logs?entityId=${c.id}&pageSize=50`).expect(200),
       );
       expect(entries.filter((entry) => entry.action === 'banner.updated').length).toBeGreaterThan(
         0,
@@ -203,6 +204,64 @@ describe('Banners e2e: duplicate, archive, move', () => {
         404,
         'RESOURCE_NOT_FOUND',
       );
+    });
+  });
+
+  describe('the fields of the demo form', () => {
+    it('keeps colour style and audience, and links to an operator', async () => {
+      await context.connection.collection('banners').deleteMany({});
+      const defaults = await create({ title: 'Defaults' });
+      expect(defaults).toMatchObject({ colourStyle: 'NAVY_BLUE', audience: 'ALL' });
+
+      const operatorId = '64b0000000000000000000c3';
+      const styled = await create({
+        title: 'For operators',
+        colourStyle: 'GREEN_NAVY',
+        audience: 'SIGNED_IN',
+        linkType: 'OPERATOR',
+        linkValue: operatorId,
+      });
+      expect(styled).toMatchObject({
+        colourStyle: 'GREEN_NAVY',
+        audience: 'SIGNED_IN',
+        linkType: 'OPERATOR',
+        linkValue: operatorId,
+      });
+      await expectCode(
+        superAdmin.post(ADMIN, { title: 'Bad operator', linkType: 'OPERATOR', linkValue: 'abc' }),
+        400,
+        'VALIDATION_FAILED',
+      );
+      await expectCode(
+        superAdmin.post(ADMIN, { title: 'Bad style', colourStyle: 'PINK' }),
+        400,
+        'VALIDATION_FAILED',
+      );
+      const edited = dataOf<BannerBody>(
+        await superAdmin.put(`${ADMIN}/${defaults.id}`, { colourStyle: 'BLUE_SKY' }).expect(200),
+      );
+      expect(edited).toMatchObject({ colourStyle: 'BLUE_SKY' });
+    });
+
+    it('shows each audience only to the people it is meant for', async () => {
+      await context.connection.collection('banners').deleteMany({});
+      const all = await create({ title: 'For all', audience: 'ALL' });
+      const fresh = await create({ title: 'For new', audience: 'NEW_USERS' });
+      const signed = await create({ title: 'For signed in', audience: 'SIGNED_IN' });
+      const idsFor = async (viewer?: string) =>
+        dataOf<PublicBannerBody[]>(
+          await client(context)
+            .get(viewer ? `${PUBLIC}?viewer=${viewer}` : PUBLIC)
+            .expect(200),
+        )
+          .map((banner) => banner.id)
+          .sort();
+
+      expect(await idsFor()).toEqual([all.id, fresh.id].sort()); // a guest by default
+      expect(await idsFor('GUEST')).toEqual([all.id, fresh.id].sort());
+      expect(await idsFor('NEW_USER')).toEqual([all.id, fresh.id, signed.id].sort());
+      expect(await idsFor('RETURNING')).toEqual([all.id, signed.id].sort());
+      await client(context).get(`${PUBLIC}?viewer=NOBODY`).expect(400);
     });
   });
 

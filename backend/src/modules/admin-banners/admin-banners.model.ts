@@ -9,8 +9,37 @@ import { definePermissions, PLATFORM_ONLY } from '../rbac/permissions/permission
 export const BANNER_MODEL = 'Banner';
 
 /** What happens when a customer taps the banner. */
-export const BANNER_LINK_TYPES = ['NONE', 'OFFER', 'ROUTE_SEARCH', 'SCREEN', 'URL'] as const;
+export const BANNER_LINK_TYPES = [
+  'NONE',
+  'OFFER',
+  'ROUTE_SEARCH',
+  'SCREEN',
+  'URL',
+  'OPERATOR',
+] as const;
 export type BannerLinkType = (typeof BANNER_LINK_TYPES)[number];
+
+/** The three colour styles of the demo: navy to blue, blue to sky, green to navy. */
+export const BANNER_COLOUR_STYLES = ['NAVY_BLUE', 'BLUE_SKY', 'GREEN_NAVY'] as const;
+export type BannerColourStyle = (typeof BANNER_COLOUR_STYLES)[number];
+
+/** Who is shown the banner: everyone, new users, or signed-in users. */
+export const BANNER_AUDIENCES = ['ALL', 'NEW_USERS', 'SIGNED_IN'] as const;
+export type BannerAudience = (typeof BANNER_AUDIENCES)[number];
+
+/**
+ * What the customer app knows about the person looking: a guest (not signed in), a new user
+ * (signed in, no booking yet) or a returning one. It decides which audiences apply.
+ */
+export const BANNER_VIEWERS = ['GUEST', 'NEW_USER', 'RETURNING'] as const;
+export type BannerViewer = (typeof BANNER_VIEWERS)[number];
+
+/** Which banner audiences a kind of viewer is shown. */
+export const AUDIENCES_SEEN_BY: Readonly<Record<BannerViewer, readonly BannerAudience[]>> = {
+  GUEST: ['ALL', 'NEW_USERS'],
+  NEW_USER: ['ALL', 'NEW_USERS', 'SIGNED_IN'],
+  RETURNING: ['ALL', 'SIGNED_IN'],
+};
 
 /** Where in the customer app the banner is shown. */
 export const BANNER_PLACEMENTS = ['HOME_TOP', 'OFFERS'] as const;
@@ -71,6 +100,8 @@ export interface Banner {
   linkValue: string;
   placement: BannerPlacement;
   language: BannerLanguage;
+  colourStyle: BannerColourStyle;
+  audience: BannerAudience;
   /** Key in file storage of an uploaded image (`banners/<uuid>.<ext>`). */
   imageKey: string | null;
   imageMimeType: string | null;
@@ -105,6 +136,8 @@ export const bannerSchema = new Schema<Banner>(
     linkValue: { type: String, trim: true, maxlength: 300, default: '' },
     placement: { type: String, enum: BANNER_PLACEMENTS, required: true, default: 'HOME_TOP' },
     language: { type: String, enum: BANNER_LANGUAGES, required: true, default: 'ALL' },
+    colourStyle: { type: String, enum: BANNER_COLOUR_STYLES, required: true, default: 'NAVY_BLUE' },
+    audience: { type: String, enum: BANNER_AUDIENCES, required: true, default: 'ALL' },
     imageKey: { type: String, default: null },
     imageMimeType: { type: String, default: null },
     imageUpdatedAt: { type: Date, default: null },
@@ -123,7 +156,7 @@ export const bannerSchema = new Schema<Banner>(
 );
 
 bannerSchema.plugin(softDeletePlugin);
-bannerSchema.index({ placement: 1, isActive: 1, sortOrder: 1 });
+bannerSchema.index({ placement: 1, isActive: 1, sortOrder: -1 });
 bannerSchema.index({ startsAt: 1, endsAt: 1 });
 bannerSchema.index({ createdAt: -1 });
 
@@ -180,6 +213,9 @@ export function bannerRuleIssues(banner: {
       }
       break;
     }
+    case 'OPERATOR':
+      if (!OBJECT_ID.test(value)) link('must be an operator id');
+      break;
     case 'SCREEN':
       if (!/^\/?[A-Za-z][A-Za-z0-9_\-/]{0,99}$/.test(value)) link('must be an app screen name');
       break;
@@ -222,6 +258,8 @@ const fields = {
   linkValue: clearableText(300),
   placement: z.enum(BANNER_PLACEMENTS),
   language: z.enum(BANNER_LANGUAGES),
+  colourStyle: z.enum(BANNER_COLOUR_STYLES),
+  audience: z.enum(BANNER_AUDIENCES),
   externalImageUrl: httpsUrl,
   externalDesktopImageUrl: httpsUrl,
   startsAt: isoDate,
@@ -240,6 +278,8 @@ export class CreateBannerDto extends createZodDto(
       linkValue: fields.linkValue.default(''),
       placement: fields.placement.default('HOME_TOP'),
       language: fields.language.default('ALL'),
+      colourStyle: fields.colourStyle.default('NAVY_BLUE'),
+      audience: fields.audience.default('ALL'),
       externalImageUrl: fields.externalImageUrl.default(null),
       externalDesktopImageUrl: fields.externalDesktopImageUrl.default(null),
       startsAt: fields.startsAt.default(null),
@@ -264,6 +304,8 @@ export class UpdateBannerDto extends createZodDto(
     linkValue: fields.linkValue.optional(),
     placement: fields.placement.optional(),
     language: fields.language.optional(),
+    colourStyle: fields.colourStyle.optional(),
+    audience: fields.audience.optional(),
     externalImageUrl: fields.externalImageUrl.optional(),
     externalDesktopImageUrl: fields.externalDesktopImageUrl.optional(),
     startsAt: fields.startsAt.optional(),
@@ -287,7 +329,11 @@ export class BannerListQueryDto extends createZodDto(
 ) {}
 
 export class PublicBannerQueryDto extends createZodDto(
-  z.object({ placement: z.enum(BANNER_PLACEMENTS).default('HOME_TOP') }),
+  z.object({
+    placement: z.enum(BANNER_PLACEMENTS).default('HOME_TOP'),
+    /** Who is looking, so banners meant for new or signed-in users are shown to the right people. */
+    viewer: z.enum(BANNER_VIEWERS).default('GUEST'),
+  }),
 ) {}
 
 const variant = z.enum(BANNER_IMAGE_VARIANTS).default('mobile');
@@ -390,6 +436,8 @@ export interface BannerView {
   linkValue: string;
   placement: string;
   language: string;
+  colourStyle: string;
+  audience: string;
   startsAt: string | null;
   endsAt: string | null;
   sortOrder: number;
@@ -411,6 +459,7 @@ export interface PublicBannerView {
   buttonText: string;
   linkType: string;
   linkValue: string;
+  colourStyle: string;
   imageUrl: string | null;
   desktopImageUrl: string | null;
 }

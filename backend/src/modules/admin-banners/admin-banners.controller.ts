@@ -150,7 +150,7 @@ export class AdminBannersController {
     description:
       'Requires banners.manage. `variant=mobile` (default, the main image) or `desktop` ' +
       '(optional wider image for tablets and desktops). Multipart field `file`: JPG, PNG or ' +
-      'WebP (checked from the bytes), at most 3 MB. Replaces the previous image of that ' +
+      'WebP (checked from the bytes), at most 1 MB. Replaces the previous image of that ' +
       'variant and its external image address. Audited.',
   })
   @ApiResponse({ status: 413, description: 'PAYLOAD_TOO_LARGE' })
@@ -214,7 +214,7 @@ export class PublicBannersController {
     @Query() query: PublicBannerQueryDto,
     @Headers('accept-language') acceptLanguage?: string,
   ): Promise<PublicBannerView[]> {
-    return this.banners.live(query.placement, preferredLanguage(acceptLanguage));
+    return this.banners.live(query.placement, preferredLanguage(acceptLanguage), query.viewer);
   }
 
   @Get(':id/image')

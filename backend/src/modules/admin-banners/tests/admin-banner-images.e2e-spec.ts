@@ -172,14 +172,14 @@ describe('Banner images e2e', () => {
     expect(uploaded.imageUrl).toMatch(/^banners\//);
   });
 
-  it('refuses text files and files over 3 MB', async () => {
+  it('refuses text files and files over 1 MB', async () => {
     const banner = await create({ title: 'Refuses files' });
     await expectCode(
       superAdmin.upload(`${ADMIN}/${banner.id}/image`, Buffer.from('hello world'), 'a.png'),
       415,
       'UNSUPPORTED_MEDIA_TYPE',
     );
-    const tooLarge = Buffer.concat([PNG, Buffer.alloc(3 * 1024 * 1024)]);
+    const tooLarge = Buffer.concat([PNG, Buffer.alloc(1024 * 1024)]);
     await expectCode(
       superAdmin.upload(`${ADMIN}/${banner.id}/image`, tooLarge, 'big.png'),
       413,

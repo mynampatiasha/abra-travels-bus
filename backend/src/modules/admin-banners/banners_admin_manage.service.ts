@@ -90,6 +90,8 @@ export class BannersManageService {
                 linkValue: source.linkValue,
                 placement: source.placement,
                 language: source.language,
+                colourStyle: source.colourStyle,
+                audience: source.audience,
                 externalImageUrl: source.externalImageUrl,
                 externalDesktopImageUrl: source.externalDesktopImageUrl,
                 startsAt: source.startsAt,
@@ -154,7 +156,8 @@ export class BannersManageService {
       ordered.map((banner) => [banner._id.toHexString(), banner.sortOrder]),
     );
     const writes = next.flatMap((bannerId, index) => {
-      const sortOrder = (index + 1) * ORDER_STEP;
+      // the first of the list has the highest number: higher shows first
+      const sortOrder = (next.length - index) * ORDER_STEP;
       return sortOrderOf.get(bannerId) === sortOrder
         ? []
         : [
@@ -222,7 +225,7 @@ export class BannersManageService {
   private workingList(placement: Banner['placement']): Promise<StoredBanner[]> {
     return this.banners
       .find({ placement, archivedAt: null })
-      .sort({ sortOrder: 1, createdAt: -1, _id: -1 })
+      .sort({ sortOrder: -1, createdAt: -1, _id: -1 })
       .lean<StoredBanner[]>()
       .exec();
   }

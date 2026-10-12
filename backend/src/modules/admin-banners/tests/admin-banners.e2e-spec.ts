@@ -261,10 +261,11 @@ describe('Banners e2e', () => {
       const response = await client(context).get(PUBLIC).expect(200);
       expect(response.headers['cache-control']).toBe('public, max-age=60');
       const items = dataOf<PublicBannerBody[]>(response);
-      expect(items.map((item) => item.id)).toEqual([first.id, second.id, windowed.id]);
+      expect(items.map((item) => item.id)).toEqual([windowed.id, second.id, first.id]); // higher order shows first
       expect(Object.keys(items[0] ?? {}).sort()).toEqual(
         [
           'buttonText',
+          'colourStyle',
           'desktopImageUrl',
           'id',
           'imageUrl',
