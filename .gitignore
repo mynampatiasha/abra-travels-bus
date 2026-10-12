@@ -50,3 +50,7 @@ Thumbs.db
 logs/
 *.log
 infrastructure/load-tests/results/
+
+**/*service-account*.json
+
+**/*firebase-adminsdk*.json

@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Abra Customer Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+.ban{border-radius:16px;padding:16px;color:#fff;min-width:270px;min-height:120px;display:flex;flex-direction:column;justify-content:flex-end;gap:2px;text-align:left}
+.ban0{background:var(--gr)}.ban1{background:linear-gradient(135deg,#0B4EA2,#36BDF5)}.ban2{background:linear-gradient(135deg,#12304A,#1B8A5A)}
+.hero{background:var(--gr);color:#fff;padding:16px 16px 44px}
+.srch{background:var(--card);border-radius:18px;padding:12px;box-shadow:var(--sh);display:flex;flex-direction:column;gap:8px;margin-top:-30px;position:relative}
+.cityb{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1px solid var(--ln);border-radius:12px;padding:8px 12px;min-height:56px;background:var(--fld)}
+.cityb small{display:block;color:var(--m);font-size:12px}.cityb b{font-size:16px}
+.swp{position:absolute;right:24px;top:52px;width:40px;height:40px;border-radius:50%;background:var(--card);border:1px solid var(--ln);display:grid;place-items:center;z-index:2;color:var(--b)}
+.res{display:flex;flex-direction:column;gap:6px;text-align:left;width:100%}.res.so{opacity:.55}
+.pr{font-size:20px;font-weight:800;color:var(--db)}:root[data-theme=dark] .pr{color:var(--s)}
+.deck{border:1px solid var(--ln);border-radius:16px;background:var(--bg);padding:12px;display:flex;flex-direction:column;gap:6px;align-items:center}
+.deck .front{align-self:stretch;display:flex;justify-content:space-between;font-size:11px;color:var(--m);border-bottom:1px dashed var(--ln);padding-bottom:6px;margin-bottom:4px}
+.srw{display:flex;gap:6px}.gap{width:20px}
+.st2{width:42px;height:42px;border-radius:8px;border:1.5px solid var(--b);background:var(--card);font-size:10px;font-weight:700;color:var(--db);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1}
+.st2.berth{height:72px}.st2 small{font-weight:600;font-size:9px;color:var(--m)}
+.st2.B{background:#C9D3DC;border-color:#C9D3DC;color:#4C5E6E;cursor:not-allowed}.st2.H{background:#FDE7B0;border-color:#F59E0B;color:#7A4B00;cursor:not-allowed}.st2.X{background:#F9C7C7;border-color:#EF4444;color:#B91C1C;cursor:not-allowed}
+.st2.L{border-color:#E86BB5;color:#8A1C5E}.st2.sel{background:var(--g);border-color:var(--g);color:#fff}.st2.sel small{color:#fff}
+.leg{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;align-items:center}.leg i{display:inline-block;width:14px;height:14px;border-radius:4px;border:1.5px solid var(--b);margin-right:4px;vertical-align:-2px}
+.botbar{flex:none;background:var(--card);border-top:1px solid var(--ln);padding:10px 14px;display:flex;align-items:center;gap:10px}
+.opt{display:flex;gap:10px;align-items:center;border:1px solid var(--ln);border-radius:12px;padding:12px;width:100%;text-align:left;background:var(--card)}.opt.on{border-color:var(--b);background:var(--lb)}
+.tkt{background:var(--card);border-radius:18px;overflow:hidden;box-shadow:var(--sh);border:1px solid var(--ln)}.tkt .top{background:var(--gr);color:#fff;padding:14px}.tkt .cut{border-top:2px dashed var(--ln);margin:0 14px}
+.ring{width:170px;height:170px;margin:8px auto;position:relative;display:grid;place-items:center;user-select:none;touch-action:none;cursor:pointer}
+.ring svg{position:absolute;inset:0}.ring b{width:130px;height:130px;border-radius:50%;background:var(--r);color:#fff;font-size:28px;display:grid;place-items:center;box-shadow:0 0 0 10px var(--rbg)}
+.timer{background:var(--abg);color:var(--atx);border-radius:10px;padding:4px 10px;font-weight:800;font-size:12px;white-space:nowrap}
+.msgs{display:flex;flex-direction:column;gap:8px}.mg{max-width:85%;padding:8px 12px;border-radius:12px;background:var(--bg)}.mg.me{align-self:flex-end;background:var(--b);color:#fff}
+.seg2{display:flex;background:var(--bg);border-radius:12px;padding:3px}.seg2 button{flex:1;min-height:38px;border-radius:10px;font-weight:700;color:var(--m)}.seg2 button.on{background:var(--card);color:var(--db);box-shadow:var(--sh)}
+.onb{min-height:100%;display:flex;flex-direction:column;justify-content:space-between;padding:20px;gap:16px;background:var(--card)}
+.onb .art{height:200px;border-radius:24px;background:var(--gr);display:grid;place-items:center;color:#fff}
+.dots{display:flex;gap:6px;justify-content:center}.dots i{width:8px;height:8px;border-radius:99px;background:var(--ln)}.dots i.on{width:22px;background:var(--b)}
+.otp{display:flex;gap:8px;justify-content:center}.otp input{width:42px;height:50px;text-align:center;font-size:20px;font-weight:800;border:1px solid var(--ln);border-radius:12px;background:var(--fld)}
+.sk{height:92px;border-radius:16px;background:linear-gradient(90deg,#E5EAEE 25%,#F3F5F7 50%,#E5EAEE 75%);background-size:200% 100%;animation:skl 1.2s infinite}@keyframes skl{to{background-position:-200% 0}}
+:root[data-theme=dark] .sk{background:linear-gradient(90deg,#1B2E3E 25%,#243C50 50%,#1B2E3E 75%);background-size:200% 100%}
+.splash{height:100%;background:var(--gr);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+.faq summary{cursor:pointer;font-weight:700;padding:10px 0}.faq{border-bottom:1px solid var(--ln)}
+.toggle{width:48px;height:28px;border-radius:99px;background:#B7C4CF;position:relative;flex:none}.toggle:after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.2s}.toggle.on{background:var(--g)}.toggle.on:after{left:23px}
+.err{color:var(--rtx);font-size:12px}.fd.bad{border-color:var(--r)}
+.amen{display:flex;flex-wrap:wrap;gap:6px}.amen span{background:var(--lb);color:var(--db);border-radius:99px;padding:4px 10px;font-size:12px;font-weight:600}
+.spin{width:54px;height:54px;border-radius:50%;border:5px solid var(--lb2);border-top-color:var(--b);animation:rot 1s linear infinite;margin:auto}@keyframes rot{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<script src="shared/abra_langs.js"></script>
+<script src="shared/abra_store.js"></script>
+<script src="shared/abra_mobile.js"></script>
+<script src="shared/abra_ai_mobile.js"></script>
+<script>
+/* =====================================================================
+   ABRA TRAVELS - CUSTOMER APP DEMO (phone)
+   Same screens and steps as the Flutter customer app (apps/customer_app),
+   connected live to the admin, client and driver prototypes through shared/abra_store.js.
+   ===================================================================== */
+const {$,$$,esc,money,fd,ft,fdt,rel,ic,chip,hb,kv,empty,fld,gv,toast,sheet,closeSheet,lab}=M;
+AbraStore.init();
+const DB=()=>AbraStore.get();
+const LS=(k,v)=>{try{if(v===undefined)return JSON.parse(localStorage.getItem('abra_c_'+k)||'null');localStorage.setItem('abra_c_'+k,JSON.stringify(v))}catch(e){return null}};
+const S={who:LS('who')||'',tab:'home',stack:[],q:LS('q')||{from:'Bengaluru',to:'Hyderabad',date:new Date().toISOString().slice(0,10)},
+sort:'early',f:{win:[],type:[],ac:'',ops:[],am:[],max:0},page:1,sel:[],trip:null,tt:'up',boot:LS('onboarded')?'app':'splash',onb:0,nf:'all'};
+if(S.q.date<new Date().toISOString().slice(0,10))S.q.date=new Date().toISOString().slice(0,10);
+/* links from the public website: #search=From|To|YYYY-MM-DD or #trip=TRP-xxxx */
+(function(){const h=decodeURIComponent(location.hash||'');let m=h.match(/^#search=([^|]+)\|([^|]+)\|(\d{4}-\d\d-\d\d)/);if(m){S.q={from:m[1],to:m[2],date:m[3]};S.boot='app';S.stack=['results'];S.loadingR=true;history.replaceState(null,'',location.pathname)}
+m=h.match(/^#trip=([\w-]+)/);if(m){S.boot='app';S.trip=m[1];S.stack=['trip:'+m[1]];history.replaceState(null,'',location.pathname)}})();
+const me=()=>DB().customers.find(c=>c.id===S.who);
+const save=s=>AbraStore.save(s||'customer');
+const T=id=>DB().trips.find(t=>t.id===id);
+const busOf=t=>DB().buses.find(b=>b.id===t.busId)||{};
+const route=t=>DB().routes.find(r=>r.id===t.routeId)||{stops:[]};
+const opOf=t=>DB().operators.find(o=>o.id===t.operatorId)||{};
+const placeOf=name=>DB().places.find(p=>p.name===name)||{};
+const inbox=()=>S.who?AbraStore.inbox('customer:'+S.who).sort((a,b)=>new Date(b.at)-new Date(a.at)):[];
+const myBk=()=>DB().bookings.filter(b=>b.customerId===S.who).sort((a,b)=>new Date(a.travelDate)-new Date(b.travelDate));
+const sameDay=(a,b)=>new Date(a).toDateString()===new Date(b).toDateString();
+const hrs=t=>route(t).hours||8;
+const arr=t=>new Date(new Date(t.depart).getTime()+hrs(t)*36e5);
+const stopTime=(t,s)=>new Date(new Date(t.depart).getTime()+((s&&s.offset)||0)*6e4);
+const price=(t,l)=>AbraStore.price(t,l);
+const seatIdxT=(t,l)=>{for(let i=0;i<t.seats;i++)if(AbraStore.seatLabelFor(t,i)===l)return i;return -1};
+const seatIdx=l=>seatIdxT(T(S.trip),l);
+const free=t=>AbraStore.seatStates(t).filter(x=>x==='A'||x==='L').length;
+const push=v=>{S.stack.push(v);M.render();const s=$('.scr');if(s)s.scrollTop=0};
+const pop=()=>{const v=String(S.stack.pop()||'');if(v==='points')releaseHold();M.render()};
+const AM_DEF={'AC Sleeper':['Charging point','Blanket','Water bottle','Reading light','GPS tracking','CCTV'],'Volvo Multi-Axle AC':['Wi-Fi','Charging point','Water bottle','Entertainment','GPS tracking','Toilet'],'AC Seater':['Charging point','Water bottle','GPS tracking'],'Semi-Sleeper AC':['Charging point','Blanket','GPS tracking']};
+const amenOf=t=>{const b=busOf(t);return(b.amen&&b.amen.length?b.amen:AM_DEF[t.type]||['GPS tracking','Emergency exit'])};
+M.addDict(`Where are you travelling?|మీరు ఎక్కడికి ప్రయాణిస్తున్నారు?|आप कहाँ यात्रा कर रहे हैं?
+Find buses between cities and compare timings and fares.|నగరాల మధ్య బస్సులు వెతికి సమయాలు, ఛార్జీలు పోల్చండి.|शहरों के बीच बसें खोजें और समय व किराया तुलना करें।
+Recent searches|ఇటీవలి శోధనలు|हाल की खोजें
+Good to know|తెలుసుకోవాల్సినవి|जानने योग्य
+Every operator is approved by Abra Travels|ప్రతి ఆపరేటర్‌ను అబ్రా ట్రావెల్స్ ఆమోదించింది|हर ऑपरेटर अब्रा ट्रैवल्स द्वारा स्वीकृत है
+Fares are shown before you choose|ఎంచుకునే ముందే ఛార్జీలు చూపిస్తాం|चुनने से पहले किराया दिखता है
+Boarding and dropping points come with timings|బోర్డింగ్, డ్రాపింగ్ పాయింట్లు సమయాలతో|बोर्डिंग और ड्रॉपिंग पॉइंट समय के साथ
+Support|సపోర్ట్|सहायता
+Previous day|ముందు రోజు|पिछला दिन
+Next day|తర్వాతి రోజు|अगला दिन
+Filter|ఫిల్టర్|फ़िल्टर
+Sort|క్రమం|क्रम
+Sold out|అమ్ముడైపోయింది|बिक गई
+Boarding points|బోర్డింగ్ పాయింట్లు|बोर्डिंग पॉइंट
+Dropping points|డ్రాపింగ్ పాయింట్లు|ड्रॉपिंग पॉइंट
+Amenities|సౌకర్యాలు|सुविधाएँ
+Lower deck|కింది డెక్|निचला डेक
+Upper deck|పై డెక్|ऊपरी डेक
+Front|ముందు|आगे
+Ladies only|మహిళలకు మాత్రమే|केवल महिलाएँ
+Blocked|బ్లాక్|ब्लॉक
+Use my profile|నా ప్రొఫైల్ ఉపయోగించు|मेरी प्रोफ़ाइल इस्तेमाल करें
+Contact details|సంప్రదింపు వివరాలు|संपर्क विवरण
+Review booking|బుకింగ్ సమీక్ష|बुकिंग की समीक्षा
+Fare breakup|ఛార్జీ వివరాలు|किराया विवरण
+Cancellation policy|రద్దు విధానం|रद्दीकरण नीति
+Proceed to pay|చెల్లింపుకు వెళ్లండి|भुगतान करें
+Processing your payment|మీ చెల్లింపు ప్రాసెస్ అవుతోంది|आपका भुगतान हो रहा है
+Retry payment|మళ్లీ చెల్లించండి|फिर से भुगतान करें
+Change payment method|చెల్లింపు విధానం మార్చండి|भुगतान का तरीका बदलें
+Back to review|సమీక్షకు తిరిగి|समीक्षा पर वापस
+View ticket|టికెట్ చూడండి|टिकट देखें
+Add to calendar|క్యాలెండర్‌కు జోడించు|कैलेंडर में जोड़ें
+Share|షేర్|शेयर
+Call operator|ఆపరేటర్‌కు కాల్|ऑपरेटर को कॉल करें
+Trip timeline|ట్రిప్ టైమ్‌లైన్|ट्रिप समयरेखा
+Cancel seats|సీట్లు రద్దు|सीटें रद्द करें
+Get help|సహాయం పొందండి|मदद लें
+Refund status|రీఫండ్ స్థితి|रिफंड स्थिति
+Live tracking|లైవ్ ట్రాకింగ్|लाइव ट्रैकिंग
+Call driver|డ్రైవర్‌కు కాల్|ड्राइवर को कॉल करें
+Women safety|మహిళల భద్రత|महिला सुरक्षा
+Emergency contacts|అత్యవసర పరిచయాలు|आपातकालीन संपर्क
+Add contact|పరిచయం జోడించు|संपर्क जोड़ें
+Helplines|హెల్ప్‌లైన్‌లు|हेल्पलाइन
+Help is on the way|సహాయం వస్తోంది|मदद आ रही है
+Call 112 now|ఇప్పుడే 112కు కాల్ చేయండి|अभी 112 पर कॉल करें
+I'm safe, cancel alert|నేను సురక్షితం, హెచ్చరిక రద్దు|मैं सुरक्षित हूँ, अलर्ट रद्द करें
+Trip sharing|ట్రిప్ షేరింగ్|ट्रिप शेयरिंग
+Let family follow your journey|మీ ప్రయాణాన్ని కుటుంబం చూడనివ్వండి|परिवार को आपकी यात्रा देखने दें
+People with access|యాక్సెస్ ఉన్నవారు|जिनके पास पहुँच है
+Stop sharing|షేరింగ్ ఆపండి|शेयरिंग बंद करें
+Start sharing|షేరింగ్ ప్రారంభించండి|शेयरिंग शुरू करें
+Copy link|లింక్ కాపీ|लिंक कॉपी करें
+Offers & promotions|ఆఫర్లు & ప్రమోషన్లు|ऑफ़र और प्रमोशन
+Save on your next trip|తదుపరి ట్రిప్‌లో ఆదా చేయండి|अगली यात्रा पर बचत करें
+Copy|కాపీ|कॉपी
+Help centre|సహాయ కేంద్రం|सहायता केंद्र
+Contact support|సపోర్ట్‌ను సంప్రదించండి|सहायता से संपर्क करें
+My tickets|నా టికెట్లు|मेरे टिकट
+Edit profile|ప్రొఫైల్ సవరించు|प्रोफ़ाइल संपादित करें
+Notification settings|నోటిఫికేషన్ సెట్టింగ్‌లు|सूचना सेटिंग्स
+Terms & Conditions|నిబంధనలు & షరతులు|नियम और शर्तें
+Privacy Policy|గోప్యతా విధానం|गोपनीयता नीति
+About Abra Travels|అబ్రా ట్రావెల్స్ గురించి|अब्रा ट्रैवल्स के बारे में
+Delete account|ఖాతా తొలగించు|खाता हटाएँ
+Log in or sign up|లాగిన్ లేదా సైన్ అప్|लॉग इन या साइन अप
+Log in to see your trips|మీ ట్రిప్‌లు చూడటానికి లాగిన్ చేయండి|अपनी ट्रिप देखने के लिए लॉग इन करें
+Enter verification code|ధృవీకరణ కోడ్ నమోదు చేయండి|सत्यापन कोड डालें
+Resend code|కోడ్ మళ్లీ పంపు|कोड फिर से भेजें
+Change number|నంబర్ మార్చు|नंबर बदलें
+Get started|ప్రారంభించండి|शुरू करें
+Skip|దాటవేయి|छोड़ें
+Next|తదుపరి|अगला
+Back|వెనుకకు|वापस
+Start exploring|అన్వేషించడం ప్రారంభించండి|खोजना शुरू करें
+Welcome to Abra Travels|అబ్రా ట్రావెల్స్‌కు స్వాగతం|अब्रा ट्रैवल्स में स्वागत है
+Travel smarter, go further|తెలివిగా ప్రయాణించండి, దూరం వెళ్లండి|समझदारी से यात्रा करें, दूर तक जाएँ
+All|అన్నీ|सभी
+Booking|బుకింగ్|बुकिंग
+Safety|భద్రత|सुरक्षा
+Earlier|ముందు|पहले
+Refund processing|రీఫండ్ ప్రాసెస్ అవుతోంది|रिफंड प्रक्रिया में
+Refunded|రీఫండ్ అయింది|रिफंड हो गया
+Show more buses|మరిన్ని బస్సులు చూపించు|और बसें दिखाएँ
+Clear filters|ఫిల్టర్లు క్లియర్|फ़िल्टर हटाएँ
+Show buses|బస్సులు చూపించు|बसें दिखाएँ
+Reset|రీసెట్|रीसेट
+Departure time|బయలుదేరే సమయం|प्रस्थान समय
+Bus type|బస్సు రకం|बस प्रकार
+Operator|ఆపరేటర్|ऑपरेटर
+Maximum price|గరిష్ఠ ధర|अधिकतम कीमत
+Travelling from|నుండి ప్రయాణం|यहाँ से यात्रा
+Travelling to|వరకు ప్రయాణం|यहाँ तक यात्रा
+Popular cities|ప్రసిద్ధ నగరాలు|लोकप्रिय शहर
+Search city|నగరం వెతకండి|शहर खोजें
+Profile|ప్రొఫైల్|प्रोफ़ाइल
+Language|భాష|भाषा`);
+
+/* ---------- common frame ---------- */
+function bell(){const un=inbox().filter(n=>!n.read).length;return`<button class="ib" data-a="go" data-v="notifs" aria-label="Notifications">${ic('bell')}${un?`<span class="dot">${un}</span>`:''}</button>`}
+function hdr(title,back,extra){return`<div class="hd">${back?`<button class="ib" data-a="back" aria-label="Back">${ic('back')}</button>`:`<span class="ib">${ic('bus')}</span>`}<h1>${esc(title)}</h1>${extra||''}${bell()}</div>`}
+function tabs(){return`<nav class="tabs" aria-label="Main sections">${[['home','home','Home'],['trips','ticket','My trips'],['support','help','Support'],['me','user','Profile']].map(([k,i,l])=>`<button class="${S.tab===k&&!S.stack.length?'on':''}" data-a="tab" data-v="${k}">${ic(i)}${l}</button>`).join('')}</nav>`}
+const shell=inner=>`<div class="lay"><div class="main">${inner}</div>${tabs()}</div>`;
+const page=(title,body,o={})=>{const inner=`${hdr(title,o.back!==false&&(o.back||S.stack.length),o.extra)}<div class="scr"><div class="pad">${body}</div></div>${o.foot||''}`;return o.foot||o.noTabs?`<div class="lay"><div class="main">${inner}</div></div>`:shell(inner)};
+const guest=(t,s)=>`<div class="c tc">${M.empty(t,s)}<button class="cta full" data-a="login">${ic('user')} Log in / Sign up</button></div>`;
+const fmtLeft=()=>{const s=Math.max(0,Math.round((S.holdUntil-Date.now())/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+const timer=()=>S.holdUntil?`<span class="timer" id="tmr">${ic('clock',12)} ${fmtLeft()}</span>`:'';
+const holdBar=()=>S.holdUntil?hb('Seats held for '+timer()+'. Pay before the timer ends.','a','clock'):'';
+
+/* ---------- start: splash, welcome, onboarding, language ---------- */
+const ONB=[['bus','Discover your next journey','Bus travel between cities, from operators approved by Abra Travels.'],['search','Search in seconds','Pick your cities and a date to compare timings, fares and bus types.'],['ticket','Choose your seat and book','Pick a seat, add passengers and pay securely.'],['nav','Track your journey','Follow your bus live and know when to be at your boarding point.'],['shield','Safety and support','Safety tools for women, SOS, and help from our team when you need it.']];
+function start(){if(S.boot==='splash'){setTimeout(()=>{if(S.boot==='splash'){S.boot='welcome';M.render()}},1300);return`<div class="splash">${ic('bus',56)}<h1>Abra Travels</h1><p>Bus travel, made simple</p><div class="spin" style="border-color:#ffffff44;border-top-color:#fff;width:36px;height:36px;margin-top:20px"></div></div>`}
+if(S.boot==='welcome')return`<div class="scr"><div class="onb"><div class="art" style="height:260px">${ic('bus',90)}</div><div class="tc"><h1>Welcome to Abra Travels</h1><p class="m mt2">Travel smarter, go further</p></div><div class="col"><button class="cta full" data-a="onb_go">Get started</button><button class="cta gh full" data-a="onb_lang">Skip</button></div></div></div>`;
+if(S.boot==='onb'){const s=ONB[S.onb];return`<div class="scr"><div class="onb"><div class="row bt"><span class="sm m">Step ${S.onb+1} of ${ONB.length}</span><button class="cta sm gh" data-a="onb_lang">Skip</button></div><div class="art">${ic(s[0],80)}</div><div class="tc"><h2>${s[1]}</h2><p class="m mt2">${s[2]}</p></div><div class="dots">${ONB.map((_,i)=>`<i class="${i===S.onb?'on':''}"></i>`).join('')}</div><div class="row">${S.onb?'<button class="cta gh" data-a="onb_b">Back</button>':''}<button class="cta grow" data-a="onb_n">${S.onb===ONB.length-1?'Start exploring':'Next'}</button></div></div></div>`}
+return`<div class="scr"><div class="onb"><div><h1>Language</h1><p class="m mt2">Choose the language for the app. You can change it later in Profile.</p></div><div class="col">${ABRA_L.CARDS.map(([k,l,e])=>`<button class="opt ${M.lang===k?'on':''}" data-a="setlang" data-v="${k}"><b class="grow">${l}</b><span class="sm m">${e}</span>${M.lang===k?ic('check'):''}</button>`).join('')}</div><button class="cta full" data-a="onb_done">Continue</button></div></div>`}
+
+/* ---------- home and city picker ---------- */
+function home(){const d=DB(),now=Date.now(),B=d.banners.filter(b=>b.status==='PUBLISHED'&&new Date(b.from)<=now&&new Date(b.to+'T23:59')>=now).sort((a,b)=>b.priority-a.priority),O=d.offers.filter(o=>o.status==='ACTIVE'&&new Date(o.to+'T23:59')>=now),P=d.popular.filter(p=>p.active).sort((a,b)=>a.order-b.order),R=LS('recent')||[];
+const today=new Date().toISOString().slice(0,10),tmr=new Date(now+864e5).toISOString().slice(0,10),max=new Date(now+90*864e5).toISOString().slice(0,10);
+return shell(`<div class="scr"><div class="hero"><div class="row bt"><div class="row">${ic('bus',24)}<b style="font-size:18px">Abra Travels</b></div>${bell()}</div><h2 style="margin-top:10px">Where are you travelling?</h2><p class="sm" style="opacity:.85">Find buses between cities and compare timings and fares.</p></div>
+${runBanner()}<div class="pad" style="padding-top:0"><div class="srch"><button class="cityb" data-a="city" data-v="from">${ic('pin',18)}<span><small>From</small><b>${esc(S.q.from)}</b></span></button><button class="swp" data-a="swap" aria-label="Swap origin and destination">${ic('swap',18)}</button><button class="cityb" data-a="city" data-v="to">${ic('flag',18)}<span><small>To</small><b>${esc(S.q.to)}</b></span></button>
+<div class="row rw"><button class="ch ${S.q.date===today?'on':''}" data-a="qd" data-v="${today}">Today</button><button class="ch ${S.q.date===tmr?'on':''}" data-a="qd" data-v="${tmr}">Tomorrow</button><input type="date" id="f_date" value="${S.q.date}" min="${today}" max="${max}" class="ch" style="flex:1" aria-label="Travel date"></div>
+<button class="cta full" data-a="search">${ic('search')} Search buses</button></div>
+${R.length?`<div><h3>Recent searches</h3><div class="hs mt2">${R.map(r=>`<button class="ch" data-a="recent" data-v="${esc(r.from+'|'+r.to)}">${esc(r.from)} → ${esc(r.to)}</button>`).join('')}</div></div>`:''}
+${B.length?`<div class="hs" aria-label="Banners">${B.map((b,i)=>`<button class="ban ban${b.style%3}" data-a="ban" data-v="${b.id}" aria-label="Banner ${i+1} of ${B.length}: ${esc(b.title)}"><b style="font-size:17px">${esc(b.title)}</b><span class="sm">${esc(b.sub)}</span>${b.code?`<span class="st" style="background:#ffffff33;color:#fff;align-self:flex-start;margin-top:6px">${esc(b.code)}</span>`:''}</button>`).join('')}</div>`:''}
+${O.length?`<div class="row bt"><h3>Offers</h3><button class="cta sm gh" data-a="go" data-v="offers">View all</button></div><div class="hs">${O.slice(0,6).map(o=>`<button class="c" style="min-width:210px;text-align:left" data-a="offer" data-v="${o.id}"><b>${esc(o.code)}</b><div class="sm m">${esc(o.desc)}</div></button>`).join('')}</div>`:''}
+<h3>Popular routes</h3><div class="col">${P.slice(0,5).map(p=>{const[a,b]=p.route.split(' to ');return`<button class="c row" style="text-align:left" data-a="pop" data-v="${esc(p.route)}">${ic('pin',18)}<span class="grow"><b>${esc(a)}</b> → <b>${esc(b)}</b></span>${ic('chevR',16)}</button>`}).join('')}</div>
+<div class="c"><h3>Good to know</h3>${['Every operator is approved by Abra Travels','Fares are shown before you choose','Boarding and dropping points come with timings'].map(x=>`<div class="row sm">${ic('check',16)} ${x}</div>`).join('')}</div></div></div>`)}
+function cityPicker(which){const C=DB().cities.filter(c=>c.active),q=(S.cq||'').toLowerCase(),L=q?C.filter(c=>c.name.toLowerCase().includes(q)||(c.te||'').includes(q)||(c.hi||'').includes(q)):[];
+const row=c=>`<button class="opt" data-a="cpick" data-v="${esc(which+'|'+c.name)}">${ic('pin',18)}<span class="grow"><b>${esc(c.name)}</b><div class="sm m">${esc(c.state)}</div></span></button>`;
+return page(which==='from'?'Travelling from':'Travelling to',`<div class="fd"><label for="f_cq">Search city</label><input id="f_cq" data-live="cq" value="${esc(S.cq||'')}" placeholder="Type the name of a city." autocomplete="off"></div>
+${q?(L.length?L.map(row).join(''):M.empty('No city found','Check the spelling or try another name.')):`<h3>Popular cities</h3>${C.filter(c=>c.popular).map(row).join('')}`}`,{back:1})}
+
+/* ---------- results, filters, sort ---------- */
+const WIN=[['em','Before 6 AM',0,6],['mo','6 AM to 12 PM',6,12],['af','12 PM to 6 PM',12,18],['ni','After 6 PM',18,24]];
+const btype=t=>/Semi/.test(t.type)?'Semi-sleeper':/Sleeper/.test(t.type)?'Sleeper':'Seater';
+const isAc=t=>!/Non-AC/.test(t.type);
+function baseResults(){const q=S.q;return DB().trips.filter(t=>{const r=route(t);return r.from===q.from&&r.to===q.to&&sameDay(t.depart,q.date+'T12:00')&&AbraStore.bookable(t)})}
+function applyF(L){const f=S.f;return L.filter(t=>{const h=new Date(t.depart).getHours();if(f.win.length&&!f.win.some(w=>{const x=WIN.find(y=>y[0]===w);return h>=x[2]&&h<x[3]}))return false;if(f.type.length&&!f.type.includes(btype(t)))return false;if(f.ac&&(f.ac==='ac')!==isAc(t))return false;if(f.ops.length&&!f.ops.includes(t.operatorId))return false;if(f.am.length&&!f.am.every(a=>amenOf(t).includes(a)))return false;if(f.max&&price(t).seat>f.max)return false;return true})}
+const nF=()=>{const f=S.f;return f.win.length+f.type.length+(f.ac?1:0)+f.ops.length+f.am.length+(f.max?1:0)};
+const SORTS=[['early','Departure: earliest first'],['late','Departure: latest first'],['low','Price: lowest first'],['high','Price: highest first'],['short','Duration: shortest first']];
+function results(){if(S.loadingR){setTimeout(()=>{S.loadingR=false;M.render()},450);return page(S.q.from+' → '+S.q.to,'<div class="sk"></div><div class="sk"></div><div class="sk"></div>',{back:1})}
+const all=baseResults();let L=applyF(all);const srt={early:(a,b)=>new Date(a.depart)-new Date(b.depart),late:(a,b)=>new Date(b.depart)-new Date(a.depart),low:(a,b)=>price(a).seat-price(b).seat,high:(a,b)=>price(b).seat-price(a).seat,short:(a,b)=>hrs(a)-hrs(b)}[S.sort];L.sort(srt);
+const shown=L.slice(0,S.page*5),today=new Date().toISOString().slice(0,10);
+return page(S.q.from+' → '+S.q.to,`<div class="row bt"><button class="cta sm gh" data-a="day" data-v="-1" ${S.q.date<=today?'disabled':''}>${ic('back',14)} Previous day</button><b class="sm">${fd(S.q.date+'T12:00')}</b><button class="cta sm gh" data-a="day" data-v="1">Next day ${ic('chevR',14)}</button></div>
+<div class="row bt"><span class="sm m">${L.length} ${L.length===1?'bus':'buses'}</span><div class="row"><button class="ch" data-a="sortsh">${ic('swap',14)} Sort</button><button class="ch ${nF()?'on':''}" data-a="filtsh">${ic('tag',14)} Filter${nF()?' · '+nF():''}</button></div></div>
+${L.length?shown.map(t=>{const p=price(t),f=free(t),o=opOf(t),so=f===0,nd=!sameDay(arr(t),t.depart);return`<button class="c res ${so?'so':''}" data-a="trip" data-v="${t.id}" ${so?'disabled':''}><div class="row bt"><b>${esc(o.name)}</b><span class="pr">${so?'<span class="st n">Sold out</span>':'From '+money(p.seat)}</span></div><div class="sm m">${esc(t.type)} · ★ ${o.rating} ${t.status==='DELAYED'?chip('DELAYED'):''}</div>
+<div class="row bt"><span><b>${ft(t.depart)}</b> → <b>${ft(arr(t))}</b> <span class="sm m">${hrs(t)}h 0m${nd?' · Arrives next day':''}</span></span><span class="sm" style="${f<6&&!so?'color:var(--rtx);font-weight:700':''}">${so?'':f+(f===1?' seat left':' seats left')}</span></div><div class="amen">${amenOf(t).slice(0,3).map(a=>`<span>${esc(a)}</span>`).join('')}</div></button>`}).join('')+(L.length>shown.length?`<button class="cta gh full" data-a="more">Show more buses</button>`:'')
+:`<div class="c">${all.length?M.empty('No buses found','No buses match your filters.'):M.empty('No buses found','There are no buses on this route on this date. Try another date.')}<div class="row" style="justify-content:center">${all.length?'<button class="cta sm" data-a="fclear">Clear filters</button>':'<button class="cta sm" data-a="day" data-v="1">Next day</button>'}</div></div>`}`,{back:1})}
+function filterSheet(){const all=baseResults(),f=S.f,cnt=fn=>all.filter(fn).length,ops=[...new Set(all.map(t=>t.operatorId))],maxP=Math.max(100000,...all.map(t=>price(t).seat)),ams=[...new Set(all.flatMap(amenOf))];
+const chipT=(k,v,l,n)=>`<button class="ch ${(Array.isArray(f[k])?f[k].includes(v):f[k]===v)?'on':''}" data-a="fset" data-v="${k}|${v}">${esc(l)}${n!=null?` (${n})`:''}</button>`;
+sheet('Filters',`<b>Departure time</b><div class="row rw">${WIN.map(w=>chipT('win',w[0],w[1],cnt(t=>{const h=new Date(t.depart).getHours();return h>=w[2]&&h<w[3]}))).join('')}</div>
+<b>Bus type</b><div class="row rw">${['Seater','Sleeper','Semi-sleeper'].map(x=>chipT('type',x,x,cnt(t=>btype(t)===x))).join('')}</div>
+<b>Air conditioning</b><div class="row rw">${chipT('ac','ac','AC',cnt(isAc))}${chipT('ac','non','Non-AC',cnt(t=>!isAc(t)))}</div>
+<b>Operator</b><div class="row rw">${ops.map(o=>chipT('ops',o,(DB().operators.find(x=>x.id===o)||{}).name,cnt(t=>t.operatorId===o))).join('')||'<span class="sm m">-</span>'}</div>
+<b>Amenities</b><div class="row rw">${ams.map(a=>chipT('am',a,a)).join('')||'<span class="sm m">-</span>'}</div>
+<b>Maximum price</b><div class="row"><input type="range" id="f_max" min="0" max="${maxP}" step="5000" value="${f.max||maxP}" class="grow" aria-label="Maximum price" data-live="fmax"><b id="fmaxv" class="sm">${money(f.max||maxP)}</b></div>`,`<button class="cta gh" data-a="fclear">Reset</button><button class="cta" data-a="fapply">Show buses</button>`)}
+
+/* ---------- trip details ---------- */
+function policy(){const sl=[...DB().cancelSlabs].sort((a,b)=>b.hours-a.hours);return sl.map((s,i)=>`<div class="row bt sm"><span>${i===0?'More than '+s.hours+' hours before departure':s.hours===0?'Under '+sl[i-1].hours+' hours':s.hours+' to '+sl[i-1].hours+' hours before'}</span><b>${s.pct?s.pct+'% refund':'No refund'}</b></div>`).join('')}
+function tripDetails(id){const t=T(id);if(!t||!AbraStore.bookable(t))return page('Trip details',M.empty('This bus is no longer available','It may have departed or been cancelled. Search again to see current buses.'),{back:1});
+const o=opOf(t),r=route(t),p=price(t),bp=r.stops.filter(s=>s.type!=='DROPPING'),dp=r.stops.filter(s=>s.type!=='BOARDING'),via=[...new Set(r.stops.map(s=>s.city))].filter(c=>c!==r.from&&c!==r.to);
+const pts=L=>L.map(s=>{const pl=placeOf(s.name);return`<div class="row" style="align-items:flex-start"><b class="sm" style="width:68px">${ft(stopTime(t,s))}</b><div class="grow"><b>${esc(s.name)}</b>${pl.landmark?`<div class="sm m">Landmark: ${esc(pl.landmark)}</div>`:''}</div></div>`}).join('');
+return page(o.name,`<div class="c"><div class="row bt"><b>${esc(t.type)}</b><span class="sm">★ ${o.rating}</span></div><div class="row bt"><span><b>${ft(t.depart)}</b> → <b>${ft(arr(t))}</b></span><span class="sm m">${hrs(t)}h</span></div><div class="sm m">${fd(t.depart)} · Bus number ${esc(t.bus)}${via.length?' · Via '+esc(via.join(', ')):''}</div></div>
+<div class="c"><h3>Boarding points</h3>${pts(bp)}</div><div class="c"><h3>Dropping points</h3>${pts(dp)}</div>
+<div class="c"><h3>Amenities</h3><div class="amen">${amenOf(t).map(a=>`<span>${esc(a)}</span>`).join('')}</div></div>
+<div class="c"><h3>Cancellation policy</h3>${policy()}</div><p class="sm m">Lowest seat price. The amount to pay is shown before payment.</p>`,{back:1,foot:`<div class="botbar"><div class="grow"><b>From ${money(p.seat)}</b><div class="sm m">${free(t)} seats left</div></div><button class="cta" data-a="seats" data-v="${t.id}">Select seats</button></div>`})}
+
+/* ---------- seats: drawn from the operator's seat layout (client portal) ---------- */
+function layoutOf(t){const b=busOf(t),sl=btype(t)==='Sleeper',cell=(c,i,z)=>'SBL'.includes(c)&&i.v<z?{c,i:i.v++}:{c:c==='_'?'_':'.'};
+if(b.seatMap&&b.seatMap.length){const i={v:0};return[b.seatMap.map(r=>[...r].map(c=>cell(c,i,t.seats)))]}
+if(!sl){const i={v:0};return[Array.from({length:Math.ceil(t.seats/4)},()=>[...'SS_SS'].map(c=>cell(c,i,t.seats)))]}
+const half=Math.ceil(t.seats/2),deck=(a,z)=>{const i={v:a};return Array.from({length:Math.ceil((z-a)/3)},()=>[...'BB_B'].map(c=>cell(c,i,z)))};return[deck(0,half),deck(half,t.seats)]}
+function seatsScreen(){const t=T(S.trip);if(!t)return page('Select seats',M.empty('This bus is no longer available',''),{back:1});const st=AbraStore.seatStates(t),p=price(t),mx=DB().settings.booking.maxSeats,D=layoutOf(t),left=free(t);
+const cell=x=>{if(x.c==='_')return'<span class="gap"></span>';if(x.i==null)return'<span style="width:42px"></span>';const l=AbraStore.seatLabelFor(t,x.i),s=st[x.i],sel=S.sel.includes(l),lad=s==='L'||x.c==='L',busy=['B','H','X'].includes(s);
+return`<button class="st2 ${x.c==='B'?'berth':''} ${sel?'sel':busy?s:lad?'L':''}" data-a="seat" data-v="${l}" ${busy&&!sel?'disabled':''} aria-label="Seat ${l}, ${sel?'selected':s==='B'?'booked':s==='H'?'held':s==='X'?'blocked':lad?'ladies only':'available'}, ${money(price(t,l).seat)}">${l}<small>${busy?'':money(price(t,l).seat)}</small></button>`};
+const deck=(cells,name,front)=>`<div class="deck"><div class="front"><b>${name}</b>${front?`<span>${ic('user',12)} Front</span>`:''}</div>${cells.map(r=>`<div class="srw">${r.map(cell).join('')}</div>`).join('')}</div>`;
+return page('Select seats',`<div class="sm m">${esc(opOf(t).name)} · ${fdt(t.depart)} · ${esc(t.type)}</div>${left===0?M.empty('No seats left on this bus','Every seat of this trip is taken. Try another bus.'):''}
+<div class="leg"><span><i></i>Available</span><span><i style="background:var(--g);border-color:var(--g)"></i>Selected</span><span><i style="background:#C9D3DC;border-color:#C9D3DC"></i>Booked</span><span><i style="border-color:#E86BB5"></i>Ladies only</span><span><i style="background:#F9C7C7;border-color:#EF4444"></i>Blocked</span></div>
+<p class="sm m">Select up to ${mx} seats · ${S.sel.length}/${mx} chosen</p><div class="col" style="align-items:center">${D.map((c,i)=>deck(c,D.length>1?(i?'Upper deck':'Lower deck'):'Seats',i===0)).join('')}</div>`,
+{back:1,foot:`<div class="botbar"><div class="grow"><b>${S.sel.length?S.sel.length+(S.sel.length>1?' seats':' seat')+' · '+S.sel.join(', '):'No seats selected'}</b><div class="sm m">Total ${money(S.sel.reduce((a,l)=>a+price(t,l).seat,0))}</div></div><button class="cta" data-a="hold" ${S.sel.length?'':'disabled'}>Continue</button></div>`})}
+function releaseHold(){const t=T(S.trip);S.holdUntil=null;if(!t||!t.heldSeats)return;const mine=t.heldSeats.filter(h=>h.by===S.who);if(!mine.length)return;t.heldSeats=t.heldSeats.filter(h=>h.by!==S.who);t.held=Math.max(0,(t.held||0)-mine.length);save()}
+
+/* ---------- boarding and dropping ---------- */
+function points(){const t=T(S.trip),r=route(t),bp=r.stops.filter(s=>s.type!=='DROPPING'),dp=r.stops.filter(s=>s.type!=='BOARDING');S.bp=S.bp||(bp[0]||{}).name;S.dp=S.dp||(dp[dp.length-1]||{}).name;const tab=S.ptab||'b',L=tab==='b'?bp:dp;
+return page('Boarding & dropping',`${holdBar()}<p class="m">Choose where to get on and off</p><div class="seg2" role="tablist" aria-label="Boarding or dropping"><button class="${tab==='b'?'on':''}" data-a="ptab" data-v="b">Boarding</button><button class="${tab==='d'?'on':''}" data-a="ptab" data-v="d">Dropping</button></div>
+${L.map(s=>{const pl=placeOf(s.name),on=(tab==='b'?S.bp:S.dp)===s.name;return`<div class="opt ${on?'on':''}"><button class="row grow" style="text-align:left" data-a="${tab==='b'?'bp':'dp'}" data-v="${esc(s.name)}"><b class="sm" style="width:68px">${ft(stopTime(t,s))}</b><span class="grow"><b>${esc(s.name)}</b>${pl.landmark?`<div class="sm m">Landmark: ${esc(pl.landmark)}</div>`:''}${pl.address?`<div class="sm m">${esc(pl.address)}</div>`:''}</span>${on?ic('check'):''}</button><button class="cta sm gh" data-a="maps" data-v="${esc(s.name)}" aria-label="Open ${esc(s.name)} in maps">${ic('pin',14)} Map</button></div>`}).join('')}`,
+{back:1,foot:`<div class="botbar"><div class="grow sm"><b>${esc(S.bp)}</b> → <b>${esc(S.dp)}</b></div><button class="cta" data-a="topax">Continue</button></div>`})}
+
+/* ---------- passengers ---------- */
+function paxScreen(){const t=T(S.trip),c=me(),st=AbraStore.seatStates(t),px=S.px,er=S.perr||{};
+return page('Passenger details',`${holdBar()}<label class="row c"><input type="checkbox" id="f_usep" ${S.usep?'checked':''} data-ch="usep"><span><b>Use my profile</b><div class="sm m">Fill passenger 1 and contact from your profile</div></span></label>
+${S.sel.map((l,i)=>{const x=px[l]||{},lad=st[seatIdx(l)]==='L';return`<div class="c"><div class="row bt"><b>Passenger ${i+1}</b><span class="st ${lad?'r':'b'}">Seat ${l}${lad?' · Ladies':''}</span></div>
+<div class="fd ${er['n'+l]?'bad':''}"><label for="f_pn_${l}">Full name</label><input id="f_pn_${l}" value="${esc(x.n||'')}" autocomplete="name"></div>${er['n'+l]?'<div class="err">Enter the name as on ID</div>':''}
+<div class="row"><div class="fd grow ${er['a'+l]?'bad':''}"><label for="f_pa_${l}">Age</label><input id="f_pa_${l}" type="number" min="1" max="99" value="${esc(x.a||'')}"></div><div class="fd grow"><label for="f_pg_${l}">Gender</label><select id="f_pg_${l}">${[['M','Male'],['F','Female'],['O','Other']].map(([k,v])=>`<option value="${k}" ${(x.g||(lad?'F':'M'))===k?'selected':''}>${v}</option>`).join('')}</select></div></div>${er['a'+l]?'<div class="err">Enter a valid age (1 to 99)</div>':''}${er['g'+l]?'<div class="err">Ladies-only seat: female passengers only</div>':''}</div>`}).join('')}
+<div class="c"><b>Contact details</b><div class="sm m">Ticket and updates are sent here</div><div class="fd ${er.mob?'bad':''}"><label for="f_cm">Mobile *</label><input id="f_cm" type="tel" value="${esc(S.cmob!=null?S.cmob:c.phone)}"></div>${er.mob?'<div class="err">Enter a 10-digit mobile number</div>':''}<div class="fd ${er.em?'bad':''}"><label for="f_ce">Email *</label><input id="f_ce" type="email" value="${esc(S.cem!=null?S.cem:c.email)}"></div>${er.em?'<div class="err">Enter a valid email, e.g. name@example.com</div>':''}</div>
+<details class="c" ${S.gstin||er.gst||er.gco?'open':''}><summary><b>GST / ID details</b> <span class="sm m">Optional, for business travel</span></summary><div class="col mt2"><div class="fd ${er.gst?'bad':''}"><label for="f_gi">GSTIN</label><input id="f_gi" value="${esc(S.gstin||'')}" placeholder="29ABCDE1234F1Z5"></div>${er.gst?'<div class="err">Enter a valid GSTIN, e.g. 29ABCDE1234F1Z5</div>':''}<div class="fd ${er.gco?'bad':''}"><label for="f_gc">Company name</label><input id="f_gc" value="${esc(S.gco||'')}"></div>${er.gco?'<div class="err">Enter the company name</div>':''}</div></details>`,
+{back:1,foot:`<div class="botbar"><span class="grow sm m">${S.sel.length} passenger(s)</span><button class="cta" data-a="toreview">Continue</button></div>`})}
+
+/* ---------- review ---------- */
+function calc(){const t=T(S.trip),p=price(t),n=S.sel.length;let base=0,gst=0,cm=0;S.sel.forEach(l=>{const q=price(t,l);base+=q.fare+q.cm;gst+=q.gst;cm+=q.cm});let disc=0,o=null;if(S.coupon){o=DB().offers.find(x=>x.code===S.coupon);if(o)disc=o.type==='PERCENT'?Math.min(o.maxDisc,Math.round((base+gst)*o.value/10000)):o.value}return{p,n,base,gst,cm,fee:p.fee,disc,o,total:Math.max(0,base+gst+p.fee-disc)}}
+function couponOk(code){const t=T(S.trip),o=DB().offers.find(x=>x.code===code.toUpperCase()),c=calc(),now=Date.now();if(!o||o.status!=='ACTIVE')return'This coupon is not valid';if(new Date(o.to+'T23:59')<now)return'This offer has expired';if(o.limit&&o.used>=o.limit)return'This offer has been fully used';if(c.base<o.minAmt)return'Minimum booking is '+money(o.minAmt);
+if(o.scope.startsWith('Operator:')&&!o.scope.includes(opOf(t).name))return'This coupon is not valid for this route';if(o.scope.startsWith('Route:')&&!o.scope.includes(t.route))return'This coupon is not valid for this route';if(o.scope.startsWith('Bus type:')&&!o.scope.includes(t.type))return'Valid only on '+o.scope.slice(10);if(o.scope==='Women travellers'&&!Object.values(S.px).some(x=>x.g==='F'))return'Valid only for women travellers';
+if(o.newOnly&&myBk().length)return'Only for your first booking';if(DB().bookings.filter(b=>b.customerId===S.who&&b.coupon===o.code).length>=o.perUser)return'You have already used this code';return''}
+function review(){const t=T(S.trip),c=calc(),r=route(t),bps=r.stops.find(s=>s.name===S.bp),dps=r.stops.find(s=>s.name===S.dp);
+return page('Review booking',`${holdBar()}<p class="m">Check details before paying</p><div class="c"><b>${esc(opOf(t).name)}</b><div class="sm m">${fd(t.depart)} · ${ft(t.depart)} → ${ft(arr(t))} · ${esc(t.type)}</div><div class="row sm mt2">${ic('pin',14)} Boarding ${ft(stopTime(t,bps))} · ${esc(S.bp)}</div><div class="row sm">${ic('flag',14)} Dropping ${ft(stopTime(t,dps))} · ${esc(S.dp)}</div></div>
+<div class="c"><b>Passengers</b>${S.sel.map(l=>`<div class="row bt sm"><span>${esc(S.px[l].n)}, ${S.px[l].a}, ${{M:'Male',F:'Female',O:'Other'}[S.px[l].g]}</span><b>Seat ${l}</b></div>`).join('')}</div>
+<div class="c"><b>Coupon</b>${c.o?`<div class="row bt"><span class="sm" style="color:var(--gtx)">${ic('check',12)} ${esc(c.o.code)} applied. You save ${money(c.disc)}</span><button class="cta sm gh" data-a="cprm">Remove</button></div>`:`<div class="row"><input id="f_cp" class="ch grow" style="min-height:44px" value="" placeholder="Coupon code" aria-label="Coupon code"><button class="cta sm" data-a="cp">Apply</button></div>${S.cperr?`<div class="err">${esc(S.cperr)}</div>`:''}`}</div>
+<div class="c"><b>Fare breakup</b>${kv({['Base fare ('+c.n+(c.n>1?' seats)':' seat)')]:money(c.base),'GST (5%)':money(c.gst),'Convenience fee':money(c.fee),...(c.disc?{Discount:'- '+money(c.disc)}:{}),Total:'<b>'+money(c.total)+'</b>'})}</div>
+<div class="c"><b>Cancellation policy</b>${policy()}</div><label class="row c"><input type="checkbox" id="f_agree" ${S.agree?'checked':''} data-ch="agree"> <span>I agree to the Terms and the cancellation policy</span></label>`,
+{back:1,foot:`<div class="botbar"><div class="grow"><b>${money(c.total)}</b><div class="sm m">Total</div></div><button class="cta" data-a="topay" ${S.agree?'':'disabled'}>Proceed to pay</button></div>`})}
+
+/* ---------- payment ---------- */
+const PM=[['UPI','UPI','Pay with any UPI app','phone'],['CARD','Credit / Debit card','Visa, Mastercard, RuPay','card'],['NETBANKING','Net banking','All major banks','shield'],['WALLET','Wallets','Paytm, PhonePe, Amazon Pay','tag']];
+const luhn=n=>{n=n.replace(/\D/g,'');if(n.length<12)return false;let s=0;[...n].reverse().forEach((d,i)=>{d=+d;if(i%2){d*=2;if(d>9)d-=9}s+=d});return s%10===0};
+function payScreen(){const c=calc(),m=S.pm||'UPI',e=S.payErr||{};
+if(S.payState==='proc')return page('Processing payment',`<div class="tc col" style="padding:40px 0"><div class="spin"></div><h2>Processing your payment</h2><p class="m">Don’t close this screen or press back. This usually takes under 10 seconds.</p></div>`,{back:false,noTabs:1});
+if(S.payState==='fail')return page('Payment failed',`<div class="c tc">${M.empty('Payment failed',S.failNet?'We could not reach the payment service. Check your connection and try again.':'Your bank declined the transaction (code '+S.failCode+'). Try another method or try again.')}<p class="sm m">No booking was made. If money was debited, it is refunded in 5–7 working days. Ref ${S.failRef}</p></div>${holdBar()}<button class="cta full" data-a="payretry">Retry payment</button><button class="cta gh full" data-a="paychg">Change payment method</button><button class="cta gh full" data-a="back">Back to review</button>`,{back:false,noTabs:1});
+const body=k=>{if(k!==m)return'';if(k==='UPI')return`<div class="row rw">${['GPay','PhonePe','Paytm','BHIM'].map(a=>`<button class="ch ${S.upiApp===a?'on':''}" data-a="upiapp" data-v="${a}">${a}</button>`).join('')}</div><div class="row"><div class="fd grow ${e.upi?'bad':''}"><label for="f_upi">Or enter UPI ID</label><input id="f_upi" value="${esc(S.upi||'')}" placeholder="name@bank"></div><button class="cta sm gh" data-a="upiv">Verify</button></div>${e.upi?'<div class="err">Enter a valid UPI ID, e.g. name@bank</div>':''}${S.upiOk?`<div class="sm" style="color:var(--gtx)">${ic('check',12)} UPI ID looks good</div>`:''}`;
+if(k==='CARD')return`<div class="fd ${e.cn?'bad':''}"><label for="f_cn">Card number</label><input id="f_cn" inputmode="numeric" value="${esc(S.cn||'')}" placeholder="1234 5678 9012 3456"></div>${e.cn?'<div class="err">Enter a valid card number</div>':''}<div class="row"><div class="fd grow ${e.ce?'bad':''}"><label for="f_cx">Expiry</label><input id="f_cx" value="${esc(S.cx||'')}" placeholder="MM/YY"></div><div class="fd grow ${e.cv?'bad':''}"><label for="f_cv">CVV</label><input id="f_cv" type="password" inputmode="numeric" maxlength="3"></div></div>${e.ce?'<div class="err">Enter a valid expiry</div>':''}${e.cv?'<div class="err">Enter 3 digits</div>':''}<div class="fd ${e.cnm?'bad':''}"><label for="f_cnm">Name on card</label><input id="f_cnm" value="${esc(S.cnm||'')}"></div>${e.cnm?'<div class="err">Enter the name on the card</div>':''}<p class="sm m">Demo test card: 4111 1111 1111 1111</p>`;
+if(k==='NETBANKING')return`<div class="row rw">${['SBI','HDFC','ICICI','Axis','Kotak'].map(a=>`<button class="ch ${S.bank===a?'on':''}" data-a="bank" data-v="${a}">${a}</button>`).join('')}</div>${e.bank?'<div class="err">Choose your bank</div>':''}`;
+return`<div class="row rw">${['Paytm Wallet','PhonePe Wallet','Amazon Pay'].map(a=>`<button class="ch ${S.wal===a?'on':''}" data-a="wal" data-v="${a}">${a}</button>`).join('')}</div>${e.wal?'<div class="err">Choose a wallet</div>':''}`};
+return page('Payment',`${holdBar()}<p class="m">Total ${money(c.total)}</p>${PM.map(([k,l,h,i])=>`<div class="c"><button class="row" style="width:100%;text-align:left" data-a="pm" data-v="${k}">${ic(i,20)}<span class="grow"><b>${l}</b><div class="sm m">${h}</div></span>${m===k?'<span class="st b">Selected</span>':''}</button>${body(k)}</div>`).join('')}
+<p class="sm m tc">${ic('shield',12)} Payments are encrypted and processed by a PCI-DSS partner</p><div class="c sm"><b>Demo:</b> choose what happens<div class="row rw mt2">${[['ok','Success'],['decline','Bank declines'],['net','Network failure']].map(([k,l])=>`<button class="ch ${(S.sim||'ok')===k?'on':''}" data-a="paysim" data-v="${k}">${l}</button>`).join('')}</div></div>`,
+{back:1,foot:`<div class="botbar"><div class="grow">${timer()}</div><button class="cta ok" data-a="paynow">Pay ${money(c.total)}</button></div>`})}
+
+/* ---------- confirmed, ticket ---------- */
+const paid=b=>b.amount+b.gst+b.fee-b.discount;
+function confirmed(id){const b=DB().bookings.find(x=>x.id===id),t=T(b.tripId);return page('Booking',`<div class="c tc"><div class="empty" style="padding:10px"><div class="big" style="background:var(--gbg);color:var(--gtx)">${ic('check',34)}</div><h2>Booking confirmed</h2><p class="m">Ticket sent on WhatsApp to ${esc(b.phone)} and by email to ${esc(b.email||"your email")}</p><button class="cta sm gh" data-a="go" data-v="msgs">View the messages</button></div>
+<button class="ch" data-a="copy" data-v="${esc(b.pnr)}" aria-label="Copy PNR">PNR ${esc(b.pnr)} ${ic('share',12)}</button><p class="sm m mt2">Paid ${money(paid(b))}</p></div>
+<div class="c">${esc(b.operator)} · ${fd(t.depart)} · ${ft(t.depart)}<div class="sm m">Seats ${esc(b.seatList)} · Boarding ${esc(b.board)}</div></div>
+<button class="cta full" data-a="tkt" data-v="${id}">${ic('ticket')} View ticket</button><div class="row"><button class="cta gh full" data-a="sharet" data-v="${id}">${ic('share')} Share</button><button class="cta gh full" data-a="ics" data-v="${id}">${ic('cal')} Add to calendar</button></div><button class="cta gh full" data-a="tab" data-v="trips">My trips</button>`,{back:false})}
+function ticket(id){const b=DB().bookings.find(x=>x.id===id),t=T(b.tripId),o=opOf(t),act=b.seatList.split(', ').filter(s=>!(b.cancelledSeats||[]).includes(s)),P=(b.pax||act.map(s=>({seat:s,n:b.customer}))).filter(p=>act.includes(p.seat));
+return page('E-ticket',`<div class="tkt"><div class="top"><div class="row bt"><b>${esc(b.operator)}</b><span class="st" style="background:#ffffff33;color:#fff">PNR ${esc(b.pnr)}</span></div><h2 style="margin-top:6px">${esc(b.route)}</h2><div class="sm">${fd(t.depart)} · departs ${ft(t.depart)} · ${esc(t.type)}</div></div>
+<div class="pad tc">${M.qr(b.pnr)}<p class="sm m">Show this QR to the conductor while boarding</p></div><div class="cut"></div>
+<div class="pad"><b>Passengers and seats</b>${P.map(p=>`<div class="row bt sm"><span>${esc(p.n)}</span><b>Seat ${esc(p.seat)}</b></div>`).join('')}
+${kv({'Boarding point':esc(b.board||'-'),Bus:esc(t.bus),Paid:money(paid(b))})}${hb('Report 15 minutes early.','a','clock')}<div class="row bt"><span class="sm"><b>Operator contact</b><div class="m">${esc(o.phone||'+91 40 4000 1234')}</div></span><button class="cta sm gh" data-a="call" data-v="${esc(o.name)}">${ic('phone',14)} Call operator</button></div></div></div>
+<div class="row"><button class="cta gh full" data-a="pdf">${ic('download')} Download PDF</button><button class="cta gh full" data-a="sharet" data-v="${id}">${ic('share')} Share</button></div>`,{back:1})}
+
+/* ---------- my trips, trip detail, cancel, refund ---------- */
+const rfOf=b=>DB().refunds.filter(r=>r.bookingId===b.id).sort((x,y)=>new Date(y.at)-new Date(x.at));
+const bkStatus=b=>{const r=rfOf(b)[0];if(r&&(b.status==='CANCELLED'||(b.cancelledSeats||[]).length))return r.status==='COMPLETED'?'Refunded':'Refund processing';return lab(b.status==='CONFIRMED'&&arr(T(b.tripId))<Date.now()?'COMPLETED':b.status)};
+function trips(){if(!me())return page('My trips',guest('Log in to see your trips','Your upcoming and past journeys, tickets and cancellations appear here.'),{back:false});
+const L=myBk(),now=Date.now(),g={up:L.filter(b=>b.status==='CONFIRMED'&&arr(T(b.tripId))>now),done:L.filter(b=>b.status==='COMPLETED'||(b.status==='CONFIRMED'&&arr(T(b.tripId))<=now)),cx:L.filter(b=>b.status==='CANCELLED'||(b.cancelledSeats||[]).length)},cur=g[S.tt];
+const E={up:['No upcoming trips','Book a bus and your trip will show up here.'],done:['No completed trips yet','Trips you have taken will show up here.'],cx:['No cancelled trips','Trips you cancel will show up here with their refund status.']};
+return page('My trips',`<div class="seg2" role="tablist" aria-label="Trip lists">${[['up','Upcoming'],['done','Completed'],['cx','Cancelled']].map(([k,l])=>`<button class="${S.tt===k?'on':''}" data-a="tt" data-v="${k}">${l} (${g[k].length})</button>`).join('')}</div>
+${cur.length?cur.map(b=>{const t=T(b.tripId),l=DB().live.find(x=>x.tripId===t.id),st=S.tt==='up'?lab(t.status):bkStatus(b);return`<button class="c" style="text-align:left;width:100%" data-a="bk" data-v="${b.id}"><div class="row bt"><b>${esc(b.route)}</b><span class="st ${/Refund|Cancel|Delayed/.test(st)?'a':'b'}">${esc(st)}</span></div><div class="sm m">${sameDay(t.depart,now)?'Today':fd(t.depart)} · ${ft(t.depart)} → ${ft(arr(t))} · ${esc(b.operator)}</div><div class="sm">Seats ${esc(b.seatList)}</div>${l&&S.tt==='up'?`<div class="row sm mt2" style="color:var(--gtx)">${ic('nav',14)} Live: ${l.progress}% of the way</div>`:''}</button>`}).join(''):`<div class="c">${M.empty(E[S.tt][0],E[S.tt][1])}<div class="row" style="justify-content:center">${S.tt==='up'?'<button class="cta sm" data-a="tab" data-v="home">Search buses</button>':'<button class="cta sm gh" data-a="tt" data-v="up">View upcoming trips</button>'}</div></div>`}`,{back:false})}
+function bookingScreen(id){const b=DB().bookings.find(x=>x.id===id),t=T(b.tripId),r=route(t),now=Date.now(),bps=r.stops.find(s=>s.name===b.board)||r.stops[0],dps=r.stops.find(s=>s.name===b.drop)||r.stops[r.stops.length-1],rf=rfOf(b),act=b.seatList.split(', ').filter(s=>!(b.cancelledSeats||[]).includes(s));
+const bt=stopTime(t,bps),at=stopTime(t,dps),phase=[true,true,now>=bt-30*6e4,now>=at],cur=phase.lastIndexOf(true);
+const ev=(i,title,line)=>`<div class="ev ${i<cur?'d':i===cur?'c':''}"><b>${title}</b> <span class="sm m">${i<cur?'Done':i===cur?'Now':'Next'}</span><div class="sm m">${line}</div></div>`;
+const trackOk=['BOARDING','IN_TRANSIT','DEPARTED','DELAYED'].includes(t.status)||(t.status==='SCHEDULED'&&new Date(t.depart)-now<2*36e5);
+return page('Trip details',`<div class="c"><div class="row bt"><b>${esc(b.route)}</b><span class="st b">${esc(bkStatus(b)==='Confirmed'?lab(t.status):bkStatus(b))}</span></div><div class="sm m">${esc(b.operator)} · ${esc(t.bus)} · PNR ${esc(b.pnr)}</div>${t.status==='DELAYED'?hb('Running about '+(t.delay||'')+' minutes late'+(t.delayReason?': '+esc(t.delayReason):''),'a','clock'):''}${t.status==='CANCELLED'?hb('This trip was cancelled by the operator. Your full refund has started.','r','alert'):''}</div>
+<div class="c"><h3>Trip timeline</h3><div class="tl mt2">${ev(0,'Booked',fd(b.at)+' · '+ft(b.at)+' · Paid '+money(paid(b)))}${ev(1,'Ticket issued','Sent to SMS and email')}${ev(2,'Boarding at '+esc(bps.name),fd(bt)+' · '+ft(bt)+'. Reach by '+ft(new Date(bt-15*6e4)))}${ev(3,'Arrival at '+esc(dps.name),fd(at)+' · '+ft(at))}</div></div>
+${act.length&&b.status!=='CANCELLED'?`<button class="c row" style="width:100%;text-align:left" data-a="tkt" data-v="${id}">${ic('qr')}<span class="grow"><b>E-ticket</b><div class="sm m">${esc(act.join(', '))} · ${esc((b.pax||[]).filter(p=>act.includes(p.seat)).map(p=>p.n).join(', ')||b.customer)}</div></span>${ic('chevR',16)}</button>`:''}
+${rf.map(x=>`<button class="c row" style="width:100%;text-align:left" data-a="refund" data-v="${x.id}">${ic('refresh')}<span class="grow"><b>Refund for seats ${esc(x.seats||b.seatList)}</b><div class="sm m">${money(x.amount)} · ${lab(x.status)}</div></span>${ic('chevR',16)}</button>`).join('')}
+${b.status==='CONFIRMED'&&act.length&&arr(t)>now&&t.status!=='CANCELLED'?`${trackOk?`<button class="cta full" data-a="track" data-v="${id}">${ic('nav')} Track bus</button>`:`<div class="hb">${ic('clock',18)}<div>Tracking opens 2 hours before departure</div></div>`}
+<div class="row"><button class="cta gh full" data-a="sharescr" data-v="${id}">${ic('share')} Share trip</button><button class="cta gh full" data-a="safety" data-v="${id}">${ic('shield')} Safety</button></div>${new Date(t.depart)>now?`<button class="cta gh full" data-a="cancel" data-v="${id}">${ic('x')} Cancel seats</button>`:''}`:''}
+<button class="cta gh full" data-a="newtk" data-v="${id}">${ic('help')} Get help</button>`,{back:1})}
+function cancelScreen(id){const b=DB().bookings.find(x=>x.id===id),q=AbraStore.refundQuote(b),act=b.seatList.split(', ').filter(s=>!(b.cancelledSeats||[]).includes(s)),n=S.cxs.length,per=Math.round(b.amount/b.seatsN),fare=per*n,refund=Math.round(fare*q.pct/100);
+return page('Cancel booking',`<div class="c"><b>Select seats to cancel</b>${act.map(s=>{const p=(b.pax||[]).find(x=>x.seat===s);return`<label class="row bt" style="padding:8px 0"><span><b>Seat ${s}</b> <span class="sm m">${esc(p?p.n:b.customer)}</span></span><input type="checkbox" data-ch="cxs" data-k="${s}" ${S.cxs.includes(s)?'checked':''} aria-label="Seat ${s}"></label>`}).join('')}</div>
+<div class="c"><b>Refund estimate</b>${policy()}<p class="sm m">Departs in ${Math.max(0,Math.round(q.hours))} hours, so ${q.pct}% refund applies now.</p>${n?kv({['Fare paid ('+n+(n>1?' seats)':' seat)')]:money(fare),['Cancellation charge ('+(100-q.pct)+'%)']:money(fare-refund),'Refund amount':'<b>'+money(refund)+'</b>'}):'<p class="sm m">Select at least one seat to see your refund.</p>'}<p class="sm m">Refunded to your original payment method in 5 to 7 working days. The convenience fee and GST are not refunded.</p></div>
+<div class="c"><b>Reason for cancelling</b><div class="row rw mt2">${['Change of plans','Booked by mistake','Found a better option','Medical emergency','Other'].map(r=>`<button class="ch ${S.cxr===r?'on':''}" data-a="cxr" data-v="${r}">${r}</button>`).join('')}</div></div>`,
+{back:1,foot:`<div class="botbar"><div class="grow"><b>${money(refund)}</b><div class="sm m">Refund</div></div><button class="cta dg" data-a="cxgo" data-v="${id}" ${n&&S.cxr?'':'disabled'}>Cancel ${n||''} seat${n===1?'':'s'}</button></div>`})}
+function refundScreen(rid){const r=DB().refunds.find(x=>x.id===rid),b=DB().bookings.find(x=>x.id===r.bookingId),req=new Date(r.at),exp=new Date(req.getTime()+7*864e5),st=r.status,step=st==='COMPLETED'?3:st==='PROCESSING'?1:0;
+const ev=(i,t,l)=>`<div class="ev ${i<step?'d':i===step?'c':''}"><b>${t}</b><div class="sm m">${l}</div></div>`;
+return page('Refund status',`<div class="c tc"><span class="sm m">${st==='COMPLETED'?'Refunded':'Refund amount'}</span><h1>${money(r.amount)}</h1><div class="sm m">To ${esc(b.mode==='UPI'?'your UPI account':b.mode==='CARD'?'your card':'your bank account')}</div></div>
+<div class="c"><div class="tl">${ev(0,'Refund requested',fd(req)+' · '+ft(req)+' · seats '+esc(r.seats||b.seatList)+' cancelled')}${ev(1,'Processing',st==='INITIATED'?'Sent to your bank. Expected by '+fd(exp):'Bank confirmed')}${ev(2,'Refunded',st==='COMPLETED'?'Credited':'Expected by '+fd(exp))}</div>${st==='FAILED'?hb('The refund failed at the bank. Our team is retrying it.','r','alert'):''}</div>
+<div class="c row bt"><span><b>UTR number</b><div class="sm m">${st==='COMPLETED'&&r.utr?esc(r.utr):'Available once refunded'}</div></span>${st==='COMPLETED'&&r.utr?`<button class="cta sm gh" data-a="copy" data-v="${esc(r.utr)}">Copy UTR</button>`:''}</div>
+<button class="cta gh full" data-a="newtk" data-v="${b.id}">Refund taking longer? Get help</button><button class="cta gh full" data-a="tab" data-v="trips">Back to My Trips</button>`,{back:1})}
+
+/* ---------- live tracking, safety, sharing ---------- */
+function trackScreen(id){const b=DB().bookings.find(x=>x.id===id),t=T(b.tripId),l=DB().live.find(x=>x.tripId===t.id),r=route(t),o=opOf(t);
+if(!l)return page('Live tracking',sosBtn(id)+`<div class="c">${hb(['BOARDING','IN_TRANSIT','DELAYED'].includes(t.status)?'Waiting for the bus location.':'Live tracking starts when the driver starts the trip.','b','nav')}</div><button class="cta gh full" data-a="call" data-v="${esc(o.name)}">${ic('phone')} Call operator</button>`,{back:1});
+const age=Math.max(0,Math.round((Date.now()-new Date(l.ping))/1000)),stale=age>180,n=r.stops.length||1,ni=Math.min(n-1,Math.floor(l.progress/100*(n-1))+1),nx=r.stops[ni]||{name:'destination',offset:hrs(t)*60},eta=Math.max(2,Math.round((stopTime(t,nx)-Date.now())/6e4)+(t.delay||0)),km=Math.max(1,Math.round((r.km||400)*(1-l.progress/100)));
+return page('Live tracking',sosBtn(id)+`<div class="sm m">${esc(o.name)} · ${esc(t.bus)}</div>${stale?hb('GPS signal lost. Showing last known location, '+Math.round(age/60)+' min ago. The bus is still on its way.','a','alert'):''}
+<div class="c">${M.mapBox([{x:l.x,y:l.y,l:t.bus,c:stale?'red':'grn'}],210,[[15,70],[85,30]])}<div class="row bt mt2"><span><b>Arriving at ${esc(nx.name)}</b><div class="sm m">${stale?'Estimated arrival (approx.) ~ '+eta+'–'+(eta+15)+' min':eta+' min'}</div></span><span class="st ${t.status==='DELAYED'?'a':stale?'r':'g'}">${t.status==='DELAYED'?'Delayed':stale?'Signal lost':'On time'}</span></div>
+<div class="bar"><i style="width:${l.progress}%"></i></div><div class="sm m">Last updated ${age} s ago · ${km} km away</div></div>
+<div class="c row bt"><span><b>${esc(l.driver)} · Driver</b><div class="sm m">${esc(t.bus)} · ${esc(t.type)}</div></span><button class="cta sm gh" data-a="call" data-v="${esc(l.driver)}">${ic('phone',14)} Call driver</button></div>
+<div class="row"><button class="cta gh full" data-a="call" data-v="${esc(o.name)}">${ic('phone')} Call operator</button><button class="cta gh full" data-a="sharescr" data-v="${id}">${ic('share')} Share trip</button></div><button class="cta dg full" data-a="safety" data-v="${id}">${ic('alert')} SOS</button>`,{back:1})}
+function safetyScreen(id){const b=DB().bookings.find(x=>x.id===id),t=T(b.tripId),c=me(),C=c.contacts||[],s=DB().sos.find(x=>x.customerId===S.who&&x.trip===t.id&&!['RESOLVED','FALSE_ALARM','CLOSED'].includes(x.status));
+if(s)return page('Women safety',`<div class="c tc" style="border-color:var(--r)"><div class="empty" style="padding:10px"><div class="big" style="background:var(--rbg);color:var(--rtx)">${ic('alert',34)}</div><h2>Help is on the way</h2><p class="m">Alert sent ${rel(s.at)} · Status: <b>${lab(s.status)}</b></p></div></div>
+<div class="c"><p>Stay where you are if it’s safe. Your live location is being shared.</p>${[[C.length+' emergency contact'+(C.length===1?'':'s')+' notified','users'],['Live location shared every 10 seconds','nav'],['Police control room informed (112)','shield'],[s.status==='NEW'?'Abra safety team will call you in about 1 minute':'Abra safety team has your alert and is calling you','phone']].map(([x,i])=>`<div class="row sm">${ic(i,16)} ${x}</div>`).join('')}</div>
+<button class="cta dg full" data-a="call" data-v="112">${ic('phone')} Call 112 now</button><button class="cta gh full" data-a="safe" data-v="${s.id}">I'm safe, cancel alert</button>`,{back:1});
+return page('Women safety',`<p class="m tc">Press and hold in an emergency</p><p class="sm m tc">Hold the button for 3 seconds to alert your contacts, share your live location and inform the Abra safety team.</p>
+<div class="ring" id="ring" role="button" tabindex="0" aria-label="SOS. Press and hold for 3 seconds."><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="none" stroke="var(--rbg)" stroke-width="6"/><circle id="ringp" cx="50" cy="50" r="46" fill="none" stroke="var(--r)" stroke-width="6" stroke-dasharray="289" stroke-dashoffset="289" transform="rotate(-90 50 50)"/></svg><b id="ringt">SOS</b></div>
+<p class="sm m tc" id="ringn">Releasing early cancels. Nothing is sent until the ring is full.</p>
+<div class="c"><div class="row bt"><b>Emergency contacts</b><button class="cta sm gh" data-a="addc">${ic('user',14)} Add contact</button></div>${C.length?C.map((x,i)=>`<div class="row bt"><span><b>${esc(x.name)}</b> <span class="sm m">${esc(x.rel)} · ${esc(x.phone)}</span></span><div class="row"><button class="cta sm gh" data-a="call" data-v="${esc(x.name)}" aria-label="Call ${esc(x.name)}">${ic('phone',14)}</button><button class="cta sm gh" data-a="rmc" data-v="${i}" aria-label="Remove">${ic('x',14)}</button></div></div>`).join(''):'<p class="sm m">No emergency contacts yet. Add one so they can be alerted.</p>'}</div>
+<button class="cta gh full" data-a="sharescr" data-v="${id}">${ic('nav')} Share live location</button>
+<div class="c"><b>Helplines</b>${[['Women helpline','181'],['Police','112'],['Ambulance','108'],['Abra safety desk',DB().contact.emergency]].map(([n,p])=>`<div class="row bt"><span>${n} <span class="sm m">${esc(p)}</span></span><button class="cta sm gh" data-a="call" data-v="${esc(n)}" aria-label="Call ${n}">${ic('phone',14)}</button></div>`).join('')}</div>`,{back:1})}
+function shareScreen(id){const b=DB().bookings.find(x=>x.id===id),t=T(b.tripId),L=DB().sharing.filter(x=>x.trip===t.id&&x.customer===b.customer),on=L.find(x=>x.status==='ACTIVE');
+return page('Trip sharing',`<p class="m">Let family follow your journey</p>${on?hb('Sharing live until the trip ends ('+ft(arr(t))+')','g','nav'):hb('Sharing is off. Nobody can see your location.','b','info')}
+${on?`<div class="c"><b>Share link</b><div class="sm m">https://${esc(on.link)}</div><div class="row rw mt2"><button class="cta sm gh" data-a="shwa" data-v="${esc(on.link)}">WhatsApp</button><button class="cta sm gh" data-a="shsms" data-v="${esc(on.link)}">SMS</button><button class="cta sm gh" data-a="copy" data-v="https://${esc(on.link)}">Copy link</button><a class="cta sm gh" href="website_demo_model.html#/s/${esc(on.link.split('/').pop())}" target="abra_website">Open as family (demo)</a></div></div>
+<div class="c"><b>People with access</b>${on.opened?Array.from({length:Math.min(3,on.opened)},(_,i)=>`<div class="row bt sm"><span>${['Mother','Brother','Friend'][i]}</span><span class="m">Viewed ${5+i*7} min ago</span></div>`).join(''):'<p class="sm m">No one yet. Send the link to start.</p>'}</div>`:''}
+<button class="cta ${on?'gh':''} full" data-a="${on?'shstop':'shstart'}" data-v="${on?on.id:id}">${on?'Stop sharing':'Start sharing'}</button>`,{back:1})}
+
+/* ---------- notifications, offers ---------- */
+const nCat=n=>/SOS|safety|Safety/.test(n.t)?'safety':/[Oo]ffer|coupon/.test(n.t+n.b)?'offers':'booking';
+function notifs(){if(!me())return page('Notifications',guest('Log in or sign up','Booking updates, offers and safety alerts will appear here.'),{back:1});
+const all=inbox(),L=all.filter(n=>S.nf==='all'||nCat(n)===S.nf),un=all.filter(n=>!n.read).length,td=L.filter(n=>sameDay(n.at,Date.now())),er=L.filter(n=>!sameDay(n.at,Date.now()));
+const card=n=>`<div class="c" style="${n.read?'':'border-color:var(--s)'}"><div class="row bt"><b>${esc(n.t)}</b>${n.read?'':'<span class="st b">Unread</span>'}</div><div class="sm m">${esc(n.b)}</div><div class="sm m">${rel(n.at)}</div></div>`;
+return page('Notifications',`<div class="row bt"><span class="sm m">${un} unread</span><button class="cta sm gh" data-a="readall">Mark all read</button></div><div class="hs" role="group" aria-label="Filter notifications">${[['all','All'],['booking','Booking'],['offers','Offers'],['safety','Safety']].map(([k,l])=>`<button class="ch ${S.nf===k?'on':''}" data-a="nf" data-v="${k}">${l}</button>`).join('')}<button class="ch" data-a="go" data-v="offers">${ic('tag',14)} Offers</button></div>
+${L.length?(td.length?`<h3>Today</h3>${td.map(card).join('')}`:'')+(er.length?`<h3>Earlier</h3>${er.map(card).join('')}`:''):M.empty('You’re all caught up','Booking updates, offers and safety alerts will appear here.')}`,{back:1})}
+function offers(){const O=DB().offers.filter(o=>o.status==='ACTIVE'&&new Date(o.to+'T23:59')>=Date.now());return page('Offers & promotions',`<p class="m">Save on your next trip</p>${O.length?`<div class="hs" aria-label="Featured offers">${O.slice(0,3).map((o,i)=>`<div class="ban ban${i%3}"><b style="font-size:18px">${esc(o.code)}</b><span class="sm">${esc(o.desc)}</span></div>`).join('')}</div>`+O.map(o=>`<div class="c"><div class="row bt"><b>${esc(o.code)}</b><button class="cta sm gh" data-a="copy" data-v="${esc(o.code)}">Copy</button></div><div>${esc(o.desc)}</div><div class="row bt sm m"><span>Valid till ${fd(o.to+'T12:00')}</span><button class="cta sm gh" data-a="offer" data-v="${o.id}">Terms apply</button></div></div>`).join(''):M.empty('No offers right now','New offers will show up here. Check back soon.')}`,{back:1})}
+
+/* ---------- support, profile, info ---------- */
+function support(){const c=DB().contact,F=DB().faqs.filter(f=>f.status==='PUBLISHED'),cats=[...new Set(F.map(f=>f.cat))],L=me()?DB().tickets.filter(t=>t.customerId===S.who):[];
+return page('Support',`<div class="c"><h3>Help centre</h3>${cats.map(k=>`<div class="sm m mt2"><b>${esc(k)}</b></div>${F.filter(f=>f.cat===k).map(f=>`<details class="faq"><summary>${esc(f.q)}</summary><p class="sm m" style="padding-bottom:10px">${esc(f.a)}</p></details>`).join('')}`).join('')}</div>
+<div class="c"><h3>Contact support</h3>${kv({Phone:esc(c.phone),WhatsApp:esc(c.whatsapp),Email:esc(c.email),Hours:esc(c.hours)})}<div class="row"><button class="cta sm gh" data-a="call" data-v="Abra support">${ic('phone',14)} Call</button><button class="cta sm" data-a="newtk">${ic('help',14)} Create a ticket</button></div></div>
+${L.length?`<h3>My tickets</h3>${L.map(t=>`<button class="c" style="text-align:left;width:100%" data-a="tkopen" data-v="${t.id}"><div class="row bt"><b>${esc(t.subject)}</b>${chip(t.status)}</div><div class="sm m">${t.id} · ${rel(t.at)} · ${t.msgs.length} messages</div></button>`).join('')}`:''}`,{back:false})}
+function tkview(id){const t=DB().tickets.find(x=>x.id===id);return page(t.id,`<div class="c"><b>${esc(t.subject)}</b> ${chip(t.status)}</div><div class="msgs">${t.msgs.map(m=>`<div class="mg ${m[0]==='customer'?'me':''}">${esc(m[1])}${m[3]&&m[3].length?`<div class="mt2">${M.fchips(m[3])}</div>`:''}<div class="sm" style="opacity:.7">${rel(m[2])}</div></div>`).join('')}</div>`,{back:1,foot:`<div class="botbar"><input id="f_rp" class="ch grow" style="min-height:44px" placeholder="Write a message" aria-label="Message"><button class="cta" data-a="tkreply" data-v="${id}" aria-label="Send">${ic('send',16)}</button></div>`})}
+const info=()=>`<h3>About</h3>${[['terms','Terms & Conditions'],['privacy','Privacy Policy'],['about','About Abra Travels']].map(([k,l])=>`<button class="c row" style="width:100%;text-align:left" data-a="go" data-v="info:${k}">${ic('info')}<span class="grow">${l}</span>${ic('chevR',16)}</button>`).join('')}`;
+function profile(){const c=me();if(!c)return page('Profile',guest('Log in or sign up','Book faster, find your tickets and manage your trips.')+info(),{back:false});
+return page('Profile',`<div class="c row"><span class="ib" style="background:var(--lb2);color:var(--db);border-radius:50%;font-weight:800">${esc(c.name[0])}</span><div class="grow"><span class="sm m">Signed in as</span><div><b>${esc(c.name)}</b></div><div class="sm m">${esc(c.phone)}</div></div></div>${c.status!=='ACTIVE'?hb('This account has been disabled. Please contact support.','r','alert'):''}
+<h3>Account</h3>${[['pedit','user','Edit profile'],['nset','bell','Notification settings'],['msgs','mail','Messages sent to me']].map(([a,i,l])=>`<button class="c row" style="width:100%;text-align:left" data-a="go" data-v="${a}">${ic(i)}<span class="grow">${l}</span>${ic('chevR',16)}</button>`).join('')}
+<h3>Preferences and help</h3><button class="c row" style="width:100%;text-align:left" data-a="go" data-v="lang">${ic('globe')}<span class="grow">Language</span><span class="sm m">${(ABRA_L.LANGS.find(l=>l[0]===M.lang)||['','English','English'])[1]}</span>${ic('chevR',16)}</button><button class="c row" style="width:100%;text-align:left" data-a="tab" data-v="support">${ic('help')}<span class="grow">Help centre</span>${ic('chevR',16)}</button>
+${info()}<button class="cta gh full" data-a="out">${ic('logout')} Sign out</button><button class="cta gh full" data-a="go" data-v="del" style="color:var(--rtx)">Delete account</button>`,{back:false})}
+function infoPage(k){const map={terms:'Terms and Conditions',privacy:'Privacy Policy',about:'About Abra Travels'},p=DB().pages.find(x=>x.title===map[k]),t2={terms:'Terms & Conditions',privacy:'Privacy Policy',about:'About Abra Travels'}[k];
+return page(t2,`<div class="c">${k==='about'?'<p>Bus booking, live journeys and travel safety, in one app.</p><p class="sm m">Version 1.0.0 (demo)</p>':p&&p.status==='PUBLISHED'?`<p class="sm m">Version ${p.version} · updated ${fd(p.updated)}</p><p>The published text from the admin app (Help content and contact, pages) appears here.</p>`:'<p>This page is being prepared and will be available here soon.</p>'}</div>`,{back:1})}
+function profileEdit(){const c=me(),e=S.perr||{};return page('Edit profile',`<div class="fd ${e.n?'bad':''}"><label for="f_en">Full name</label><input id="f_en" value="${esc(c.name)}"></div>${e.n?'<div class="err">Enter your name</div>':''}<div class="fd ${e.e?'bad':''}"><label for="f_ee">Email *</label><input id="f_ee" type="email" value="${esc(c.email)}"></div>${e.e?'<div class="err">Enter a valid email, e.g. name@example.com</div>':''}<div class="fd"><label>Mobile number</label><input value="${esc(c.phone)}" disabled></div><p class="sm m">To change your mobile number, contact support.</p>`,{back:1,foot:`<div class="botbar"><span class="grow"></span><button class="cta" data-a="psave">Save</button></div>`})}
+function notifSettings(){const c=me(),n=c.notif||(c.notif={booking:true,offers:true,safety:true,whatsapp:true});return page('Notification settings',[['booking','Booking and trip updates','Tickets, delays, boarding and refunds'],['offers','Offers and promotions','Discounts and new routes'],['safety','Safety alerts','Always on while you travel',1],['whatsapp','WhatsApp messages','Also send updates on WhatsApp']].map(([k,l,h,lock])=>`<div class="c row"><span class="grow"><b>${l}</b><div class="sm m">${h}</div></span><button class="toggle ${n[k]?'on':''}" role="switch" aria-checked="${!!n[k]}" aria-label="${l}" data-a="nset_t" data-v="${k}" ${lock?'disabled':''}></button></div>`).join(''),{back:1})}
+function langPage(){return page('Language',ABRA_L.CARDS.map(([k,l,e])=>`<button class="opt ${M.lang===k?'on':''}" data-a="setlang" data-v="${k}"><b class="grow">${l}</b><span class="sm m">${e}</span>${M.lang===k?ic('check'):''}</button>`).join(''),{back:1})}
+function delPage(){const up=myBk().filter(b=>b.status==='CONFIRMED'&&arr(T(b.tripId))>Date.now()).length;return page('Delete account',`${hb('Deleting your account removes your profile, saved contacts and preferences. Booking records are kept for 8 years as the law requires.','r','alert')}${up?hb('You have '+up+' upcoming trip(s). Cancel them or travel first.','a','info'):''}<label class="row c"><input type="checkbox" id="f_delok"> I understand this can’t be undone</label>`,{back:1,foot:`<div class="botbar"><span class="grow"></span><button class="cta dg" data-a="delgo" ${up?'disabled':''}>Delete account</button></div>`})}
+
+/* ---------- sign-in ---------- */
+function loginSheet(){S.lstep='phone';S.otpTries=0;drawLogin()}
+function drawLogin(){const L=DB().customers.slice(0,6);
+if(S.lstep==='phone')return sheet('Log in or sign up',`<p class="m">Enter your mobile number to continue. We will send a verification code to this number.</p><div class="row"><div class="fd" style="width:80px"><label>Code</label><input value="+91" disabled></div><div class="fd grow"><label for="f_ph">Mobile number</label><input id="f_ph" type="tel" inputmode="numeric" maxlength="10" value="${esc(S.lph||'')}" placeholder="98xxxxxxxx"></div></div><div id="lerr"></div>
+<button class="cta full" data-a="lsend">Continue</button><div class="tc sm m" style="margin:10px 0 6px">or continue with</div><div class="row"><button class="cta gh full" data-a="gsign">${GICON} Google</button><button class="cta gh full" data-a="asign">${AICON} Apple</button></div><p class="sm m">By continuing, you agree to our Terms & Conditions and Privacy Policy.</p><details><summary class="sm m">Demo: pick an existing account</summary><div class="col mt2">${L.map(c=>`<button class="opt" data-a="asis" data-v="${c.id}">${ic('user',18)}<span class="grow"><b>${esc(c.name)}</b><div class="sm m">${esc(c.phone)} · ${DB().bookings.filter(b=>b.customerId===c.id).length} bookings${c.status!=='ACTIVE'?' · '+lab(c.status):''}</div></span></button>`).join('')}</div></details>`);
+sheet('Enter verification code',`<p class="m">We sent a 6-digit code on WhatsApp to +91 ${esc(S.lph)}. <b>Demo code: 123456</b></p><div class="otp">${[0,1,2,3,4,5].map(i=>`<input id="o${i}" maxlength="1" inputmode="numeric" aria-label="Digit ${i+1}" data-live="otpk" data-k="${i}">`).join('')}</div><div id="lerr"></div>
+<button class="cta full" data-a="lverify">Verify</button><div class="row bt"><button class="cta sm gh" data-a="lchange">Change number</button><button class="cta sm gh" data-a="lresend" id="lres" ${S.resendAt>Date.now()?'disabled':''}>Resend code</button></div>`);setTimeout(()=>{const e=$('#o0');if(e)e.focus()},50)}
+const lerr=m=>{const e=$('#lerr');if(e)e.innerHTML=`<div class="err">${esc(M.t(m))}</div>`};
+
+/* ---------- router ---------- */
+function view(){if(S.boot!=='app')return start();const top=S.stack[S.stack.length-1];
+if(top){const[v,...rest]=String(top).split(':'),a=rest.join(':');switch(v){case'city':return cityPicker(a);case'results':return results();case'trip':return tripDetails(a);case'seats':return seatsScreen();case'points':return points();case'pax':return paxScreen();case'review':return review();case'pay':return payScreen();case'conf':return confirmed(a);case'ticket':return ticket(a);case'bk':return bookingScreen(a);case'cancel':return cancelScreen(a);case'refund':return refundScreen(a);case'track':return trackScreen(a);case'safety':return safetyScreen(a);case'share':return shareScreen(a);case'notifs':return notifs();case'offers':return offers();case'tk':return tkview(a);case'pedit':return profileEdit();case'nset':return notifSettings();case'msgs':return msgsPage();case'lang':return langPage();case'del':return delPage();case'info':return infoPage(a);default:return page('Page not found',M.empty('This page does not exist','Go back and try again.'),{back:1})}}
+return S.tab==='trips'?trips():S.tab==='support'?support():S.tab==='me'?profile():home()}
+
+/* ---------- actions ---------- */
+function needLogin(next){if(me())return true;S.after=next;loginSheet();return false}
+const addRecent=()=>{const R=(LS('recent')||[]).filter(r=>!(r.from===S.q.from&&r.to===S.q.to));R.unshift({from:S.q.from,to:S.q.to});LS('recent',R.slice(0,4));LS('q',S.q)};
+function keepPax(){S.sel.forEach(l=>{const n=$('#f_pn_'+l);if(!n)return;S.px[l]={n:n.value.trim(),a:Number($('#f_pa_'+l).value),g:$('#f_pg_'+l).value}});const m=$('#f_cm');if(m){S.cmob=m.value;S.cem=$('#f_ce').value.trim();S.gstin=$('#f_gi').value.trim().toUpperCase();S.gco=$('#f_gc').value.trim()}}
+function keepPay(){['upi','cn','cx','cv','cnm'].forEach(k=>{const e=$('#f_'+k);if(e)S[k]=e.value.trim()})}
+Object.assign(M.A,{
+onb_go:()=>{S.boot='onb';S.onb=0;M.render()},onb_n:()=>{if(S.onb<ONB.length-1){S.onb++;M.render()}else M.A.onb_lang()},onb_b:()=>{S.onb=Math.max(0,S.onb-1);M.render()},onb_lang:()=>{S.boot='lang';M.render()},
+onb_done:()=>{S.boot='app';LS('onboarded',1);M.render()},setlang:v=>{M.lang=v;localStorage.setItem('abra_m_lang',v);document.documentElement.lang=v;M.render();M.drawBar()},
+tab:v=>{if(S.stack.some(x=>['points','pax','review','pay'].includes(String(x))))releaseHold();S.stack=[];S.tab=v;M.render()},back:()=>pop(),go:v=>push(v),
+city:v=>{S.cq='';push('city:'+v)},cq:v=>{S.cq=v;M.keepScroll=true;M.render();const e=$('#f_cq');if(e){e.focus();e.setSelectionRange(v.length,v.length)}},
+cpick:v=>{const[w,c]=v.split('|'),o=w==='from'?'to':'from';if(S.q[o]===c)S.q[o]=S.q[w];S.q[w]=c;LS('q',S.q);pop()},
+swap:()=>{[S.q.from,S.q.to]=[S.q.to,S.q.from];M.render()},qd:v=>{S.q.date=v;M.render()},
+search:()=>{const d=gv('date')||S.q.date,max=new Date(Date.now()+90*864e5).toISOString().slice(0,10),td=new Date().toISOString().slice(0,10);if(S.q.from===S.q.to)return toast('Origin and destination must be different.');if(d<td||d>max)return toast('Choose a date from today up to 90 days ahead.');S.q.date=d;addRecent();S.page=1;S.loadingR=true;push('results')},
+recent:v=>{const[a,b]=v.split('|');S.q.from=a;S.q.to=b;M.A.search()},pop:v=>{const[a,b]=v.split(' to ');S.q.from=a;S.q.to=b;M.A.search()},
+day:v=>{const d=new Date(S.q.date+'T12:00');d.setDate(d.getDate()+Number(v));S.q.date=d.toISOString().slice(0,10);S.page=1;S.loadingR=true;M.render()},more:()=>{S.page++;M.keepScroll=true;M.render()},
+sortsh:()=>sheet('Sort',SORTS.map(([k,l])=>`<button class="opt ${S.sort===k?'on':''}" data-a="sortset" data-v="${k}"><span class="grow">${l}</span>${S.sort===k?ic('check'):''}</button>`).join('')),sortset:v=>{S.sort=v;closeSheet();M.render()},
+filtsh:()=>filterSheet(),
+fset:v=>{const[k,x]=v.split('|'),f=S.f;if(Array.isArray(f[k])){const i=f[k].indexOf(x);i<0?f[k].push(x):f[k].splice(i,1)}else f[k]=f[k]===x?'':x;filterSheet()},
+fmax:v=>{S.f.max=Number(v);const e=$('#fmaxv');if(e)e.textContent=money(v)},
+fapply:()=>{closeSheet();S.page=1;M.render()},fclear:()=>{S.f={win:[],type:[],ac:'',ops:[],am:[],max:0};closeSheet();M.render()},
+ban:v=>{const b=DB().banners.find(x=>x.id===v);b.clicks=(b.clicks||0)+1;save();if(b.code){const o=DB().offers.find(x=>x.code===b.code);if(o)return M.A.offer(o.id)}M.A.search()},
+offer:v=>{const o=DB().offers.find(x=>x.id===v);sheet('Offer terms',`<b>${esc(o.code)}</b><p>${esc(o.desc)}</p><ul class="sm">${(o.terms||[]).map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`,`<button class="cta gh" data-a="copy" data-v="${esc(o.code)}">Copy</button><button class="cta" data-a="sheet_x">Got it</button>`)},
+copy:v=>{try{navigator.clipboard.writeText(v).catch(()=>{})}catch(e){}toast('Copied')},
+trip:v=>{S.trip=v;push('trip:'+v)},
+seats:v=>{S.trip=v;S.sel=[];S.coupon='';S.cperr='';S.bp=null;S.dp=null;S.px={};S.agree=false;S.perr={};S.cmob=null;S.cem=null;S.gstin='';S.gco='';S.usep=false;push('seats')},
+seat:v=>{const mx=DB().settings.booking.maxSeats,i=S.sel.indexOf(v);if(i>=0)S.sel.splice(i,1);else{if(S.sel.length>=mx)return toast('You can select up to '+mx+' seats');S.sel.push(v)}M.keepScroll=true;M.render()},
+hold:()=>{if(!needLogin('hold'))return;if(me().status!=='ACTIVE')return toast('This account has been disabled. Please contact support.');const t=T(S.trip),st=AbraStore.seatStates(t),gone=S.sel.filter(l=>['B','H','X'].includes(st[seatIdx(l)])&&!(t.heldSeats||[]).some(h=>h.seat===l&&h.by===S.who));
+if(gone.length){S.sel=S.sel.filter(l=>!gone.includes(l));M.render();return toast('Some of those seats were just taken. Please choose again.')}
+const until=Date.now()+DB().settings.booking.holdSeconds*1000,old=(t.heldSeats||[]).filter(h=>h.by===S.who).length;t.heldSeats=(t.heldSeats||[]).filter(h=>h.by!==S.who).concat(S.sel.map(s=>({seat:s,by:S.who,until})));t.held=Math.max(0,(t.held||0)-old)+S.sel.length;S.holdUntil=until;save();S.ptab='b';push('points')},
+ptab:v=>{S.ptab=v;M.render()},bp:v=>{S.bp=v;S.ptab='d';M.render()},dp:v=>{S.dp=v;M.keepScroll=true;M.render()},
+maps:v=>{const p=placeOf(v);window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(p.lat&&p.lng?p.lat+','+p.lng:v),'_blank','noopener')},
+topax:()=>{if(!S.bp||!S.dp)return toast('Choose both points');push('pax')},
+usep:v=>{keepPax();S.usep=v;if(v){const c=me(),l=S.sel[0];S.px[l]=Object.assign(S.px[l]||{},{n:c.name});S.cmob=c.phone;S.cem=c.email}M.render()},
+toreview:()=>{keepPax();const e={},st=AbraStore.seatStates(T(S.trip));S.sel.forEach(l=>{const x=S.px[l];if(!x.n||x.n.length<2)e['n'+l]=1;if(!(x.a>=1&&x.a<=99))e['a'+l]=1;if(st[seatIdx(l)]==='L'&&x.g!=='F')e['g'+l]=1});
+if(String(S.cmob||'').replace(/\D/g,'').slice(-10).length<10)e.mob=1;if(!S.cem||!/^\S+@\S+\.\S+$/.test(S.cem))e.em=1;if(S.gstin&&!/^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(S.gstin))e.gst=1;if(S.gstin&&!S.gco)e.gco=1;
+S.perr=e;if(Object.keys(e).length){M.render();return toast('Fix the highlighted fields')}push('review')},
+cp:()=>{const c=$('#f_cp').value.trim().toUpperCase();if(!c)return;const e=couponOk(c);S.cperr=e;S.coupon=e?'':c;M.keepScroll=true;M.render();if(!e)toast('Coupon applied')},cprm:()=>{S.coupon='';M.render()},
+agree:v=>{S.agree=v;M.keepScroll=true;M.render()},topay:()=>{S.payState='';S.payErr={};push('pay')},
+pm:v=>{keepPay();S.pm=v;S.payErr={};M.keepScroll=true;M.render()},upiapp:v=>{S.upiApp=v;S.upi='';S.payErr={};M.render()},upiv:()=>{keepPay();S.upiOk=/^[\w.-]{2,}@[a-z]{2,}$/i.test(S.upi||'');S.payErr={upi:!S.upiOk};M.render()},
+bank:v=>{S.bank=v;M.render()},wal:v=>{S.wal=v;M.render()},paysim:v=>{keepPay();S.sim=v;M.keepScroll=true;M.render()},
+paynow:()=>{keepPay();const m=S.pm||'UPI',e={};if(m==='UPI'&&!S.upiApp&&!/^[\w.-]{2,}@[a-z]{2,}$/i.test(S.upi||''))e.upi=1;
+if(m==='CARD'){if(!luhn(S.cn||''))e.cn=1;const x=(S.cx||'').match(/^(\d\d)\/(\d\d)$/);if(!x||+x[1]<1||+x[1]>12||new Date(2000+ +x[2],+x[1])<new Date())e.ce=1;if(!/^\d{3}$/.test(S.cv||''))e.cv=1;if(!S.cnm)e.cnm=1}
+if(m==='NETBANKING'&&!S.bank)e.bank=1;if(m==='WALLET'&&!S.wal)e.wal=1;S.payErr=e;if(Object.keys(e).length)return M.render();
+S.payState='proc';M.render();setTimeout(()=>{if((S.sim||'ok')==='ok')return book();S.failNet=S.sim==='net';S.failCode=['U30','U16','Z9'][Math.floor(Math.random()*3)];S.failRef='pay_'+Math.random().toString(36).slice(2,9);
+const t=T(S.trip),c=calc();DB().payments.unshift({id:AbraStore.uid('PAY'),bookingId:'',pnr:'-',customer:me().name,operator:opOf(t).name,amount:c.total,mode:S.pm||'UPI',status:'FAILED',gw:S.failRef,at:new Date().toISOString(),reason:S.failNet?'Network failure':'Bank declined ('+S.failCode+')',settled:false});save();S.payState='fail';M.render()},1600)},
+payretry:()=>{S.payState='';M.A.paynow()},paychg:()=>{S.payState='';M.render()},
+pdf:()=>window.print(),tkt:v=>push('ticket:'+v),bk:v=>push('bk:'+v),tt:v=>{S.tt=v;M.render()},refund:v=>push('refund:'+v),track:v=>push('track:'+v),safety:v=>push('safety:'+v),sharescr:v=>push('share:'+v),
+sharet:v=>{const b=DB().bookings.find(x=>x.id===v),t=T(b.tripId),txt=`Abra Travels ticket ${b.pnr}: ${b.route}, ${fd(t.depart)}, departs ${ft(t.depart)}. Seats ${b.seatList}.`;if(navigator.share)navigator.share({text:txt}).catch(()=>{});else M.A.copy(txt)},
+ics:v=>{const b=DB().bookings.find(x=>x.id===v),t=T(b.tripId),f=d=>new Date(d).toISOString().replace(/[-:]/g,'').slice(0,15)+'Z',ics=`BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nUID:${b.pnr}@abratravels\nDTSTART:${f(t.depart)}\nDTEND:${f(arr(t))}\nSUMMARY:Bus to ${b.route.split(' to ')[1]} (${b.pnr})\nLOCATION:${b.board||''}\nEND:VEVENT\nEND:VCALENDAR`;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([ics],{type:'text/calendar'}));a.download=b.pnr+'.ics';a.click();toast('Calendar file downloaded')},
+call:v=>toast('Calling '+v+'... (demo)'),
+cancel:v=>{S.cxs=[];S.cxr='';push('cancel:'+v)},cxs:(v,el)=>{const k=el.dataset.k;S.cxs=v?S.cxs.concat(k):S.cxs.filter(x=>x!==k);M.keepScroll=true;M.render()},cxr:v=>{S.cxr=v;M.keepScroll=true;M.render()},
+cxgo:v=>{const b=DB().bookings.find(x=>x.id===v),q=AbraStore.refundQuote(b),per=Math.round(b.amount/b.seatsN),amt=Math.round(per*S.cxs.length*q.pct/100);sheet(S.cxs.length>1?'Cancel '+S.cxs.length+' seats?':'Cancel 1 seat?',`<p>Seats ${esc(S.cxs.join(', '))} on ${esc(b.route)} will be released. This can’t be undone.</p>${amt?hb('You will get '+money(amt)+' back in 5 to 7 working days.','g','refresh'):hb('No refund applies at this time.','a','info')}`,`<button class="cta gh" data-a="sheet_x">Keep booking</button><button class="cta dg" data-a="cxok" data-v="${v}">Yes, cancel seats</button>`)},
+cxok:v=>{const d=DB(),b=d.bookings.find(x=>x.id===v),q=AbraStore.refundQuote(b),t=T(b.tripId),seats=S.cxs.slice(),per=Math.round(b.amount/b.seatsN),amt=Math.round(per*seats.length*q.pct/100);
+b.cancelledSeats=(b.cancelledSeats||[]).concat(seats);t.booked=Math.max(0,t.booked-seats.length);t.taken=(t.taken||[]).filter(s=>!seats.includes(s));if(b.cancelledSeats.length>=b.seatList.split(', ').length)b.status='CANCELLED';
+const rid=AbraStore.uid('RF');d.refunds.unshift({id:rid,bookingId:b.id,pnr:b.pnr,customer:b.customer,operator:b.operator,amount:amt,pct:q.pct,status:'INITIATED',utr:'',at:new Date().toISOString(),bearer:'Customer',reason:'Cancelled by customer: '+S.cxr,seats:seats.join(', ')});save();closeSheet();S.stack=S.stack.filter(x=>!String(x).startsWith('cancel'));push('refund:'+rid);toast('Seats cancelled')},
+addc:()=>sheet('Add emergency contact',`${fld('cn','Name','')}${fld('cp','Mobile number','',{type:'tel'})}${fld('cr','Relationship','Mother',{type:'select',opts:['Mother','Father','Spouse','Brother','Sister','Friend','Other']})}`,`<button class="cta gh" data-a="sheet_x">Cancel</button><button class="cta" data-a="addcok">Save contact</button>`),
+addcok:()=>{const n=gv('cn').trim(),p=gv('cp').replace(/\D/g,'');if(!n)return toast('Enter a name');if(p.length<10)return toast('Enter a 10-digit mobile number');const c=me();c.contacts=(c.contacts||[]).concat({name:n,phone:'+91 '+p.slice(-10),rel:gv('cr')});save();closeSheet();M.render()},
+rmc:v=>{const c=me();c.contacts.splice(Number(v),1);save();M.render()},
+safe:v=>sheet('Cancel the alert?','<p>Your contacts and the safety team will be told that you are safe.</p>',`<button class="cta gh" data-a="sheet_x">Keep the alert</button><button class="cta" data-a="safeok" data-v="${v}">Yes, I’m safe</button>`),
+safeok:v=>{const s=DB().sos.find(x=>x.id===v);s.status='RESOLVED';s.log.push(['Customer marked safe in the app',new Date().toISOString()]);save();closeSheet();M.render();toast('Alert cancelled')},
+shstart:v=>{const b=DB().bookings.find(x=>x.id===v),t=T(b.tripId);DB().sharing.unshift({id:AbraStore.uid('SH'),customer:b.customer,trip:t.id,link:'abra.in/s/'+Math.random().toString(36).slice(2,8),opened:0,created:new Date().toISOString(),expires:arr(t).toISOString(),status:'ACTIVE'});save();M.render();toast('Sharing started')},
+shstop:v=>{const s=DB().sharing.find(x=>x.id===v);s.status='REVOKED';save();M.render();toast('Sharing stopped')},
+shwa:v=>{const s=DB().sharing.find(x=>x.link===v);if(s){s.opened++;save()}window.open('https://wa.me/?text='+encodeURIComponent('Follow my bus journey live: https://'+v),'_blank','noopener')},
+shsms:v=>{const s=DB().sharing.find(x=>x.link===v);if(s){s.opened++;save()}M.A.copy('Follow my bus journey live: https://'+v)},
+nf:v=>{S.nf=v;M.render()},readall:()=>{inbox().forEach(n=>n.read=true);save();M.render()},
+newtk:v=>{if(!needLogin())return;const L=myBk().slice(-6);sheet('Create a ticket',`${fld('tc','Category',v?'BOOKING':'APP',{type:'select',opts:[['BOOKING','Booking'],['PAYMENT','Payment'],['REFUND','Refund'],['SAFETY','Safety'],['APP','App']]})}${fld('tb','Booking',v||'',{type:'select',opts:[['','Not about a booking']].concat(L.map(b=>[b.id,b.pnr+' · '+b.route]))})}${fld('ts','Subject','',{ph:'Refund not received'})}${fld('tm','Message','',{type:'textarea'})}${M.proofField('tkp',false,'Screenshot or file (optional)')}`,`<button class="cta gh" data-a="sheet_x">Cancel</button><button class="cta" data-a="tksave">Send</button>`)},
+tksave:async()=>{const s=gv('ts').trim(),m=gv('tm').trim();if(s.length<4)return toast('Write a short subject');if(m.length<5)return toast('Describe the problem');const cu=me(),pids=await M.readProofs('tkp',false,cu.name);if(pids===null)return;const id=AbraStore.uid('TKT');DB().tickets.unshift({id,customer:cu.name,customerId:cu.id,subject:s,category:gv('tc'),priority:gv('tc')==='SAFETY'?'URGENT':'MEDIUM',status:'OPEN',assignee:'',at:new Date().toISOString(),sla:new Date(Date.now()+864e5).toISOString(),bookingId:gv('tb'),msgs:[['customer',m,new Date().toISOString(),pids]]});save();closeSheet();S.tab='support';S.stack=['tk:'+id];M.render();toast('Ticket created. We usually reply within a few hours.')},
+tkopen:v=>push('tk:'+v),tkreply:v=>{const e=$('#f_rp'),m=e.value.trim();if(!m)return;const t=DB().tickets.find(x=>x.id===v);t.msgs.push(['customer',m,new Date().toISOString()]);if(['RESOLVED','CLOSED'].includes(t.status))t.status='OPEN';save();M.keepScroll=true;M.render()},
+psave:()=>{const n=gv('en').trim(),e=gv('ee').trim();S.perr={n:n.length<2,e:!e||!/^\S+@\S+\.\S+$/.test(e)};if(S.perr.n||S.perr.e)return M.render();Object.assign(me(),{name:n,email:e});save();S.perr={};pop();toast('Saved')},
+nset_t:v=>{const c=me();c.notif[v]=!c.notif[v];save();M.render()},
+delgo:()=>{if(!$('#f_delok').checked)return toast('Tick the box to confirm');const c=me();c.status='DEACTIVATED';c.deletedAt=new Date().toISOString();save();S.who='';LS('who','');S.stack=[];S.tab='home';M.render();toast('Your account was deleted')},
+login:()=>loginSheet(),
+lsend:()=>{const p=gv('ph').replace(/\D/g,'');if(p.length!==10)return lerr('Enter a 10-digit mobile number');S.lph=p;S.lstep='otp';S.otpAt=Date.now();S.resendAt=Date.now()+30000;S.otpTries=0;drawLogin()},
+lchange:()=>{S.lstep='phone';drawLogin()},lresend:()=>{S.resendAt=Date.now()+30000;S.otpAt=Date.now();toast('A new code has been sent.');drawLogin()},
+otpk:(v,el)=>{const i=Number(el.dataset.k);if(v&&i<5){const n=$('#o'+(i+1));if(n)n.focus()}},
+lverify:()=>{const code=[0,1,2,3,4,5].map(i=>($('#o'+i)||{}).value||'').join('');if(S.otpTries>=5)return lerr('Too many attempts. Please try again later.');if(Date.now()-S.otpAt>5*6e4)return lerr('That code has expired. Please request a new one.');
+if(code!=='123456'){S.otpTries++;return lerr(S.otpTries>=5?'Too many attempts. Please try again later.':'That code is incorrect. Please try again.')}
+const d=DB();let c=d.customers.find(x=>x.phone.replace(/\D/g,'').endsWith(S.lph));if(c&&c.status!=='ACTIVE')return lerr('This account has been disabled. Please contact support.');
+if(!c){c={id:AbraStore.uid('CU'),name:'Traveller '+S.lph.slice(-4),email:'',phone:'+91 '+S.lph,status:'ACTIVE',joined:new Date().toISOString(),bookings:0,spent:0,method:'WhatsApp OTP',city:'',lastActive:new Date().toISOString()};d.customers.push(c);save()}M.A.asis(c.id)},
+asis:v=>{const c=DB().customers.find(x=>x.id===v);if(c.status!=='ACTIVE')return toast('This account has been disabled. Please contact support.');S.who=v;LS('who',v);closeSheet();toast('Welcome to Abra Travels! You’re signed in.');const n=S.after;S.after=null;if(n==='hold')M.A.hold();else M.render()},
+out:()=>sheet('Sign out?','<p>You will need a new verification code to sign in again.</p>',`<button class="cta gh" data-a="sheet_x">Cancel</button><button class="cta" data-a="outok">Sign out</button>`),
+outok:()=>{releaseHold();S.who='';LS('who','');S.stack=[];S.tab='home';closeSheet();M.render()}
+});
+function book(){const t=T(S.trip),d=DB(),c=calc(),cu=me(),taken=new Set(t.taken||[]),clash=S.sel.find(l=>taken.has(l));
+if(clash){releaseHold();S.stack=['results','trip:'+t.id,'seats'];S.sel=[];S.payState='';M.render();return toast('Some of those seats were just taken. Please choose again. No money was taken.')}
+const id=AbraStore.uid('BK'),pnr='ABR'+'KMQTX'[Math.floor(Math.random()*5)]+Math.floor(1000+Math.random()*8999)+'ABCDE'[Math.floor(Math.random()*5)];
+d.bookings.push({id,pnr,customerId:cu.id,customer:cu.name,phone:S.cmob||cu.phone,email:S.cem||cu.email,tripId:t.id,route:t.route,operator:opOf(t).name,operatorId:t.operatorId,travelDate:t.depart,seatList:S.sel.join(', '),seatsN:S.sel.length,amount:c.base,commission:c.cm,gst:c.gst,fee:c.fee,discount:c.disc,status:'CONFIRMED',mode:S.pm||'UPI',at:new Date().toISOString(),coupon:S.coupon||'',board:S.bp,drop:S.dp,pax:S.sel.map(l=>({seat:l,...S.px[l]})),gstin:S.gstin||'',company:S.gco||''});
+d.payments.unshift({id:AbraStore.uid('PAY'),bookingId:id,pnr,customer:cu.name,operator:opOf(t).name,amount:c.total,mode:S.pm||'UPI',status:'SUCCESS',gw:'pay_'+Math.random().toString(36).slice(2,9),at:new Date().toISOString(),reason:'',settled:false});
+t.heldSeats=(t.heldSeats||[]).filter(h=>h.by!==S.who);t.held=Math.max(0,(t.held||0)-S.sel.length);t.taken=(t.taken||[]).concat(S.sel);t.booked+=S.sel.length;if(c.o)c.o.used++;cu.bookings=(cu.bookings||0)+1;cu.spent=(cu.spent||0)+c.total;
+AbraStore.notify('customer:'+cu.id,'Booking confirmed',pnr+' · '+t.route+' · '+fdt(t.depart),'trips');S.holdUntil=null;S.payState='';save();S.stack=['conf:'+id];S.sel=[];M.render()}
+/* hold timer and expiry, code resend countdown */
+setInterval(()=>{if(S.holdUntil){if(Date.now()>S.holdUntil){releaseHold();S.sel=[];closeSheet();S.stack=S.stack.filter(x=>!['points','pax','review','pay'].includes(String(x)));S.payState='';M.render();sheet('Your seats were released','<p>The 10-minute hold ended before payment was completed. No money was taken.</p>',`<button class="cta" data-a="sheet_x">Choose seats again</button>`)}else{const e=$('#tmr');if(e)e.innerHTML=ic('clock',12)+' '+fmtLeft()}}
+const r=$('#lres');if(r&&S.resendAt){const s=Math.ceil((S.resendAt-Date.now())/1000);if(s>0){r.disabled=true;r.textContent='Resend code in '+s+' s'}else if(r.disabled){r.disabled=false;r.textContent=M.t('Resend code')}}
+if(AbraStore.dropExpiredHolds())save()},1000);
+/* SOS ring: hold for 3 seconds */
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('#ring'))return;const t0=Date.now();S.ringT=setInterval(()=>{const f=Math.min(1,(Date.now()-t0)/3000),p=$('#ringp'),tx=$('#ringt');if(p)p.setAttribute('stroke-dashoffset',289*(1-f));if(tx)tx.textContent=Math.ceil(3-f*3)+'s';if(f>=1){clearInterval(S.ringT);S.ringT=null;sendSos()}},50)});
+document.addEventListener('pointerup',()=>{if(!S.ringT)return;clearInterval(S.ringT);S.ringT=null;const p=$('#ringp'),tx=$('#ringt'),n=$('#ringn');if(p)p.setAttribute('stroke-dashoffset',289);if(tx)tx.textContent='SOS';if(n)n.textContent=M.t('Released too early. Hold for 3 seconds')});
+function sendSos(){const id=String(S.stack[S.stack.length-1]).split(':')[1],b=DB().bookings.find(x=>x.id===id),t=T(b.tripId),l=DB().live.find(x=>x.tripId===t.id),cu=me();
+DB().sos.unshift({id:AbraStore.uid('SOS'),customerId:cu.id,customer:cu.name,phone:cu.phone,trip:t.id,route:t.route,bus:t.bus,driver:t.driver,operator:t.operator,status:'NEW',at:new Date().toISOString(),note:'SOS from the customer app (women safety)',x:l?l.x:50,y:l?l.y:50,contacts:(cu.contacts||[]).map(c=>c.rel+' '+c.phone),log:[['SOS received',new Date().toISOString()],[(cu.contacts||[]).length+' emergency contacts alerted by SMS and call',new Date().toISOString()]],assignee:''});save();M.render()}
+window.addEventListener('pagehide',()=>releaseHold());
+/* ---------- AI assistant (customer): only this traveller's own data ---------- */
+const AL=M.AL;const AI=M.ai;
+const CITY_ALIAS={bangalore:'Bengaluru',bengaluru:'Bengaluru',blr:'Bengaluru',hyd:'Hyderabad',hyderabad:'Hyderabad',madras:'Chennai',chennai:'Chennai',vizag:'Visakhapatnam',visakhapatnam:'Visakhapatnam',bombay:'Mumbai',mumbai:'Mumbai',cochin:'Kochi',kochi:'Kochi',mysore:'Mysuru',mysuru:'Mysuru',vijayawada:'Vijayawada',bezawada:'Vijayawada',tirupati:'Tirupati',coimbatore:'Coimbatore',pune:'Pune',madurai:'Madurai','బెంగళూరు':'Bengaluru','హైదరాబాద్':'Hyderabad','చెన్నై':'Chennai','విజయవాడ':'Vijayawada','విశాఖపట్నం':'Visakhapatnam','तिरुपति':'Tirupati','बेंगलुरु':'Bengaluru','बैंगलोर':'Bengaluru','हैदराबाद':'Hyderabad','चेन्नई':'Chennai','मुंबई':'Mumbai'};
+function citiesIn(q){const low=q.toLowerCase(),hits=[];Object.entries(CITY_ALIAS).forEach(([k,v])=>{const i=low.indexOf(k);if(i>=0&&DB().cities.some(c=>c.name===v&&c.active))hits.push([i,v,k])});DB().cities.forEach(c=>{const i=low.indexOf(c.name.toLowerCase());if(i>=0)hits.push([i,c.name,c.name])});
+hits.sort((a,b)=>a[0]-b[0]);const L=[...new Set(hits.map(h=>h[1]))];let from=L[0],to=L[1];
+const m=low.match(/(?:to|for|వరకు|కి|तक|को)\s*$/);const toFirst=hits.length>=2&&(/\bto\s+\S+.*\bfrom\b/.test(low));if(toFirst){[from,to]=[to,from]}return{from,to}}
+function dateIn(q){const d=new Date();if(/day after|ఎల్లుండి|परसों/i.test(q))d.setDate(d.getDate()+2);else if(/tomorrow|రేపు|\bkal\b|कल/i.test(q))d.setDate(d.getDate()+1);
+const wd=['sun','mon','tue','wed','thu','fri','sat'],m=q.toLowerCase().match(/\b(sun|mon|tue|wed|thu|fri|sat)[a-z]*\b/);if(m){const k=wd.indexOf(m[1]);let n=(k-d.getDay()+7)%7;if(n===0)n=7;d.setDate(d.getDate()+n)}
+const dm=q.match(/\b(\d{1,2})(?:st|nd|rd|th)?\s*(?:\/|-|\s)?\s*(?:(\d{1,2})|(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec))?/i);if(dm&&+dm[1]<=31&&/\d{1,2}(st|nd|rd|th|\/|-)|\d{1,2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i.test(q)){const mo=dm[2]?+dm[2]-1:dm[3]?['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].indexOf(dm[3].toLowerCase()):d.getMonth();const x=new Date(d.getFullYear(),mo,+dm[1],12);if(x<new Date(Date.now()-864e5))x.setFullYear(x.getFullYear()+1);return x.toISOString().slice(0,10)}
+return d.toISOString().slice(0,10)}
+function prefIn(q){const f={win:[],type:[],ac:'',max:0};if(/morning|ఉదయం|सुबह/i.test(q))f.win.push('mo');if(/afternoon|మధ్యాహ్నం|दोपहर/i.test(q))f.win.push('af');if(/night|evening|రాత్రి|సాయంత్రం|रात|शाम/i.test(q))f.win.push('ni');
+if(/non[- ]?ac|నాన్ ఏసీ/i.test(q))f.ac='non';else if(/\bac\b|ఏసీ|एसी/i.test(q))f.ac='ac';if(/semi/i.test(q))f.type.push('Semi-sleeper');else if(/sleeper|స్లీపర్|स्लीपर/i.test(q))f.type.push('Sleeper');else if(/seater|సీటర్|सीटर/i.test(q))f.type.push('Seater');
+const m=q.match(/(?:under|below|less than|within|max|upto|up to|లోపు|से कम|तक)\s*(?:rs\.?|₹)?\s*(\d{3,5})|(?:rs\.?|₹)\s*(\d{3,5})\s*(?:లోపు|से कम|or less)/i);if(m)f.max=Number(m[1]||m[2])*100;return f}
+const nextBk=()=>{const now=Date.now();return myBk().filter(b=>b.status==='CONFIRMED'&&arr(T(b.tripId))>now&&T(b.tripId).status!=='CANCELLED')[0]};
+const pnrIn=q=>{const m=q.match(/ABR[A-Z]\d{4}[A-Z]/i);return m?DB().bookings.find(b=>b.pnr===m[0].toUpperCase()&&b.customerId===S.who):null};
+const goBtn=(a,v,l)=>`<button class="cta sm gh" data-a="${a}" data-v="${esc(v)}">${esc(l)}</button>`;
+const signIn=lg=>({html:AL(lg,'Please sign in first, so I can see your bookings.','మీ బుకింగ్‌లు చూడటానికి ముందుగా సైన్ ఇన్ చేయండి.','आपकी बुकिंग देखने के लिए पहले साइन इन करें।')+`<div>${goBtn('mai_login','','Log in / Sign up')}</div>`});
+function aiSearch(q,lg){const c=citiesIn(q),from=c.from||S.q.from,to=c.to||(c.from?null:S.q.to);if(!to||from===to)return{html:AL(lg,'Where are you travelling from and to? For example: "Bengaluru to Hyderabad tomorrow night".','ఎక్కడి నుండి ఎక్కడికి? ఉదా: "బెంగళూరు నుండి హైదరాబాద్ రేపు రాత్రి".','कहाँ से कहाँ जाना है? जैसे: "बेंगलुरु से हैदराबाद कल रात"।'),chips:['Bengaluru to Hyderabad tomorrow night AC sleeper under 1500']};
+const date=dateIn(q),pf=prefIn(q),save0=S.f;S.f={win:pf.win,type:pf.type,ac:pf.ac,ops:[],am:[],max:pf.max};const q0=S.q;S.q={from,to,date};let L=applyF(baseResults()).sort((a,b)=>price(a).seat-price(b).seat);const all=baseResults().length;S.f=save0;S.q=q0;
+AI.lastSearch={q:{from,to,date},f:{win:pf.win,type:pf.type,ac:pf.ac,ops:[],am:[],max:pf.max}};
+const want=[pf.ac==='ac'?'AC':pf.ac==='non'?'non-AC':'',pf.type.join('/'),pf.win.map(w=>WIN.find(x=>x[0]===w)[1]).join(', '),pf.max?'under '+money(pf.max):''].filter(Boolean).join(', ');
+if(!L.length)return{html:AL(lg,`No buses from <b>${esc(from)}</b> to <b>${esc(to)}</b> on ${fd(date+'T12:00')}${want?' matching '+esc(want):''}. ${all?all+' bus(es) run that day without those filters.':'Try another date.'}`,`${fd(date+'T12:00')} న <b>${esc(from)}</b> నుండి <b>${esc(to)}</b> కు ${want?esc(want)+' ':''}బస్సులు లేవు. ${all?'ఫిల్టర్లు లేకుండా '+all+' బస్సులు ఉన్నాయి.':'వేరే తేదీ ప్రయత్నించండి.'}`,`${fd(date+'T12:00')} को <b>${esc(from)}</b> से <b>${esc(to)}</b> ${want?esc(want)+' ':''}कोई बस नहीं। ${all?'फ़िल्टर के बिना '+all+' बसें हैं।':'दूसरी तारीख आज़माएँ।'}`),chips:all?[`${from} to ${to} ${fd(date+'T12:00')}`]:[`${from} to ${to} tomorrow`],steps:[`search_trips(${from}, ${to}, ${date}) → ${all} buses`,`apply_filters(${want||'none'}) → 0`]};
+return{html:AL(lg,`I found <b>${L.length}</b> bus(es) from ${esc(from)} to ${esc(to)} on ${fd(date+'T12:00')}${want?' ('+esc(want)+')':''}. Cheapest first:`,`${fd(date+'T12:00')} న ${esc(from)} నుండి ${esc(to)} కు <b>${L.length}</b> బస్సులు దొరికాయి${want?' ('+esc(want)+')':''}. చౌకైనవి ముందు:`,`${fd(date+'T12:00')} को ${esc(from)} से ${esc(to)} की <b>${L.length}</b> बसें मिलीं${want?' ('+esc(want)+')':''}। सस्ती पहले:`)
++L.slice(0,3).map(t=>{const o=opOf(t);return`<div class="aicard"><div class="row bt"><b>${esc(o.name)}</b><b>${money(price(t).seat)}</b></div><div class="sm m">${esc(t.type)} · ${ft(t.depart)} → ${ft(arr(t))} · ${free(t)} seats left · ★ ${o.rating}</div><div class="row">${goBtn('mai_trip',t.id,'Choose seats')}</div></div>`}).join('')+(L.length>3?`<div>${goBtn('mai_all','','See all '+L.length+' buses')}</div>`:''),
+steps:[`search_trips(${from}, ${to}, ${date}) → ${all} buses`,`apply_filters(${want||'none'}) → ${L.length}`,'sort(price)'],chips:['Apply the best coupon','What is the cancellation policy?']}}
+function aiWhere(q,lg){if(!me())return signIn(lg);const b=pnrIn(q)||nextBk();if(!b)return{html:AL(lg,'You have no upcoming trip right now.','ఇప్పుడు మీకు రాబోయే ట్రిప్ లేదు.','अभी आपकी कोई आगामी ट्रिप नहीं है।'),chips:['Bengaluru to Hyderabad tomorrow']};
+const t=T(b.tripId),l=DB().live.find(x=>x.tripId===t.id);if(!l)return{html:AL(lg,`Your bus <b>${esc(t.bus)}</b> (${esc(b.route)}) leaves ${fdt(t.depart)} from ${esc(b.board||'')}. Live tracking starts when the driver starts the trip.`,`మీ బస్సు <b>${esc(t.bus)}</b> (${esc(b.route)}) ${fdt(t.depart)} కి ${esc(b.board||'')} నుండి బయలుదేరుతుంది. డ్రైవర్ ట్రిప్ ప్రారంభించినప్పుడు లైవ్ ట్రాకింగ్ మొదలవుతుంది.`,`आपकी बस <b>${esc(t.bus)}</b> (${esc(b.route)}) ${fdt(t.depart)} को ${esc(b.board||'')} से चलेगी। ड्राइवर ट्रिप शुरू करेगा तब लाइव ट्रैकिंग शुरू होगी।`),steps:['get_my_next_booking() → '+b.pnr,'get_live_location('+t.id+') → not started']};
+return{html:AL(lg,`Your bus <b>${esc(t.bus)}</b> is <b>${l.progress}%</b> of the way on ${esc(b.route)}, moving at ${l.speed} km/h${t.status==='DELAYED'?', running about '+(t.delay||'')+' minutes late':''}. Last update ${rel(l.ping)}. Driver: ${esc(l.driver)}.`,`మీ బస్సు <b>${esc(t.bus)}</b> ${esc(b.route)} మార్గంలో <b>${l.progress}%</b> దూరం వచ్చింది, వేగం ${l.speed} కి.మీ/గం${t.status==='DELAYED'?', సుమారు '+(t.delay||'')+' నిమిషాలు ఆలస్యం':''}. చివరి అప్‌డేట్ ${rel(l.ping)}. డ్రైవర్: ${esc(l.driver)}.`,`आपकी बस <b>${esc(t.bus)}</b> ${esc(b.route)} पर <b>${l.progress}%</b> रास्ता तय कर चुकी है, गति ${l.speed} किमी/घंटा${t.status==='DELAYED'?', लगभग '+(t.delay||'')+' मिनट देरी':''}। आखिरी अपडेट ${rel(l.ping)}। ड्राइवर: ${esc(l.driver)}।`)+`<div class="row">${goBtn('mai_track',b.id,'Open live tracking')}</div>`,steps:['get_my_next_booking() → '+b.pnr,'get_live_location('+t.id+') → '+l.progress+'%']}}
+function aiTrips(lg){if(!me())return signIn(lg);const L=myBk().filter(b=>b.status==='CONFIRMED'&&arr(T(b.tripId))>Date.now());if(!L.length)return{html:AL(lg,'You have no upcoming trips.','మీకు రాబోయే ట్రిప్‌లు లేవు.','आपकी कोई आगामी ट्रिप नहीं है।')};
+return{html:AL(lg,`You have <b>${L.length}</b> upcoming trip(s):`,`మీకు <b>${L.length}</b> రాబోయే ట్రిప్‌లు ఉన్నాయి:`,`आपकी <b>${L.length}</b> आगामी ट्रिप हैं:`)+L.slice(0,4).map(b=>`<div class="aicard"><b>${esc(b.route)}</b><div class="sm m">${fdt(b.travelDate)} · ${esc(b.operator)} · seats ${esc(b.seatList)} · PNR ${esc(b.pnr)}</div><div>${goBtn('mai_bk',b.id,'Open')}</div></div>`).join(''),steps:['get_my_bookings(upcoming) → '+L.length]}}
+function aiRefund(q,lg){if(!me())return signIn(lg);const R=DB().refunds.filter(r=>myBk().some(b=>b.id===r.bookingId)).sort((a,b)=>new Date(b.at)-new Date(a.at));if(!R.length)return{html:AL(lg,'You have no refunds.','మీకు రీఫండ్‌లు లేవు.','आपका कोई रिफंड नहीं है।')};const r=R[0],exp=new Date(new Date(r.at).getTime()+7*864e5);
+return{html:AL(lg,`Your refund of <b>${money(r.amount)}</b> for ${esc(r.pnr)} is <b>${lab(r.status).toLowerCase()}</b>. ${r.status==='COMPLETED'?'It reached your account.':'Expected by '+fd(exp)+'.'}`,`${esc(r.pnr)} కోసం మీ <b>${money(r.amount)}</b> రీఫండ్ <b>${lab(r.status)}</b> స్థితిలో ఉంది. ${r.status==='COMPLETED'?'మీ ఖాతాలో జమ అయింది.':fd(exp)+' లోపు వస్తుంది.'}`,`${esc(r.pnr)} के लिए आपका <b>${money(r.amount)}</b> का रिफंड <b>${lab(r.status)}</b> है। ${r.status==='COMPLETED'?'आपके खाते में आ गया।':fd(exp)+' तक आ जाएगा।'}`)+`<div>${goBtn('mai_rf',r.id,'Refund details')}</div>`,steps:['get_my_refunds() → '+R.length]}}
+function aiCancel(q,lg){if(!me())return signIn(lg);const b=pnrIn(q)||nextBk();if(!b)return{html:AL(lg,'You have no upcoming booking to cancel.','రద్దు చేయడానికి రాబోయే బుకింగ్ లేదు.','रद्द करने के लिए कोई आगामी बुकिंग नहीं है।')};
+const act=b.seatList.split(', ').filter(s=>!(b.cancelledSeats||[]).includes(s)),ask=(q.toUpperCase().match(/\b\d{1,2}[A-D]\b/g)||[]).filter(s=>act.includes(s)),seats=ask.length?ask:act,qq=AbraStore.refundQuote(b),per=Math.round(b.amount/b.seatsN),amt=Math.round(per*seats.length*qq.pct/100);
+const pend=AI.mkPend({lg,danger:true,desc:AL(lg,`Cancel seat(s) <b>${esc(seats.join(', '))}</b> on ${esc(b.route)} (${fdt(b.travelDate)}). Refund: <b>${money(amt)}</b> (${qq.pct}%).`,`${esc(b.route)} (${fdt(b.travelDate)}) లో సీట్లు <b>${esc(seats.join(', '))}</b> రద్దు చేయాలి. రీఫండ్: <b>${money(amt)}</b> (${qq.pct}%).`,`${esc(b.route)} (${fdt(b.travelDate)}) की सीट <b>${esc(seats.join(', '))}</b> रद्द करें। रिफंड: <b>${money(amt)}</b> (${qq.pct}%)।`),
+check:()=>b.status!=='CONFIRMED'?'This booking is no longer active.':'',run:()=>{const d=DB(),t=T(b.tripId);b.cancelledSeats=(b.cancelledSeats||[]).concat(seats);t.booked=Math.max(0,t.booked-seats.length);t.taken=(t.taken||[]).filter(s=>!seats.includes(s));if(b.cancelledSeats.length>=b.seatList.split(', ').length)b.status='CANCELLED';
+d.refunds.unshift({id:AbraStore.uid('RF'),bookingId:b.id,pnr:b.pnr,customer:b.customer,operator:b.operator,amount:amt,pct:qq.pct,status:'INITIATED',utr:'',at:new Date().toISOString(),bearer:'Customer',reason:'Cancelled by customer via AI assistant',seats:seats.join(', ')});save();return AL(lg,`Cancelled. Your refund of ${money(amt)} has started. It reaches your account in 5 to 7 working days.`,`రద్దు అయింది. మీ ${money(amt)} రీఫండ్ ప్రారంభమైంది. 5 నుండి 7 పని దినాల్లో మీ ఖాతాలో జమ అవుతుంది.`,`रद्द हो गया। आपका ${money(amt)} का रिफंड शुरू हो गया है। 5 से 7 कार्य दिवस में खाते में आएगा।`)}});
+return{html:AL(lg,`You are ${Math.max(0,Math.round(qq.hours))} hours before departure, so ${qq.pct}% of the fare comes back. The convenience fee and GST are not refunded.`,`బయలుదేరడానికి ${Math.max(0,Math.round(qq.hours))} గంటలు ఉంది, కాబట్టి ఛార్జీలో ${qq.pct}% తిరిగి వస్తుంది. కన్వీనియన్స్ ఫీజు, GST తిరిగి రావు.`,`प्रस्थान में ${Math.max(0,Math.round(qq.hours))} घंटे बाकी हैं, इसलिए किराये का ${qq.pct}% वापस मिलेगा। सुविधा शुल्क और GST वापस नहीं होते।`),pend,steps:['get_booking('+b.pnr+')','get_cancellation_policy() → '+qq.pct+'%']}}
+function aiBoard(lg){if(!me())return signIn(lg);const b=nextBk();if(!b)return{html:AL(lg,'You have no upcoming trip.','మీకు రాబోయే ట్రిప్ లేదు.','आपकी कोई आगामी ट्रिप नहीं है।')};const t=T(b.tripId),s=route(t).stops.find(x=>x.name===b.board)||route(t).stops[0],pl=placeOf(s.name),tm=stopTime(t,s);
+return{html:AL(lg,`Board at <b>${esc(s.name)}</b> at <b>${ft(tm)}</b> on ${fd(tm)}. Please reach by ${ft(new Date(tm-15*6e4))}.${pl.landmark?' Landmark: '+esc(pl.landmark)+'.':''} Bus ${esc(t.bus)}.`,`<b>${esc(s.name)}</b> వద్ద ${fd(tm)} <b>${ft(tm)}</b> కి ఎక్కాలి. ${ft(new Date(tm-15*6e4))} లోపు చేరుకోండి.${pl.landmark?' గుర్తు: '+esc(pl.landmark)+'.':''} బస్సు ${esc(t.bus)}.`,`<b>${esc(s.name)}</b> से ${fd(tm)} <b>${ft(tm)}</b> पर चढ़ना है। ${ft(new Date(tm-15*6e4))} तक पहुँचें।${pl.landmark?' पहचान: '+esc(pl.landmark)+'।':''} बस ${esc(t.bus)}।`)+`<div class="row">${goBtn('mai_map',s.name,'Open in maps')}${goBtn('mai_tkt',b.id,'Ticket')}</div>`,steps:['get_my_next_booking() → '+b.pnr,'get_place('+s.name+')']}}
+function aiOffers(lg){const O=DB().offers.filter(o=>o.status==='ACTIVE'&&new Date(o.to+'T23:59')>=Date.now()&&(!o.newOnly||!myBk().length)).sort((a,b)=>(b.type==='FLAT'?b.value:b.maxDisc)-(a.type==='FLAT'?a.value:a.maxDisc));
+return{html:AL(lg,'Offers you can use now (biggest saving first). Apply the code on the review screen:','ఇప్పుడు వాడగల ఆఫర్లు (ఎక్కువ ఆదా ముందు). సమీక్ష స్క్రీన్‌లో కోడ్ వాడండి:','अभी इस्तेमाल होने वाले ऑफ़र (ज़्यादा बचत पहले)। समीक्षा स्क्रीन पर कोड डालें:')+O.slice(0,4).map(o=>`<div class="aicard"><div class="row bt"><b>${esc(o.code)}</b>${goBtn('copy',o.code,'Copy')}</div><div class="sm">${esc(o.desc)}</div><div class="sm m">${esc(o.scope==='All'?'All buses':o.scope)}</div></div>`).join(''),steps:['get_offers(active, eligible) → '+O.length]}}
+function aiSafety(lg){const b=nextBk();return{html:AL(lg,'If you are in danger, call <b>112</b> now. In a running trip, open Safety and hold the SOS button for 3 seconds: your contacts, the Abra safety desk and the bus company are alerted with your live location. I never send an SOS for you, so it is never delayed.','ప్రమాదంలో ఉంటే వెంటనే <b>112</b> కి కాల్ చేయండి. ప్రయాణంలో ఉంటే Safety తెరిచి SOS బటన్‌ను 3 సెకన్లు నొక్కి పట్టుకోండి.','खतरे में हों तो तुरंत <b>112</b> पर कॉल करें। यात्रा में हों तो Safety खोलें और SOS बटन 3 सेकंड दबाए रखें।')+`<div class="row rw">${goBtn('mai_call','112','Call 112')}${goBtn('mai_call','181','Women helpline 181')}${b?goBtn('mai_safety',b.id,'Open Safety'):''}</div>`}}
+function aiTicket(q,lg){if(!me())return signIn(lg);const b=pnrIn(q)||nextBk();const pend=AI.mkPend({lg,desc:AL(lg,'Create a support ticket with your message'+(b?' for booking '+esc(b.pnr):'')+': "'+esc(q)+'"','మీ సందేశంతో సపోర్ట్ టికెట్ సృష్టించాలి'+(b?' (బుకింగ్ '+esc(b.pnr)+')':'')+': "'+esc(q)+'"','आपके संदेश के साथ सहायता टिकट बनाएँ'+(b?' (बुकिंग '+esc(b.pnr)+')':'')+': "'+esc(q)+'"'),
+run:()=>{const cu=me(),id=AbraStore.uid('TKT');DB().tickets.unshift({id,customer:cu.name,customerId:cu.id,subject:q.slice(0,70),category:/refund/i.test(q)?'REFUND':/pay/i.test(q)?'PAYMENT':b?'BOOKING':'APP',priority:'MEDIUM',status:'OPEN',assignee:'',at:new Date().toISOString(),sla:new Date(Date.now()+864e5).toISOString(),bookingId:b?b.id:'',msgs:[['customer',q+' (via AI assistant)',new Date().toISOString()]]});save();return AL(lg,'Ticket '+id+' created. Our team usually replies within a few hours.','టికెట్ '+id+' సృష్టించబడింది. మా బృందం కొన్ని గంటల్లో సమాధానం ఇస్తుంది.','टिकट '+id+' बन गया। हमारी टीम कुछ घंटों में जवाब देगी।')}});
+return{html:AL(lg,'I can pass this to our support team.','దీన్ని మా సపోర్ట్ బృందానికి పంపగలను.','मैं इसे हमारी सहायता टीम को भेज सकता हूँ।'),pend}}
+function aiPolicy(lg){const sl=[...DB().cancelSlabs].sort((a,b)=>b.hours-a.hours);return{html:AL(lg,'Refund when you cancel:','రద్దు చేస్తే రీఫండ్:','रद्द करने पर रिफंड:')+`<div class="aicard">${sl.map((s,i)=>`<div class="row bt sm"><span>${i===0?'> '+s.hours+' h':s.hours===0?'< '+sl[i-1].hours+' h':s.hours+'–'+sl[i-1].hours+' h'}</span><b>${s.pct}%</b></div>`).join('')}</div>`+AL(lg,'If the operator cancels, you get 100%.','ఆపరేటర్ రద్దు చేస్తే 100% వస్తుంది.','ऑपरेटर रद्द करे तो 100% मिलेगा।')}}
+function custAnswer(q,lg){const H=r=>r.test(q);
+if(H(/\b(hi|hello|hey|help|what can you)\b|నమస్తే|ఏమి చేయగల|नमस्ते|क्या कर सक/i)&&q.length<40)return{html:AL(lg,'I can find and book buses, tell you where your bus is, your boarding point, refund status, cancel seats (after you confirm), show offers and raise a support ticket.','నేను బస్సులు వెతికి బుక్ చేయగలను, మీ బస్సు ఎక్కడ ఉందో, బోర్డింగ్ పాయింట్, రీఫండ్ స్థితి చెప్పగలను, మీ నిర్ధారణ తర్వాత సీట్లు రద్దు చేయగలను, ఆఫర్లు చూపించి సపోర్ట్ టికెట్ సృష్టించగలను.','मैं बसें खोजकर बुक कर सकता हूँ, आपकी बस कहाँ है, बोर्डिंग पॉइंट, रिफंड स्थिति बता सकता हूँ, आपकी पुष्टि के बाद सीट रद्द कर सकता हूँ, ऑफ़र दिखा सकता हूँ और सहायता टिकट बना सकता हूँ।'),chips:AI.sugg().slice(0,3)};
+if(H(/unsafe|danger|harass|emergency|sos|scared|భయం|ప్రమాదం|అత్యవసర|खतरा|डर|आपात/i))return aiSafety(lg);
+if(H(/refund|రీఫండ్|रिफंड|money back|డబ్బు తిరిగి|पैसा वापस/i))return aiRefund(q,lg);
+if(H(/\bcancel\b|రద్దు|रद्द/i)&&!H(/policy|విధానం|नीति/i))return aiCancel(q,lg);
+if(H(/policy|విధానం|नीति/i))return aiPolicy(lg);
+if(H(/where.*bus|track|live|ఎక్కడ|ట్రాక్|कहाँ|ट्रैक/i))return aiWhere(q,lg);
+if(H(/boarding|pick ?up|బోర్డింగ్|ఎక్కాలి|बोर्डिंग|चढ़/i))return aiBoard(lg);
+if(H(/offer|coupon|discount|ఆఫర్|కూపన్|ऑफ़र|कूपन|छूट/i))return aiOffers(lg);
+if(H(/my (trips|bookings)|upcoming|నా ట్రిప్|నా బుకింగ్|मेरी (ट्रिप|बुकिंग)/i))return aiTrips(lg);
+if(H(/complain|problem|issue|not received|wrong|support|ఫిర్యాదు|సమస్య|शिकायत|समस्या/i))return aiTicket(q,lg);
+const c=citiesIn(q);if(c.from||H(/\bbus(es)?\b|ticket|book|బస్సు|టికెట్|बस|टिकट/i))return aiSearch(q,lg);
+return{html:AL(lg,'I did not understand that. I can help with booking, your bus location, boarding point, refunds, cancellations and offers.','నాకు అర్థం కాలేదు. బుకింగ్, బస్సు లొకేషన్, బోర్డింగ్ పాయింట్, రీఫండ్, రద్దు, ఆఫర్లలో సహాయం చేయగలను.','मैं समझ नहीं पाया। बुकिंग, बस की लोकेशन, बोर्डिंग पॉइंट, रिफंड, रद्दीकरण और ऑफ़र में मदद कर सकता हूँ।'),chips:AI.sugg().slice(0,4)}}
+Object.assign(M.ai,{enabled:()=>S.boot==='app',title:'Abra AI assistant',answer:custAnswer,
+welcome:'Hi! Ask me to find a bus, track your bus, check a refund or cancel seats, in your own language. I only see your own bookings, and I ask before changing anything.',
+sugg:()=>['Bengaluru to Hyderabad tomorrow night AC sleeper under 1500','Where is my bus?','What is my boarding point?','Refund status','Show offers','Cancel my booking','I feel unsafe']});
+M.addDict(`Hi! Ask me to find a bus, track your bus, check a refund or cancel seats, in your own language. I only see your own bookings, and I ask before changing anything.|నమస్తే! బస్సు వెతకమని, మీ బస్సు ట్రాక్ చేయమని, రీఫండ్ చూడమని లేదా సీట్లు రద్దు చేయమని English, తెలుగు లేదా हिन्दी లో అడగండి. మీ బుకింగ్‌లు మాత్రమే చూస్తాను, ఏదైనా మార్చే ముందు అడుగుతాను.|नमस्ते! बस खोजने, अपनी बस ट्रैक करने, रिफंड देखने या सीट रद्द करने के लिए English, తెలుగు या हिन्दी में पूछें। मैं सिर्फ़ आपकी बुकिंग देखता हूँ और कुछ भी बदलने से पहले पूछता हूँ।
+Where is my bus?|నా బస్సు ఎక్కడ ఉంది?|मेरी बस कहाँ है?
+What is my boarding point?|నా బోర్డింగ్ పాయింట్ ఏది?|मेरा बोर्डिंग पॉइंट क्या है?
+Refund status|రీఫండ్ స్థితి|रिफंड स्थिति
+Show offers|ఆఫర్లు చూపించు|ऑफ़र दिखाओ
+Cancel my booking|నా బుకింగ్ రద్దు చేయి|मेरी बुकिंग रद्द करो
+I feel unsafe|నాకు భయంగా ఉంది|मुझे असुरक्षित लग रहा है
+Choose seats|సీట్లు ఎంచుకోండి|सीटें चुनें
+Open live tracking|లైవ్ ట్రాకింగ్ తెరవండి|लाइव ट्रैकिंग खोलें
+Open in maps|మ్యాప్‌లో తెరవండి|मैप में खोलें
+Refund details|రీఫండ్ వివరాలు|रिफंड विवरण`);
+/* ---------- Google and Apple sign-in (demo), messages page, SOS shortcuts ---------- */
+const GICON='<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.5l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.6 5.9c4.4-4.1 7-10.1 7-17.6z"/><path fill="#FBBC05" d="M10.5 28.7c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.9-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>';
+const AICON='<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.4 12.6c0-2.5 2-3.6 2.1-3.7-1.2-1.7-3-1.9-3.6-2-1.5-.2-3 .9-3.8.9-.8 0-2-.9-3.3-.9-1.7 0-3.3 1-4.2 2.5-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.5 1.3-.1 1.8-.8 3.3-.8s2 .8 3.3.8c1.4 0 2.3-1.2 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9-.1 0-2.8-1.1-2.8-4.1zM13.9 5.2c.7-.9 1.2-2 1-3.2-1 0-2.3.7-3 1.6-.7.8-1.2 2-1.1 3.1 1.2.1 2.4-.6 3.1-1.5z"/></svg>';
+function socialSheet(m){const all=DB().customers.filter(c=>c.status==='ACTIVE'&&c.email),L=all.filter(c=>c.method===m).concat(all.filter(c=>c.method!==m)).slice(0,3);
+sheet('Continue with '+m,`<p class="m">In the real app this opens the ${m} sign-in screen. For the demo, choose an account.</p><div class="col">${L.map(c=>`<button class="opt" data-a="asis" data-v="${c.id}">${m==='Google'?GICON:AICON}<span class="grow"><b>${esc(c.name)}</b><div class="sm m">${esc(c.email)}</div></span></button>`).join('')}</div>`)}
+function runBanner(){if(!S.who)return'';const d=DB(),b=d.bookings.find(x=>x.customerId===S.who&&x.status==='CONFIRMED'&&['BOARDING','IN_TRANSIT','DELAYED','DEPARTED'].includes((T(x.tripId)||{}).status));if(!b)return'';
+return`<div class="pad" style="padding-bottom:0"><div class="c" style="border-color:var(--r)"><div class="row bt"><div><b>Your trip is running</b><div class="sm m">${esc(b.route)}</div></div><button class="cta dg sm" data-a="safety" data-v="${b.id}" aria-label="SOS and safety">${ic('alert',14)} SOS</button></div><button class="cta gh sm full mt2" data-a="track" data-v="${b.id}">${ic('nav',14)} Track bus</button></div></div>`}
+const sosBtn=id=>`<button class="cta dg full" data-a="safety" data-v="${id}" aria-label="SOS and safety">${ic('alert')} SOS and safety</button><div class="mt2"></div>`;
+function msgsPage(){const L=(DB().messages||[]).filter(m=>m.to===S.who);
+return page('Messages sent to me',L.length?`<p class="sm m">Copies of the WhatsApp messages and emails Abra Travels sent you.</p>${L.slice(0,40).map(m=>`<button class="c" style="width:100%;text-align:left" data-a="msg_open" data-v="${m.id}"><div class="row bt"><span class="row">${ic(m.channel==='WHATSAPP'?'phone':'mail',16)} <b>${m.channel==='WHATSAPP'?'WhatsApp':'Email'}</b></span><span class="sm m">${rel(m.at)}</span></div><div class="sm"><b>${esc(m.subject)}</b></div><div class="sm m">Sent to ${esc(m.address)}</div></button>`).join('')}`:`<div class="c tc"><p class="m">No messages yet. Tickets, delays and refunds will appear here.</p></div>`,{back:1})}
+Object.assign(M.A,{gsign:()=>socialSheet('Google'),asign:()=>socialSheet('Apple'),msg_open:v=>{const m=(DB().messages||[]).find(x=>x.id===v);if(!m)return;sheet(m.subject,`<div class="sm m">${m.channel==='WHATSAPP'?'WhatsApp':'Email'} to ${esc(m.address)} - ${rel(m.at)}</div><div class="doc mt2" style="white-space:pre-wrap;${m.channel==='WHATSAPP'?'background:#DCF8C6;color:#111;':''}">${esc(m.body)}</div>`)}});
+Object.assign(M.A,{mai_login:()=>{M.ai.open=false;loginSheet()},
+mai_trip:v=>{M.ai.open=false;S.stack=[];S.tab='home';M.A.seats(v)},
+mai_all:()=>{M.ai.open=false;const L=M.ai.lastSearch;S.q=L.q;S.f=L.f;S.stack=[];S.page=1;S.loadingR=true;push('results')},
+mai_track:v=>{M.ai.open=false;S.tab='trips';S.stack=['bk:'+v,'track:'+v];M.render()},mai_bk:v=>{M.ai.open=false;S.tab='trips';S.stack=['bk:'+v];M.render()},
+mai_rf:v=>{M.ai.open=false;S.tab='trips';S.stack=['refund:'+v];M.render()},mai_tkt:v=>{M.ai.open=false;S.tab='trips';S.stack=['ticket:'+v];M.render()},
+mai_safety:v=>{M.ai.open=false;S.tab='trips';S.stack=['bk:'+v,'safety:'+v];M.render()},mai_map:v=>M.A.maps(v),mai_call:v=>M.toast('Calling '+v+'... (demo)')});
+['mai_login','mai_trip','mai_all','mai_track','mai_bk','mai_rf','mai_tkt','mai_safety','mai_map','mai_call'];
+
+M.boot('customer',view);
+</script>
+</body>
+</html>

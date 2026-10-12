@@ -17,7 +17,7 @@ It is separate from the customer app and shares only the `packages/shared_*` cod
 | Trip publishing and cancelling | Done |
 | Users and roles, bookings, payments, reports, settings (including the WhatsApp settings API) | Not built |
 
-Verified by widget tests against a stand-in backend and by a web build. **It has not been run in a browser against the real backend yet** (see §8).
+Verified by widget tests against a stand-in backend, by a web build, and by a run in a browser against the real backend (2026-10-06: sign-in, session restore, every catalogue section, trip publishing and cancelling, and the customer search showing only the published trip). Its look follows [design-system.md](design-system.md).
 
 ## 2. First administrator
 
@@ -99,7 +99,7 @@ The side navigation, the route guard and every button read the permission set fr
 
 Resulting navigation for the system roles: Super Admin and Admin see all seven sections; Operator Admin sees all but Cities; Operator Manager sees Trips, Buses, Routes, Locations and Bus types; Support sees Trips, Buses, Operators and Bus types, read-only.
 
-A section opened by address without its permission shows "No access" and makes no request. **This is presentation only.** The backend checks permission and data scope on every request, and the app shows its refusal when it happens.
+The open section is part of the address and survives a page reload: while the session is checked the section travels as `?from=`, and the user lands on it again if their permissions still allow it. A section opened by address without its permission shows "No access" and makes no request. **This is presentation only.** The backend checks permission and data scope on every request, and the app shows its refusal when it happens.
 
 ## 6. Operator data isolation
 
@@ -110,7 +110,7 @@ A section opened by address without its permission shows "No access" and makes n
 
 ## 7. Catalogue pages
 
-Each page is a table with filters applied by the backend, pagination (20 per page), an "Add" button and row actions, each shown only with its permission. Create and edit happen in a form dialog: required fields and number formats are checked in the form; everything else is checked by the backend, whose message is shown in the form, which stays open with what was typed. Enabling, disabling and status changes ask for confirmation. A saved change is confirmed and the list reloads.
+Each page is one data surface: filters applied by the backend, a table, pagination (20 per page), an "Add" button and row actions, each shown only with its permission. Row actions are pinned at the trailing edge, so they stay on screen when the columns need to scroll sideways; on a phone each record is a block with its actions. While the first page loads the table shows its shape; an empty list says what to do next. Create and edit happen in a form dialog: required fields and number formats are checked in the form; everything else is checked by the backend, whose message is shown in the form, which stays open with what was typed. Enabling, disabling and status changes ask for confirmation. A saved change is confirmed and the list reloads.
 
 | Page | Filters | Actions |
 |---|---|---|
@@ -126,7 +126,7 @@ Each page is a table with filters applied by the backend, pagination (20 per pag
 
 The list shows the lifecycle status (`Draft`, `Scheduled`, `Cancelled`, `Arrived`, and the running states when trip operations exist). Only a draft can be edited. Fares are entered in rupees and sent in paise.
 
-Opening a trip shows its details. For a draft it also shows the **publishing requirements**:
+Opening a trip shows its details. A draft has no seats on sale, so its seats read "Not on sale yet" instead of a count. For a draft it also shows the **publishing requirements**:
 
 | Requirement | Shown as |
 |---|---|
@@ -137,7 +137,6 @@ The list is an aid to see problems early. It is not a second implementation of t
 
 ## 8. Not included, and known gaps
 
-- **Not run against the real backend in a browser.** Sign-in as a web client depends on cookies and CORS between the app's origin and the API, which only a real run can confirm.
 - **Two-step verification cannot be set up in the app.** With `MFA_REQUIRED_FOR_STAFF=true`, a new staff account cannot get past sign-in until this exists.
 - **No user management.** Further administrators and all operator staff accounts cannot be created through the app (or any API) yet.
 - **Operator staff cannot create routes or locations in the app.** Both need a city chooser, and the city list is platform catalogue (`catalogue.read`). The backend allows them to; the app needs a city search built on the public `GET /cities` first. They can create buses and trips.

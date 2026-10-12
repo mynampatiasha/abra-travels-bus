@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Abra Travels Prototypes</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--n:#12304A;--b:#1677C8;--bg:#F3F5F7;--card:#fff;--ln:#D7E0E7;--m:#66798A;--tx:#183247;--gr:linear-gradient(135deg,#12304A,#1677C8 58%,#36BDF5)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0B1620;--card:#13222F;--ln:#2A3E50;--m:#9FB6C9;--tx:#E6EEF5}}
+:root[data-theme=dark]{--bg:#0B1620;--card:#13222F;--ln:#2A3E50;--m:#9FB6C9;--tx:#E6EEF5}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:400 15px/1.5 Inter,system-ui,Arial,sans-serif}
+.hero{background:var(--gr);color:#fff;padding:32px 16px 56px}.wrap{max-width:1040px;margin:0 auto;padding:0 16px}
+h1{margin:0;font-size:28px}.hero p{margin:6px 0 0;opacity:.9}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:-36px}
+.app{background:var(--card);border:1px solid var(--ln);border-radius:16px;padding:16px;text-decoration:none;color:inherit;box-shadow:0 8px 24px rgba(18,48,74,.08);display:flex;flex-direction:column;gap:6px}
+.app:hover{border-color:var(--b)}.app b{font-size:17px}.app span{color:var(--m);font-size:13px}.app i{font-style:normal;font-weight:800;color:var(--b);margin-top:auto}
+.c{background:var(--card);border:1px solid var(--ln);border-radius:16px;padding:16px;margin-top:16px}
+h2{font-size:17px;margin:0 0 8px}ol,ul{margin:0;padding-left:20px}li{margin:4px 0}
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}.flow div{border-left:3px solid var(--b);padding:2px 10px}
+button{min-height:40px;padding:0 14px;border-radius:10px;border:1px solid var(--ln);background:var(--card);color:var(--tx);font:inherit;font-weight:600;cursor:pointer}
+.m{color:var(--m);font-size:13px}
+</style>
+</head>
+<body>
+<div class="hero"><div class="wrap"><h1>Abra Travels prototypes</h1><p>Four connected demo apps on one shared mock database. Open them in separate tabs of the same browser: a change in one shows in the others within a second.</p></div></div>
+<div class="wrap">
+<div class="grid">
+<a class="app" href="admin_demo_model.html" target="abra_admin"><b>Admin app</b><span>Abra team: KYC, operators, commission, bookings, payments, refunds, settlements, banners, offers, SOS, reports, roles and access, AI assistant.</span><i>Open →</i></a>
+<a class="app" href="client_demo_model.html" target="abra_client"><b>Client portal</b><span>Bus operators: sign in or accept an invitation, KYC, buses, seat layouts, drivers, routes, fares, schedules, trips, bookings, earnings.</span><i>Open →</i></a>
+<a class="app" href="customer_demo_model.html" target="abra_customer"><b>Customer app</b><span>Travellers: banners and offers, search, seats, boarding points, coupon, payment, ticket with QR, My trips, cancel, live bus, SOS, support.</span><i>Open →</i></a>
+<a class="app" href="website_demo_model.html" target="abra_website"><b>Public website</b><span>Home with search, banners and offers, route pages for Google, track by PNR, shared trip links, Partner with us, Contact, Help, Terms, Privacy, Refund policy, Grievance officer.</span><i>Open →</i></a>
+<a class="app" href="driver_demo_model.html" target="abra_driver"><b>Driver app</b><span>Drivers: today's trip, start boarding, scan tickets, start trip with live location, report delay, end trip, SOS.</span><i>Open →</i></a>
+</div>
+<div class="c"><h2>How the apps connect</h2><div class="flow">
+<div><b>Admin → Client</b><br><span class="m">KYC and bus approval, place requests, commission rules, settlement payments, suspension</span></div>
+<div><b>Client → Admin</b><br><span class="m">KYC documents, new buses, place requests, offer requests, settlement queries, bank changes</span></div>
+<div><b>Client → Customer</b><br><span class="m">Published trips and fares appear in search; delays and cancellations notify passengers</span></div>
+<div><b>Client → Driver</b><br><span class="m">Trip assignment appears in the driver app at once</span></div>
+<div><b>Customer → Client and Admin</b><br><span class="m">Bookings, payments, cancellations and refunds, SOS, support tickets</span></div>
+<div><b>Admin → Customer</b><br><span class="m">Banners, offers and coupons, refund status, support replies, SOS response</span></div>
+<div><b>Driver → everyone</b><br><span class="m">Boarding, check-ins, live location, delays, trip end, driver SOS</span></div>
+</div></div>
+<div class="c"><h2>Try this end to end</h2><ol>
+<li>Customer app: sign in, search <b>Bengaluru → Hyderabad</b> for today, pick the Kaveri Express bus, choose seats and pay.</li>
+<li>Client portal (signed in as Kaveri Express): the booking appears in Bookings and in the bell.</li>
+<li>Driver app: sign in as the driver of that trip, start boarding, scan the ticket by PNR, start the trip.</li>
+<li>Customer app → My trips: the bus moves on the map. Press SOS.</li>
+<li>Admin app → SOS board: acknowledge it. The customer sees it at once.</li>
+<li>Client portal: accept an invitation, fill KYC; Admin app → KYC reviews: approve it, and the client portal unlocks.</li>
+</ol></div>
+<div class="c"><h2>Shared data</h2><p class="m">The data lives in this browser (localStorage) and starts fresh every day. Reset it here or from any app's demo controls.</p><p><button id="rst">Reset shared data</button> <span class="m" id="msg"></span></p></div>
+<p class="m" style="margin:16px 0 32px">Prototypes only: no real backend, payments or messages. The real apps are Flutter (customer, admin, client, driver) with a NestJS + MongoDB backend.</p>
+</div>
+<script src="shared/abra_store.js"></script>
+<script>document.getElementById('rst').onclick=()=>{AbraStore.init();AbraStore.reset();document.getElementById('msg').textContent='Done. Open apps refresh by themselves.'};</script>
+</body>
+</html>

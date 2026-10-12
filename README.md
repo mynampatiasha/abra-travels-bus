@@ -46,3 +46,5 @@ MongoDB (replica set), Redis, BullMQ workers, Socket.IO, S3-compatible storage.
 | [deployment.md](documentation/deployment.md) | Environments, CI/CD, backups, disaster recovery |
 | [environment-variables.md](documentation/environment-variables.md) | Every required variable |
 | [implementation-plan.md](documentation/implementation-plan.md) | Build sequence and phase status |
+| [go-live-plan.md](documentation/go-live-plan.md) | Agreed order for replacing mock data with the real platform: decisions, backend status, 16 blocks, edge cases, import/export |
+| [abra-master-plan.md](documentation/abra-master-plan.md) ([PDF](documentation/abra-master-plan.pdf)) | **Start here.** The one master build plan: flow, architecture, the three-files-per-feature rule, phases 0 to 11 with test checklists, and the full demo-to-backend mapping (every page, button, field and endpoint) |

@@ -39,7 +39,7 @@ Files `.env.development`, `.env.test`, `.env.staging`, `.env.production` are **n
 | WHATSAPP_ACCESS_TOKEN / WHATSAPP_PHONE_NUMBER_ID / WHATSAPP_APP_SECRET / WHATSAPP_VERIFY_TOKEN | — | if meta |
 | WHATSAPP_GRAPH_API_VERSION / WHATSAPP_OTP_TEMPLATE_NAME / WHATSAPP_OTP_TEMPLATE_LANGUAGE | v23.0 / abra_login_code / en (approved authentication template) | if meta |
 | SMS_PROVIDER / SMS_API_KEY / SMS_SENDER_ID / SMS_DLT_ENTITY_ID | — | if not development |
-| EMAIL_PROVIDER / EMAIL_API_KEY / EMAIL_FROM | — | if not development |
+| EMAIL_PROVIDER (`smtp` \| `development`) / EMAIL_FROM | — | EMAIL_FROM is the sender when none is saved in Settings. With `smtp`, the SMTP server (host, port, security, login) is saved by the Super Admin in the management app (Settings > Email), encrypted with FIELD_ENCRYPTION_KEY. `development` only records and is refused in production. |
 | PUSH_PROVIDER / FCM_SERVICE_ACCOUNT_JSON | — | if fcm |
 | MAPS_PROVIDER / MAPS_API_KEY | — | for ETA |
 | AI_PROVIDER / ANTHROPIC_API_KEY / AI_MODEL | claude-sonnet-5-5 | if AI enabled |

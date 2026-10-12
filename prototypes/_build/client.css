@@ -1,0 +1,20 @@
+/* client portal */
+.auth{min-height:100vh;display:grid;place-items:center;background:var(--gr);padding:16px;overflow:auto}
+.authc{width:min(480px,100%)}.authc h2{font-size:22px;margin-top:6px}
+.brand{display:flex;gap:10px;align-items:center;font-size:18px;color:var(--n)}:root[data-theme=dark] .brand{color:var(--tx)}
+.hrl{height:1px;background:var(--ln);margin:16px 0}
+.steps3{display:flex;gap:8px;flex-wrap:wrap}.steps3 button{flex:1;min-width:140px;display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--ln);border-radius:12px;background:var(--card);font-weight:600;color:var(--m)}
+.steps3 button span{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--bg);font-weight:800}
+.steps3 button.on{border-color:var(--b);color:var(--db)}.steps3 button.on span{background:var(--b);color:#fff}.steps3 button.done span{background:var(--g);color:#fff}
+.kq{display:grid;gap:4px}.kin{border:1px solid var(--ln);border-radius:10px;min-height:44px;padding:0 12px;background:var(--fld);min-width:200px}
+.sedit{display:grid;gap:6px;margin-top:10px;overflow:auto;padding:10px;border:1px dashed var(--ln);border-radius:12px;background:var(--bg)}
+.srow{display:flex;gap:6px}
+.sc{width:40px;height:40px;border-radius:8px;border:1px solid var(--ln);background:var(--card);display:grid;place-items:center;font-size:12px;color:var(--db)}
+.sc.tS,.sc.tB{background:var(--lb2);border-color:var(--b)}.sc.tL{background:#FBD5EC;border-color:#E86BB5;color:#8A1C5E}
+.sc.t_{background:transparent;border-color:transparent}.sc.t\.{background:transparent;border-style:dashed}
+.sc.mini{width:16px;height:16px;border-radius:4px;display:inline-block}
+.seatmap{line-height:2.4;font-size:11px}
+.seat{display:inline-block;width:34px;text-align:center;border:1px solid var(--ln);border-radius:6px;margin:0 3px 3px 0;background:var(--card);line-height:22px;font-size:11px}
+.seat.bk{background:#C9D3DC;color:#4C5E6E}.seat.hd{background:#FDE7B0;border-color:#F59E0B}.seat.bl{background:#F9C7C7;border-color:#EF4444}.seat.ld{background:#FBD5EC;border-color:#E86BB5}
+.aisle{display:inline-block;width:14px}
+.cta.ok{background:var(--g)}

@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Abra Travels Website Demo</title>
+<meta name="description" content="Book bus tickets between cities in South India. Compare operators, timings and fares, and track your bus live.">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+<script src="shared/abra_langs.js"></script>
+<script src="shared/abra_store.js"></script>
+<script src="shared/abra_mobile.js"></script>
+<style>
+/* the site uses the phone kit only for data, icons and languages: undo its stage styles */
+body{background:var(--bg)!important;display:block}
+.w{max-width:1160px;margin:0 auto;padding:0 20px}
+header.top{position:sticky;top:0;z-index:30;background:var(--card);border-bottom:1px solid var(--ln)}
+header.top .w{display:flex;align-items:center;gap:14px;min-height:66px}
+.logo{display:flex;align-items:center;gap:8px;font-weight:800;font-size:19px;color:var(--n)}:root[data-theme=dark] .logo{color:var(--tx)}
+.logo span{width:36px;height:36px;border-radius:10px;background:var(--gr);color:#fff;display:grid;place-items:center}
+nav.mn{display:flex;gap:4px;flex:1}nav.mn a{padding:8px 12px;border-radius:10px;font-weight:600;color:var(--tx);text-decoration:none;cursor:pointer}nav.mn a:hover,nav.mn a.on{background:var(--lb);color:var(--db)}
+.burger{display:none}
+.hero{background:var(--gr);color:#fff;padding:56px 0 110px}.hero h1{font-size:40px;line-height:1.15;max-width:640px}.hero p{font-size:17px;opacity:.9;margin-top:10px;max-width:560px}
+.sbox{background:var(--card);color:var(--tx);border-radius:20px;box-shadow:0 20px 50px rgba(18,48,74,.18);padding:16px;display:grid;grid-template-columns:1fr auto 1fr 1fr auto;gap:10px;align-items:end;margin-top:-70px;position:relative;z-index:2}
+.sbox .fd{min-height:58px}.sbox .cta{min-height:58px;padding:0 26px}
+.swapb{width:44px;height:44px;border-radius:50%;border:1px solid var(--ln);background:var(--card);display:grid;place-items:center;color:var(--b);margin-bottom:7px}
+section{padding:40px 0}section h2{font-size:26px;margin-bottom:6px}.lead{color:var(--m);margin-bottom:18px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}.g2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.ban{border-radius:18px;padding:22px;color:#fff;min-height:150px;display:flex;flex-direction:column;justify-content:flex-end;gap:4px;text-align:left}.ban0{background:var(--gr)}.ban1{background:linear-gradient(135deg,#0B4EA2,#36BDF5)}.ban2{background:linear-gradient(135deg,#12304A,#1B8A5A)}
+.feat{display:flex;gap:12px;align-items:flex-start}.feat .i{width:46px;height:46px;border-radius:14px;background:var(--lb2);color:var(--db);display:grid;place-items:center;flex:none}
+.rt{display:flex;align-items:center;gap:10px;text-align:left;width:100%}
+.bus{display:grid;grid-template-columns:2fr 1.4fr 1fr auto;gap:14px;align-items:center}
+.pr{font-size:22px;font-weight:800;color:var(--db)}:root[data-theme=dark] .pr{color:var(--s)}
+.app{background:var(--n);color:#fff;border-radius:24px;padding:28px;display:flex;gap:24px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.badge{background:#000;color:#fff;border-radius:12px;padding:8px 16px;display:inline-flex;gap:8px;align-items:center;font-weight:700;border:1px solid #ffffff44}
+footer{background:#0d2236;color:#C9D7E3;padding:40px 0 24px;margin-top:30px}footer a{color:#C9D7E3;text-decoration:none;display:block;padding:3px 0;cursor:pointer}footer a:hover{color:#fff}footer h4{color:#fff;margin-bottom:8px}
+.legal h3{margin-top:18px}.legal p,.legal li{color:var(--tx);line-height:1.6}
+.cookie{position:fixed;left:16px;right:16px;bottom:16px;max-width:680px;margin:auto;background:var(--card);border:1px solid var(--ln);border-radius:16px;box-shadow:0 20px 50px #0003;padding:14px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;z-index:50}
+.crumb{font-size:13px;color:var(--m);margin-bottom:8px}.crumb a{cursor:pointer;color:var(--b)}
+.tbl{width:100%;border-collapse:collapse}.tbl td,.tbl th{padding:10px;border-bottom:1px solid var(--ln);text-align:left}.tbl th{color:var(--m);font-size:13px}
+.toast2{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--n);color:#fff;border-radius:12px;padding:11px 16px;font-weight:600;z-index:60}
+.dbar2{position:fixed;right:16px;bottom:16px;z-index:40;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:420px}.dbar2 button{min-height:34px;padding:0 12px;border:1px solid var(--ln);border-radius:99px;background:var(--card);font-weight:600;font-size:12px;color:var(--tx)}
+@media(max-width:900px){.sbox{grid-template-columns:1fr;margin-top:-60px}.swapb{justify-self:end;margin:-6px 0}.g3,.g4{grid-template-columns:1fr 1fr}.bus{grid-template-columns:1fr 1fr}.hero h1{font-size:30px}nav.mn{display:none;position:absolute;top:66px;left:0;right:0;background:var(--card);flex-direction:column;padding:10px;border-bottom:1px solid var(--ln)}nav.mn.open{display:flex}.burger{display:grid}}
+@media(max-width:560px){.g3,.g4,.g2{grid-template-columns:1fr}.bus{grid-template-columns:1fr}.hero{padding:36px 0 96px}}
+</style>
+<div id="site"></div>
+<script>
+/* =====================================================================
+   ABRA TRAVELS - PUBLIC WEBSITE DEMO
+   Connected to the other prototypes through shared/abra_store.js: banners, offers,
+   routes, buses and fares come from the admin and client apps; "Partner with us" and
+   "Contact us" reach the admin app; shared trip links show the live bus from the driver app.
+   ===================================================================== */
+const {$,$$,esc,money,fd,ft,fdt,rel,ic,chip,hb,kv,lab}=M;
+AbraStore.init();const DB=()=>AbraStore.get();
+const W={page:'home',arg:'',q:{from:'Bengaluru',to:'Hyderabad',date:new Date().toISOString().slice(0,10)},menu:false,cookie:localStorage.getItem('abra_w_cookie')};
+const slug=s=>s.toLowerCase().replace(/[^a-z]+/g,'-');
+const route=t=>DB().routes.find(r=>r.id===t.routeId)||{stops:[]};
+const opOf=t=>DB().operators.find(o=>o.id===t.operatorId)||{};
+const arr=t=>new Date(new Date(t.depart).getTime()+(route(t).hours||8)*36e5);
+const free=t=>AbraStore.seatStates(t).filter(x=>x==='A'||x==='L').length;
+const sameDay=(a,b)=>new Date(a).toDateString()===new Date(b).toDateString();
+const toast=m=>{const d=document.createElement('div');d.className='toast2';d.textContent=M.t(m);document.body.appendChild(d);setTimeout(()=>d.remove(),2600)};
+const go=(p,a)=>{location.hash='#/'+p+(a?'/'+a:'')};
+M.addDict(`Bus tickets|బస్ టికెట్లు|बस टिकट
+Routes|మార్గాలు|रूट
+Partner with us|మాతో భాగస్వామి అవ్వండి|हमारे साथ जुड़ें
+Track bus|బస్సును ట్రాక్ చేయండి|बस ट्रैक करें
+Help|సహాయం|मदद
+Get the app|యాప్ పొందండి|ऐप पाएँ
+Book bus tickets the easy way|బస్ టికెట్లను సులభంగా బుక్ చేయండి|बस टिकट आसानी से बुक करें
+Compare verified operators, pick your seat, pay securely and track your bus live.|ధృవీకరించిన ఆపరేటర్లను పోల్చండి, సీటు ఎంచుకోండి, సురక్షితంగా చెల్లించండి, బస్సును లైవ్‌గా ట్రాక్ చేయండి.|सत्यापित ऑपरेटरों की तुलना करें, सीट चुनें, सुरक्षित भुगतान करें और बस लाइव ट्रैक करें।
+Why travel with Abra|అబ్రాతో ఎందుకు ప్రయాణించాలి|अब्रा के साथ क्यों यात्रा करें
+Verified operators|ధృవీకరించిన ఆపరేటర్లు|सत्यापित ऑपरेटर
+Live tracking|లైవ్ ట్రాకింగ్|लाइव ट्रैकिंग
+Women safety|మహిళల భద్రత|महिला सुरक्षा
+Easy refunds|సులభమైన రీఫండ్‌లు|आसान रिफंड
+Popular routes|ప్రసిద్ధ మార్గాలు|लोकप्रिय रूट
+Offers|ఆఫర్లు|ऑफ़र
+About us|మా గురించి|हमारे बारे में
+Contact us|మమ్మల్ని సంప్రదించండి|संपर्क करें
+Terms & Conditions|నిబంధనలు & షరతులు|नियम और शर्तें
+Privacy Policy|గోప్యతా విధానం|गोपनीयता नीति
+Cancellation & Refund Policy|రద్దు & రీఫండ్ విధానం|रद्दीकरण और रिफंड नीति
+Grievance officer|ఫిర్యాదుల అధికారి|शिकायत अधिकारी
+Book now|ఇప్పుడే బుక్ చేయండి|अभी बुक करें
+Search buses|బస్సులు వెతకండి|बसें खोजें
+Send|పంపు|भेजें
+Accept|అంగీకరించు|स्वीकार करें
+Only necessary|అవసరమైనవి మాత్రమే|केवल आवश्यक`);
+const NAV=[['home','Bus tickets'],['routes','Routes'],['offers','Offers'],['track','Track bus'],['partner','Partner with us'],['help','Help']];
+function header(){return`<header class="top"><div class="w"><a class="logo" data-go="home" style="cursor:pointer"><span>${ic('bus',20)}</span>Abra Travels</a><nav class="mn ${W.menu?'open':''}" aria-label="Main">${NAV.map(([k,l])=>`<a class="${W.page===k?'on':''}" data-go="${k}">${l}</a>`).join('')}</nav>
+<select data-ch="lang" aria-label="Language" class="ch">${ABRA_L.OPTS.map(([k,l])=>`<option value="${k}" ${M.lang===k?'selected':''}>${l}</option>`).join('')}</select><a class="cta sm" href="customer_demo_model.html" target="abra_customer">Get the app</a><button class="ib burger" data-a="menu" aria-label="Menu">${ic('flag')}</button></div></header>`}
+function footer(){const c=DB().contact;return`<footer><div class="w g4"><div><div class="logo" style="color:#fff"><span>${ic('bus',20)}</span>Abra Travels</div><p class="sm" style="margin-top:8px">Bus booking, live journeys and travel safety in one app.</p><p class="sm">${esc(c.phone)} · ${esc(c.email)}</p></div>
+<div><h4>Company</h4><a data-go="about">About us</a><a data-go="contact">Contact us</a><a data-go="partner">Partner with us</a><a data-go="help">Help</a></div>
+<div><h4>Travel</h4><a data-go="routes">Popular routes</a><a data-go="offers">Offers</a><a data-go="track">Track bus</a></div>
+<div><h4>Legal</h4><a data-go="terms">Terms & Conditions</a><a data-go="privacy">Privacy Policy</a><a data-go="refund">Cancellation & Refund Policy</a><a data-go="grievance">Grievance officer</a></div></div>
+<div class="w sm" style="margin-top:24px;border-top:1px solid #ffffff22;padding-top:14px">© ${new Date().getFullYear()} Abra Travels Pvt Ltd · ${esc(DB().settings.company.address)} · GSTIN ${esc(DB().settings.company.gstin)}</div></footer>`}
+function searchBox(){const C=DB().cities.filter(c=>c.active).map(c=>c.name),td=new Date().toISOString().slice(0,10);return`<div class="sbox">${M.fld('from','From',W.q.from,{type:'select',opts:C})}<button class="swapb" data-a="swap" aria-label="Swap">${ic('swap',18)}</button>${M.fld('to','To',W.q.to,{type:'select',opts:C})}${M.fld('date','Travel date',W.q.date,{type:'date',min:td})}<button class="cta" data-a="search">${ic('search')} Search buses</button></div>`}
+const busRow=t=>{const p=AbraStore.price(t),o=opOf(t),f=free(t);return`<div class="c bus"><div><b>${esc(o.name)}</b><div class="sm m">${esc(t.type)} · ★ ${o.rating}</div></div><div><b>${ft(t.depart)}</b> → <b>${ft(arr(t))}</b><div class="sm m">${route(t).hours} h · ${f} seats left</div></div><div><span class="pr">${money(p.seat)}</span><div class="sm m">per seat</div></div><a class="cta" href="customer_demo_model.html#trip=${t.id}" target="abra_customer">Book now</a></div>`};
+function home(){const d=DB(),now=Date.now(),B=d.banners.filter(b=>b.status==='PUBLISHED'&&new Date(b.from)<=now&&new Date(b.to+'T23:59')>=now).sort((a,b)=>b.priority-a.priority).slice(0,3),O=d.offers.filter(o=>o.status==='ACTIVE'&&new Date(o.to+'T23:59')>=now).slice(0,4),P=d.popular.filter(p=>p.active).slice(0,6);
+return`<div class="hero"><div class="w"><h1>Book bus tickets the easy way</h1><p>Compare verified operators, pick your seat, pay securely and track your bus live.</p></div></div><div class="w">${searchBox()}</div>
+${B.length?`<section><div class="w g3">${B.map(b=>`<div class="ban ban${b.style%3}"><b style="font-size:20px">${esc(b.title)}</b><span>${esc(b.sub)}</span>${b.code?`<span class="st" style="background:#ffffff33;color:#fff;align-self:flex-start">Code ${esc(b.code)}</span>`:''}</div>`).join('')}</div></section>`:''}
+<section><div class="w"><h2>Why travel with Abra</h2><p class="lead">Everything you need for a safe, simple bus journey.</p><div class="g4">${[['shield','Verified operators','Every bus company is checked by our team before it can sell seats.'],['nav','Live tracking','See where your bus is and when to reach your boarding point.'],['alert','Women safety','SOS, trip sharing and a safety desk that answers 24 hours a day.'],['refresh','Easy refunds','Cancel in the app and see your refund before you confirm.']].map(([i,t,s])=>`<div class="feat"><span class="i">${ic(i)}</span><div><b>${t}</b><p class="sm m">${s}</p></div></div>`).join('')}</div></div></section>
+<section><div class="w"><h2>Popular routes</h2><p class="lead">Daily buses on the busiest routes.</p><div class="g3">${P.map(p=>`<button class="c rt" data-go="route" data-arg="${slug(p.route)}">${ic('pin',20)}<span class="grow"><b>${esc(p.route.replace(' to ',' → '))}</b><div class="sm m">${d.trips.filter(t=>t.route===p.route&&AbraStore.bookable(t)).length} buses this week</div></span>${ic('chevR',16)}</button>`).join('')}</div></div></section>
+${O.length?`<section><div class="w"><h2>Offers</h2><div class="g4">${O.map(o=>`<div class="c"><b>${esc(o.code)}</b><p class="sm m">${esc(o.desc)}</p><span class="sm m">Valid till ${fd(o.to+'T12:00')}</span></div>`).join('')}</div></div></section>`:''}
+<section><div class="w"><div class="app"><div><h2 style="color:#fff">Get the Abra Travels app</h2><p style="opacity:.85">Book in a few taps, get your ticket on WhatsApp and track your bus live.</p></div><div class="row rw"><a class="badge" href="customer_demo_model.html" target="abra_customer">${ic('play')} Google Play</a><a class="badge" href="customer_demo_model.html" target="abra_customer">${ic('phone')} App Store</a></div></div></div></section>`}
+function results(){const q=W.q,L=DB().trips.filter(t=>{const r=route(t);return r.from===q.from&&r.to===q.to&&sameDay(t.depart,q.date+'T12:00')&&AbraStore.bookable(t)}).sort((a,b)=>new Date(a.depart)-new Date(b.depart));
+return`<section><div class="w">${searchBox()}<div style="height:24px"></div><div class="crumb"><a data-go="home">Home</a> / ${esc(q.from)} to ${esc(q.to)}</div><h2>${esc(q.from)} to ${esc(q.to)} buses</h2><p class="lead">${fd(q.date+'T12:00')} · ${L.length} buses</p>
+${L.length?`<div class="col">${L.map(busRow).join('')}</div><p class="sm m mt">Booking continues in the Abra Travels app (demo: opens the customer app with this bus).</p>`:`<div class="c">${M.empty('No buses on this date','Try another date or route.')}</div>`}</div></section>`}
+function routePage(s){const P=DB().popular.map(p=>p.route).concat(DB().routes.map(r=>r.name)),name=P.find(r=>slug(r)===s);if(!name)return notFound();const[a,b]=name.split(' to '),T=DB().trips.filter(t=>t.route===name&&AbraStore.bookable(t)).sort((x,y)=>new Date(x.depart)-new Date(y.depart)),r=DB().routes.find(x=>x.name===name)||{},ops=[...new Set(T.map(t=>opOf(t).name))],min=T.length?Math.min(...T.map(t=>AbraStore.price(t).seat)):0;
+document.title=a+' to '+b+' bus tickets | Abra Travels';
+return`<section><div class="w"><div class="crumb"><a data-go="home">Home</a> / <a data-go="routes">Routes</a> / ${esc(a)} to ${esc(b)}</div><h2>${esc(a)} to ${esc(b)} bus tickets</h2><p class="lead">${r.km||'—'} km · about ${r.hours||'—'} hours · ${ops.length} operators · fares from ${min?money(min):'—'}</p>
+<div class="g4">${[['Buses this week',T.length],['Operators',ops.length],['Lowest fare',min?money(min):'—'],['Journey time',(r.hours||'—')+' h']].map(([k,v])=>`<div class="c"><span class="sm m">${k}</span><h2>${v}</h2></div>`).join('')}</div>
+<h3 style="margin:24px 0 10px">Next buses</h3><div class="col">${T.slice(0,6).map(busRow).join('')||'<p class="m">No buses scheduled yet.</p>'}</div>
+${r.stops?`<h3 style="margin:24px 0 10px">Boarding and dropping points</h3><div class="g2"><div class="c"><b>Boarding in ${esc(a)}</b>${r.stops.filter(x=>x.type!=='DROPPING').map(x=>`<div class="sm">${ic('pin',14)} ${esc(x.name)}</div>`).join('')}</div><div class="c"><b>Dropping in ${esc(b)}</b>${r.stops.filter(x=>x.type!=='BOARDING').map(x=>`<div class="sm">${ic('flag',14)} ${esc(x.name)}</div>`).join('')}</div></div>`:''}
+<h3 style="margin:24px 0 10px">Questions about this route</h3><div class="c">${[['How long is the bus journey from '+a+' to '+b+'?','About '+(r.hours||'—')+' hours, depending on traffic and stops.'],['What is the cheapest bus fare?',min?'Fares start at '+money(min)+' per seat including GST.':'Fares appear when buses are scheduled.'],['Can I track my bus?','Yes. Live tracking opens 2 hours before departure in the app.']].map(([q,a2])=>`<details class="faq"><summary>${esc(q)}</summary><p class="sm m" style="padding-bottom:10px">${esc(a2)}</p></details>`).join('')}</div></div></section>`}
+function routes(){const L=DB().routes.filter(r=>r.status==='ACTIVE');return`<section><div class="w"><h2>Bus routes</h2><p class="lead">Every route served by Abra operators.</p><div class="g3">${L.map(r=>`<button class="c rt" data-go="route" data-arg="${slug(r.name)}">${ic('pin',20)}<span class="grow"><b>${esc(r.name.replace(' to ',' → '))}</b><div class="sm m">${r.km} km · ${r.hours} h</div></span>${ic('chevR',16)}</button>`).join('')}</div></div></section>`}
+function offers(){const O=DB().offers.filter(o=>o.status==='ACTIVE'&&new Date(o.to+'T23:59')>=Date.now());return`<section><div class="w"><h2>Offers</h2><p class="lead">Use these codes in the app at checkout.</p><div class="g3">${O.map(o=>`<div class="c"><div class="row bt"><b style="font-size:18px">${esc(o.code)}</b><button class="cta sm gh" data-a="copy" data-v="${esc(o.code)}">Copy</button></div><p>${esc(o.desc)}</p><ul class="sm m">${(o.terms||[]).map(t=>`<li>${esc(t)}</li>`).join('')}</ul><span class="sm m">Valid till ${fd(o.to+'T12:00')}</span></div>`).join('')||M.empty('No offers right now','')}</div></div></section>`}
+function track(){const r=W.trk;let out='';if(r){const b=DB().bookings.find(x=>x.pnr===r.toUpperCase());if(!b)out=hb('No booking with PNR '+esc(r)+'. Check the PNR on your ticket.','r','alert');else{const t=DB().trips.find(x=>x.id===b.tripId),l=DB().live.find(x=>x.tripId===t.id);out=`<div class="c"><div class="row bt"><b>${esc(b.route)}</b>${chip(b.status==='CONFIRMED'?t.status:b.status)}</div><div class="sm m">${esc(b.operator)} · ${fdt(t.depart)} · ${esc(t.bus)}</div>${l?`<div class="mt">${M.mapBox([{x:l.x,y:l.y,l:t.bus,c:l.state==='LIVE'?'grn':'red'}],240,[[15,70],[85,30]])}</div><div class="bar mt2"><i style="width:${l.progress}%"></i></div><div class="sm m">${l.progress}% of the way · last update ${rel(l.ping)}</div>`:hb('Live location appears when the driver starts the trip.','b','nav')}</div>`}}
+return`<section><div class="w" style="max-width:720px"><h2>Track your bus</h2><p class="lead">Enter the PNR from your ticket.</p><div class="row">${M.fld('pnr','PNR',W.trk||'',{ph:'ABRK5001A'})}<button class="cta" data-a="track">Track</button></div><div class="mt">${out}</div></div></section>`}
+function shared(link){const s=DB().sharing.find(x=>x.link==='abra.in/s/'+link);if(!s)return notFound();const t=DB().trips.find(x=>x.id===s.trip),l=t&&DB().live.find(x=>x.tripId===t.id);if(s.status==='ACTIVE'&&!W._counted){s.opened++;AbraStore.save('website');W._counted=1}
+return`<section><div class="w" style="max-width:720px"><h2>${esc(s.customer.split(' ')[0])} is sharing a bus journey with you</h2>${s.status!=='ACTIVE'?hb('This link has expired or sharing was stopped.','a','info'):`<div class="c"><b>${esc(t.route)}</b><div class="sm m">${esc(opOf(t).name)} · ${esc(t.bus)} · ${fdt(t.depart)}</div>${l?`<div class="mt">${M.mapBox([{x:l.x,y:l.y,l:t.bus,c:'grn'}],260,[[15,70],[85,30]])}</div><div class="bar mt2"><i style="width:${l.progress}%"></i></div><div class="sm m">${l.progress}% of the way · last update ${rel(l.ping)}</div>`:hb('The bus has not started yet. This page updates by itself.','b','clock')}</div>`}</div></section>`}
+function partner(){return`<section><div class="w g2"><div><h2>Partner with Abra Travels</h2><p class="lead">Sell your seats to thousands of travellers, get paid every week and manage everything from the Abra partner portal.</p>${[['Approved in 1 to 2 days','Upload your documents online; our team verifies them.'],['Your fares, your schedule','You set fares and timings. Abra keeps an agreed commission.'],['Weekly payouts','Clear statements for every trip and booking.'],['Free tools','Seat layouts, trips, drivers, bookings and live tracking.']].map(([t,s])=>`<div class="feat mt"><span class="i">${ic('check')}</span><div><b>${t}</b><p class="sm m">${s}</p></div></div>`).join('')}</div>
+<div class="c col"><h3>Tell us about your company</h3>${M.fld('pc','Company name','')}${M.fld('po','Owner name','')}${M.fld('pe','Email','',{type:'email'})}${M.fld('pp','Mobile number','',{type:'tel'})}${M.fld('pcity','City',DB().cities[0].name,{type:'select',opts:DB().cities.map(c=>c.name)})}${M.fld('pf','Number of buses','',{type:'number',min:1})}<button class="cta" data-a="partner">Send</button><p class="sm m">The Abra team contacts you and sends an invitation to the partner portal.</p></div></div></section>`}
+function contact(){const c=DB().contact;return`<section><div class="w g2"><div><h2>Contact us</h2><p class="lead">We usually reply within a few hours.</p>${M.kv({Phone:esc(c.phone),WhatsApp:esc(c.whatsapp),Email:esc(c.email),Hours:esc(c.hours),'Safety desk (24 h)':esc(c.emergency),Address:esc(DB().settings.company.address)})}</div>
+<div class="c col"><h3>Send a message</h3>${M.fld('cn','Your name','')}${M.fld('cp','Mobile number','',{type:'tel'})}${M.fld('cpnr','PNR (if about a booking)','')}${M.fld('cm','Message','',{type:'textarea'})}<button class="cta" data-a="contact">Send</button></div></div></section>`}
+function help(){const F=DB().faqs.filter(f=>f.status==='PUBLISHED'),cats=[...new Set(F.map(f=>f.cat))];return`<section><div class="w" style="max-width:820px"><h2>Help centre</h2><p class="lead">Answers about bookings, cancellations, payments, travel and safety.</p>${cats.map(k=>`<h3 style="margin-top:16px">${esc(k)}</h3><div class="c">${F.filter(f=>f.cat===k).map(f=>`<details class="faq"><summary>${esc(f.q)}</summary><p class="sm m" style="padding-bottom:10px">${esc(f.a)}</p></details>`).join('')}</div>`).join('')}<p class="mt">Still need help? <a data-go="contact" style="cursor:pointer;color:var(--b)">Contact us</a></p></div></section>`}
+function legal(k){const co=DB().settings.company,c=DB().contact,sl=[...DB().cancelSlabs].sort((a,b)=>b.hours-a.hours);
+const T={terms:['Terms & Conditions',`<p>These terms apply when you book bus tickets on the Abra Travels website or app. Abra Travels is a booking platform; the bus journey is provided by the operator named on your ticket.</p><h3>Bookings</h3><ul><li>Carry a valid photo ID that matches the passenger name.</li><li>Reach the boarding point 15 minutes before departure.</li><li>Ladies-only seats can be booked by female passengers only.</li></ul><h3>Payments</h3><p>Payments are processed by Razorpay. A booking is confirmed only after the payment is confirmed.</p><h3>Changes by the operator</h3><p>If the operator cancels a trip, you get a full refund.</p>`],
+privacy:['Privacy Policy',`<p>We collect your name, mobile number, email, travel details and, during a trip, your location if you use live tracking or SOS. We use it to run your booking, send tickets and updates, and keep you safe.</p><h3>Who we share it with</h3><p>The bus operator of your trip, payment providers, and messaging providers (SMS, WhatsApp). We never sell your data.</p><h3>Your choices</h3><p>You can change notification settings or delete your account in the app. Booking records are kept for 8 years as the law requires.</p><h3>Contact</h3><p>${esc(c.email)}</p>`],
+refund:['Cancellation & Refund Policy',`<p>The refund depends on how long before departure you cancel:</p><table class="tbl"><tr><th>When you cancel</th><th>Refund</th></tr>${sl.map((s,i)=>`<tr><td>${i===0?'More than '+s.hours+' hours before departure':s.hours===0?'Less than '+sl[i-1].hours+' hours before':'Between '+s.hours+' and '+sl[i-1].hours+' hours before'}</td><td>${s.pct?s.pct+'% of the fare':'No refund'}</td></tr>`).join('')}</table><p>The convenience fee and GST are not refunded. Refunds reach your original payment method in 5 to 7 working days. If the operator cancels the trip, you get 100%.</p>`],
+grievance:['Grievance officer',`<p>As required by the Information Technology Rules, 2021 and the Consumer Protection (E-Commerce) Rules, 2020:</p>${M.kv({Name:'Grievance Officer, Abra Travels',Email:'grievance@abratravels.in',Phone:esc(c.phone),Address:esc(co.address),'Response time':'We acknowledge within 48 hours and resolve within 30 days'})}`],
+about:['About us',`<p>Abra Travels makes intercity bus travel simple and safe. We work only with operators our team has verified, show the full fare before you book, and give every traveller live tracking and safety tools.</p>${M.kv({Company:esc(co.name),GSTIN:esc(co.gstin),Address:esc(co.address)})}`]}[k];
+return`<section><div class="w legal" style="max-width:820px"><div class="crumb"><a data-go="home">Home</a> / ${T[0]}</div><h2>${T[0]}</h2><p class="sm m">Last updated ${fd(new Date())}. Demo text, to be replaced by the reviewed legal text.</p>${T[1]}</div></section>`}
+const notFound=()=>`<section><div class="w">${M.empty('Page not found','The page you are looking for does not exist.')}</div></section>`;
+function view(){const p=W.page,a=W.arg;document.title=({home:'Abra Travels: book bus tickets online'}[p])||'Abra Travels';
+const body=p==='home'?home():p==='search'?results():p==='route'?routePage(a):p==='routes'?routes():p==='offers'?offers():p==='track'?track():p==='s'?shared(a):p==='partner'?partner():p==='contact'?contact():p==='help'?help():['terms','privacy','refund','grievance','about'].includes(p)?legal(p):notFound();
+return header()+`<main>${body}</main>`+footer()+(W.cookie?'':`<div class="cookie" role="dialog" aria-label="Cookies"><span class="grow sm">We use necessary cookies to run the site and optional ones to improve it.</span><button class="cta sm gh" data-a="ck" data-v="min">Only necessary</button><button class="cta sm" data-a="ck" data-v="all">Accept</button></div>`)+`<div class="dbar2"><a class="cta sm gh" href="index.html">All prototypes</a></div>`}
+function render(){const y=scrollY;$('#site').innerHTML=view();M.translate($('#site'));if(W.keep)scrollTo(0,y);W.keep=false}
+function readHash(){const h=location.hash.replace(/^#\/?/,'').split('/');W.page=h[0]||'home';W.arg=h.slice(1).join('/');W.menu=false;W._counted=0}
+window.addEventListener('hashchange',()=>{readHash();render();scrollTo(0,0)});
+Object.assign(M.A,{menu:()=>{W.menu=!W.menu;render()},lang:v=>{M.lang=v;localStorage.setItem('abra_m_lang',v);document.documentElement.lang=v;render()},
+swap:()=>{W.q.from=M.gv('to');W.q.to=M.gv('from');W.keep=true;render()},
+search:()=>{W.q={from:M.gv('from'),to:M.gv('to'),date:M.gv('date')||W.q.date};if(W.q.from===W.q.to)return toast('Origin and destination must be different.');if(W.page==='search')render();else go('search')},
+copy:v=>{try{navigator.clipboard.writeText(v).catch(()=>{})}catch(e){}toast('Copied')},
+track:()=>{W.trk=M.gv('pnr').trim();W.keep=true;render()},
+ck:v=>{W.cookie=v;localStorage.setItem('abra_w_cookie',v);render()},
+partner:()=>{const v=k=>M.gv(k).trim();if(v('pc').length<3)return toast('Enter the company name');if(v('po').length<2)return toast('Enter the owner name');if(!/^\S+@\S+\.\S+$/.test(v('pe')))return toast('Enter a valid email');if(v('pp').replace(/\D/g,'').length<10)return toast('Enter a 10-digit mobile number');
+const d=DB();if(d.operators.some(o=>o.email===v('pe'))||d.invitations.some(i=>i.email===v('pe')&&i.status==='PENDING'))return toast('This email is already registered with us');
+d.invitations.unshift({id:AbraStore.uid('INV'),company:v('pc'),owner:v('po'),email:v('pe'),status:'REQUESTED',sentAt:new Date().toISOString(),expiresAt:new Date(Date.now()+7*864e5).toISOString(),email_status:'NOT_SENT',source:'Website',phone:v('pp'),city:v('pcity'),fleet:v('pf')});
+AbraStore.notify('admin','Partner request from the website',v('pc')+' ('+v('pcity')+', '+(v('pf')||'?')+' buses) wants to join. Send an invitation.','invitations','brief');AbraStore.save('website');go('home');toast('Thank you! Our team will contact you within 2 working days.')},
+contact:()=>{const v=k=>M.gv(k).trim();if(v('cn').length<2)return toast('Enter your name');if(v('cp').replace(/\D/g,'').length<10)return toast('Enter a 10-digit mobile number');if(v('cm').length<10)return toast('Write a few words about your question');
+const d=DB(),b=v('cpnr')?d.bookings.find(x=>x.pnr===v('cpnr').toUpperCase()):null,c=d.customers.find(x=>x.phone.replace(/\D/g,'').endsWith(v('cp').replace(/\D/g,'').slice(-10)));
+d.tickets.unshift({id:AbraStore.uid('TKT'),customer:v('cn'),customerId:c?c.id:'',subject:'Website: '+v('cm').slice(0,60),category:b?'BOOKING':'APP',priority:'MEDIUM',status:'OPEN',assignee:'',at:new Date().toISOString(),sla:new Date(Date.now()+864e5).toISOString(),bookingId:b?b.id:'',msgs:[['customer',v('cm')+' (phone '+v('cp')+')',new Date().toISOString()]]});AbraStore.save('website');go('home');toast('Message sent. We usually reply within a few hours.')}});
+document.addEventListener('click',e=>{const g=e.target.closest('[data-go]');if(g){e.preventDefault();go(g.dataset.go,g.dataset.arg||'')}});
+AbraStore.on(()=>{if(!document.activeElement||!document.activeElement.matches('input,textarea,select')){W.keep=true;render()}});
+document.documentElement.setAttribute('data-theme',localStorage.getItem('abra_m_theme')||'light');document.documentElement.lang=M.lang;
+readHash();render();
+</script>
+</body>
+</html>

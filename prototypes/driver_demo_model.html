@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Abra Driver Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+.trip-hero{background:var(--gr);color:#fff;border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:8px}
+.trip-hero .m{color:#DDF3FC}.trip-hero .st{background:#ffffff26;color:#fff}
+.big-act{min-height:56px;font-size:16px}
+.sosb{position:absolute;right:14px;bottom:76px;width:64px;height:64px;border-radius:50%;background:var(--r);color:#fff;font-weight:800;box-shadow:0 10px 24px rgba(239,68,68,.45);z-index:30;display:grid;place-items:center}
+.phone.land .sosb{bottom:14px}
+.pax{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--ln)}.pax:last-child{border:0}
+.av{width:38px;height:38px;border-radius:50%;background:var(--lb2);color:var(--db);display:grid;place-items:center;font-weight:800;flex:none}
+.stopdot{display:flex;gap:10px;align-items:flex-start}
+.drvpick{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1px solid var(--ln);border-radius:14px;padding:12px;background:var(--card)}
+.login{min-height:100%;background:var(--gr);display:flex;flex-direction:column;justify-content:center;padding:20px;gap:14px;color:#fff}
+.login .c{color:var(--tx)}
+</style>
+</head>
+<body>
+<script src="shared/abra_langs.js"></script>
+<script src="shared/abra_store.js"></script>
+<script src="shared/abra_mobile.js"></script>
+<script src="shared/abra_ai_mobile.js"></script>
+<script>
+/* =====================================================================
+   ABRA TRAVELS - DRIVER APP DEMO (phone)
+   Connected to the admin, client and customer prototypes through shared/abra_store.js:
+   trips assigned in the client portal appear here; boarding, check-ins, live location,
+   delays, trip end and SOS sent from here appear in the other apps at once.
+   ===================================================================== */
+const {$,$$,esc,money,fd,ft,fdt,rel,ic,chip,hb,kv,empty,fld,gv,toast,sheet,closeSheet,lab}=M;
+AbraStore.init();
+const DB=()=>AbraStore.get();
+const S={who:localStorage.getItem('abra_driver_who')||'',tab:'home',trip:null};
+const me=()=>DB().opStaff.find(s=>s.name===S.who&&s.role==='DRIVER');
+const op=()=>{const m=me();return m?DB().operators.find(o=>o.id===m.operatorId):null};
+const myTrips=()=>DB().trips.filter(t=>t.driver===S.who&&t.status!=='CANCELLED').sort((a,b)=>new Date(a.depart)-new Date(b.depart));
+const RUN=['BOARDING','IN_TRANSIT','DEPARTED','DELAYED'];
+const current=()=>{const L=myTrips();return L.find(t=>RUN.includes(t.status))||L.find(t=>t.status==='SCHEDULED'&&new Date(t.depart)>Date.now()-3*36e5)};
+const paxOf=t=>DB().bookings.filter(b=>b.tripId===t.id&&b.status!=='CANCELLED');
+const route=t=>DB().routes.find(r=>r.id===t.routeId)||{stops:[]};
+const inbox=()=>AbraStore.inbox('driver:'+S.who).sort((a,b)=>new Date(b.at)-new Date(a.at));
+const live=t=>DB().live.find(l=>l.tripId===t.id);
+const save=s=>AbraStore.save(s||'driver');
+M.addDict(`Choose your account|మీ ఖాతాను ఎంచుకోండి|अपना खाता चुनें
+Sign in with your phone number. Demo: tap your name.|మీ ఫోన్ నంబర్‌తో సైన్ ఇన్ చేయండి. డెమో: మీ పేరు నొక్కండి.|अपने फ़ोन नंबर से साइन इन करें। डेमो: अपना नाम दबाएँ।
+Your trip|మీ ట్రిప్|आपकी ट्रिप
+Open trip|ట్రిప్ తెరవండి|ट्रिप खोलें
+Checked in passengers|చెక్ ఇన్ అయిన ప్రయాణికులు|चेक इन हुए यात्री
+Enter the PNR on the ticket|టికెట్‌లోని PNR నమోదు చేయండి|टिकट पर लिखा PNR डालें
+Why are you late?|ఎందుకు ఆలస్యం?|देरी क्यों है?
+How late?|ఎంత ఆలస్యం?|कितनी देरी?
+Traffic|ట్రాఫిక్|ट्रैफ़िक
+Breakdown|బ్రేక్‌డౌన్|खराबी
+Weather|వాతావరణం|मौसम
+Police check|పోలీసు తనిఖీ|पुलिस जाँच
+Accident|ప్రమాదం|दुर्घटना
+Medical emergency|వైద్య అత్యవసరం|चिकित्सा आपातकाल
+Threat or fight|బెదిరింపు లేదా గొడవ|धमकी या झगड़ा
+Send SOS|SOS పంపండి|SOS भेजें
+What happened?|ఏమి జరిగింది?|क्या हुआ?
+Location sharing|లొకేషన్ షేరింగ్|लोकेशन शेयरिंग
+Licence|లైసెన్స్|लाइसेंस
+Valid till|వరకు చెల్లుతుంది|तक मान्य
+Company|కంపెనీ|कंपनी
+Phone|ఫోన్|फ़ोन`);
+
+/* ---------- screens ---------- */
+function login(){const all=DB().opStaff.filter(s=>s.role==='DRIVER'&&s.status==='ACTIVE');const ops=[...new Set(all.map(s=>s.operatorId))];
+return`<div class="scr"><div class="login"><div class="row">${ic('bus',30)}<h1 style="font-size:22px">Abra Driver</h1></div><p>Sign in with your phone number. Demo: tap your name.</p>
+<div class="c col"><b>Choose your account</b>${ops.slice(0,6).map(o=>{const on=DB().operators.find(x=>x.id===o);return`<div class="sm m">${esc(on.name)}</div>`+all.filter(s=>s.operatorId===o).map(s=>{const n=DB().trips.filter(t=>t.driver===s.name&&t.status!=='CANCELLED'&&new Date(t.depart)>Date.now()-12*36e5).length;return`<button class="drvpick" data-a="in" data-v="${esc(s.name)}"><span class="av">${esc(s.name[0])}</span><span class="grow"><b>${esc(s.name)}</b><div class="sm m">${esc(s.phone)}</div></span>${n?`<span class="st b">${n} trip${n>1?'s':''}</span>`:''}</button>`}).join('')}).join('')}</div></div></div>`}
+function shell(title,body,back){const un=inbox().filter(n=>!n.read).length;
+return`<div class="hd">${back?`<button class="ib" data-a="tab" data-v="home" aria-label="Back">${ic('back')}</button>`:`<span class="ib">${ic('bus')}</span>`}<h1>${esc(title)}</h1><button class="ib" data-a="tab" data-v="alerts" aria-label="Notifications">${ic('bell')}${un?`<span class="dot">${un}</span>`:''}</button></div>
+<div class="lay"><div class="main"><div class="scr"><div class="pad">${body}</div></div></div><nav class="tabs">${[['home','home','Home'],['trip','bus','Your trip'],['reports','cal','Reports'],['alerts','bell','Alerts'],['me','user','Profile']].map(([k,i,l])=>`<button class="${S.tab===k?'on':''}" data-a="tab" data-v="${k}">${ic(i)}${l}${k==='alerts'&&un?`<span class="dot" style="top:4px;right:calc(50% - 22px)">${un}</span>`:''}</button>`).join('')}</nav></div>
+${current()&&RUN.includes(current().status)?`<button class="sosb" data-a="sos" aria-label="Emergency SOS">SOS</button>`:''}`}
+function actions(t){const pax=paxOf(t),ci=(t.checkedIn||[]).length;
+if(t.status==='SCHEDULED')return`<button class="cta full big-act" data-a="board" data-v="${t.id}">${ic('users')} Start boarding</button>`;
+if(t.status==='BOARDING')return`<button class="cta ok full big-act" data-a="start" data-v="${t.id}">${ic('play')} Start trip</button><div class="sm m tc">${ci} of ${pax.length} bookings checked in</div>`;
+if(t.status==='DELAYED')return`<div class="row"><button class="cta full" data-a="resume" data-v="${t.id}">${ic('play')} Resume trip</button><button class="cta gh full" data-a="end" data-v="${t.id}">${ic('flag')} End trip</button></div>`;
+if(['IN_TRANSIT','DEPARTED'].includes(t.status))return`<div class="row"><button class="cta gh full" data-a="delay" data-v="${t.id}">${ic('clock')} Report delay</button><button class="cta full" data-a="end" data-v="${t.id}">${ic('flag')} End trip</button></div>`;return''}
+function tripCard(t){const pax=paxOf(t),l=live(t),seats=pax.reduce((a,b)=>a+b.seatsN,0);
+return`<div class="trip-hero"><div class="row bt"><span class="sm m">${esc(t.id)}</span>${chip(t.status)}</div><h2 style="font-size:20px">${esc(t.route)}</h2>
+<div class="row rw sm m">${ic('clock',14)} ${fdt(t.depart)} · ${ic('bus',14)} ${esc(t.bus)}</div>
+<div class="row rw sm">${ic('users',14)} ${seats} passengers in ${pax.length} bookings · ${(t.checkedIn||[]).length} checked in</div>
+${t.status==='DELAYED'?`<div class="sm">${ic('alert',14)} Delayed ${t.delay||''} min${t.delayReason?': '+esc(t.delayReason):''}</div>`:''}
+${l?`<div class="bar" style="background:#ffffff33"><i style="width:${l.progress}%;background:#fff"></i></div><div class="sm m">${l.progress}% of the route · ${l.speed} km/h · location shared ${rel(l.ping)}</div>`:''}</div>${actions(t)}`}
+function home(){const t=current(),next=myTrips().filter(x=>x!==t&&new Date(x.depart)>Date.now()&&x.status==='SCHEDULED').slice(0,4);
+return shell('Hello, '+S.who.split(' ')[0],`${op()&&op().status==='SUSPENDED'?hb('Your company is suspended by Abra. Trips are on hold.','r','alert'):''}${dueBanner()}
+${t?tripCard(t)+`<button class="cta gh full" data-a="tab" data-v="trip">Open trip ${ic('chevR',16)}</button>`:`<div class="c">${empty('No trips today','New trips from your company appear here at once.')}</div>`}
+<h3>Next trips</h3>${next.length?next.map(x=>`<div class="c row"><div class="grow"><b>${esc(x.route)}</b><div class="sm m">${fdt(x.depart)} · ${esc(x.bus)}</div></div>${chip(x.status)}</div>`).join(''):'<p class="sm m">Nothing else planned.</p>'}`)}
+function tripScreen(){const t=current();if(!t)return shell('Your trip',`<div class="c">${empty('No trips today','New trips from your company appear here at once.')}</div>`,1);
+const r=route(t),l=live(t),pax=paxOf(t),ci=t.checkedIn||[],pr=l?l.progress:t.status==='ARRIVED'?100:0,n=r.stops.length,cur=Math.min(n-1,Math.floor(pr/100*(n-1)+.0001));
+return shell(t.id,`${tripCard(t)}
+${l?`<div class="c">${M.mapBox([{x:15+70*pr/100,y:70-40*pr/100,l:t.bus,c:l.state==='LIVE'?'grn':'red'}],170,[[15,70],[85,30]])}<div class="row bt sm mt2"><span>${ic('nav',14)} Location sharing on</span><span class="m">${rel(l.ping)}</span></div></div>`:''}
+<div class="c"><h3>Stops</h3><div class="tl mt2">${r.stops.map((s,i)=>`<div class="ev ${l&&i<cur?'d':l&&i===cur?'c':''}"><b>${esc(s.name)}</b><div class="sm m">${esc(s.city)} · ${ft(new Date(new Date(t.depart).getTime()+s.offset*6e4))} · ${s.type==='DROPPING'?'Drop':'Pick up'}</div></div>`).join('')}</div></div>
+<div class="c"><div class="row bt"><h3>Passengers (${pax.length})</h3><button class="cta sm" data-a="scan" data-v="${t.id}">${ic('qr',14)} Scan ticket</button></div>
+${pax.length?pax.map(b=>`<div class="pax"><span class="av">${esc(b.customer[0])}</span><div class="grow"><b>${esc(b.customer)}</b><div class="sm m">${esc(b.pnr)} · seats ${esc(b.seatList)}${b.board?' · '+esc(b.board):''}</div></div>${ci.includes(b.id)?chip('Checked in','g'):`<button class="cta sm gh" data-a="ci" data-v="${b.id}" ${['SCHEDULED','ARRIVED'].includes(t.status)?'disabled':''}>Check in</button>`}</div>`).join(''):'<p class="sm m">No bookings on this trip yet.</p>'}
+${t.status==='SCHEDULED'?'<p class="sm m">Check-in opens when you start boarding.</p>':''}</div>`,1)}
+function alerts(){const L=inbox();return shell('Notifications',`<div class="row bt"><span class="sm m">${L.filter(n=>!n.read).length} unread</span><button class="cta sm gh" data-a="readall">Mark all read</button></div>
+${L.length?L.map(n=>`<div class="c" style="${n.read?'':'border-color:var(--s)'}"><b>${esc(n.t)}</b><div class="sm m">${esc(n.b)}</div><div class="sm m">${rel(n.at)}</div></div>`).join(''):`<div class="c">${empty('No notifications','Trip changes from your company and Abra appear here.')}</div>`}`,1)}
+function profile(){const m=me(),o=op();return shell('Profile',`<div class="c row"><span class="av" style="width:56px;height:56px;font-size:22px">${esc(S.who[0])}</span><div><h3>${esc(S.who)}</h3><div class="sm m">${esc(o?o.name:'')}</div></div></div>
+<div class="c">${kv({Phone:esc(m.phone),Licence:esc(m.licence||'-'),'Valid till':m.licExp?fd(m.licExp):'-',Company:esc(o?o.name:'')})}${m.licExp&&new Date(m.licExp)-Date.now()<30*864e5?hb('Your licence expires soon. Give the new copy to your company.','a','alert'):''}</div>
+<div class="c">${kv({'Trips done':myTrips().filter(t=>t.status==='ARRIVED').length,'Upcoming':myTrips().filter(t=>t.status==='SCHEDULED').length})}</div>
+<button class="cta gh full" data-a="out">${ic('logout')} Sign out</button>`,1)}
+function view(){if(!S.who||!me())return login();return view2()||(S.tab==='trip'?tripScreen():S.tab==='alerts'?alerts():S.tab==='me'?profile():home())}
+
+/* ---------- actions ---------- */
+const T=id=>DB().trips.find(t=>t.id===id);
+Object.assign(M.A,{
+in:v=>{S.who=v;localStorage.setItem('abra_driver_who',v);S.tab='home';M.render();toast('Signed in')},
+out:()=>{S.who='';localStorage.removeItem('abra_driver_who');M.render()},
+tab:v=>{S.tab=v;if(v==='alerts'){}M.render()},
+readall:()=>{inbox().forEach(n=>n.read=true);save();M.render()},
+board:v=>{const t=T(v);t.status='BOARDING';save();M.render();toast('Boarding started. Passengers were told.')},
+start_run:v=>{const t=T(v),pax=paxOf(t),miss=pax.filter(b=>!(t.checkedIn||[]).includes(b.id)).length;
+const go=()=>{t.status='IN_TRANSIT';const r=route(t);DB().live=DB().live.filter(l=>l.tripId!==t.id);DB().live.push({tripId:t.id,route:t.route,bus:t.bus,operator:t.operator,driver:t.driver,state:'LIVE',ping:new Date().toISOString(),speed:42,progress:0,eta:new Date(Date.now()+(r.hours||8)*36e5).toISOString(),x:15,y:70,pax:t.booked,checkedIn:(t.checkedIn||[]).length,stops:r.stops.map(s=>s.name),src:'driver'});closeSheet();save();M.render();toast('Trip started. Your location is shared.')};
+if(miss){sheet('Start trip?',`${hb(miss+' booking(s) are not checked in. Start anyway? They are marked as no-show for the operator.','a','alert')}`,`<button class="cta gh" data-a="sheet_x">Cancel</button><button class="cta ok" data-a="start_ok" data-v="${v}">Start trip</button>`);M.A.start_ok=()=>go()}else go()},
+delay:v=>{S.dm=30;S.dr='Traffic';sheet('Report delay',`<b>How late?</b><div class="row rw">${[15,30,45,60,90].map(m=>`<button class="ch ${m===30?'on':''}" data-a="dm" data-v="${m}">${m} min</button>`).join('')}</div><b>Why are you late?</b><div class="row rw">${['Traffic','Breakdown','Weather','Police check'].map(r=>`<button class="ch ${r==='Traffic'?'on':''}" data-a="dr" data-v="${r}">${r}</button>`).join('')}</div>${hb('Passengers, your company and Abra are told at once.','b','info')}${M.proofField('dp',false,'Photo or screenshot (optional)')}`,`<button class="cta gh" data-a="sheet_x">Cancel</button><button class="cta" data-a="delay_ok" data-v="${v}">Report delay</button>`)},
+dm:(v,el)=>{S.dm=Number(v);$$('[data-a=dm]').forEach(b=>b.classList.toggle('on',b===el))},
+dr:(v,el)=>{S.dr=v;$$('[data-a=dr]').forEach(b=>b.classList.toggle('on',b===el))},
+delay_ok:async v=>{const ids=await M.readProofs('dp',false,'Driver '+S.who);if(ids===null)return;const t=T(v);t.status='DELAYED';t.delay=S.dm;t.delayReason=S.dr;t.delayFiles=ids;const l=live(t);if(l)l.state='DELAYED';closeSheet();save();M.render();toast('Delay reported')},
+resume:v=>{const t=T(v);t.status='IN_TRANSIT';const l=live(t);if(l)l.state='LIVE';save();M.render();toast('Trip resumed')},
+end:v=>sheet('End trip?',hb('Passengers are marked as arrived and location sharing stops.','b','flag'),`<button class="cta gh" data-a="sheet_x">Cancel</button><button class="cta" data-a="end_ok" data-v="${v}">End trip</button>`),
+end_ok:v=>{const t=T(v);t.status='ARRIVED';DB().bookings.filter(b=>b.tripId===v&&b.status==='CONFIRMED').forEach(b=>b.status='COMPLETED');DB().live=DB().live.filter(l=>l.tripId!==v);closeSheet();save();M.render();toast('Trip ended. Well done!')},
+ci:v=>{const b=DB().bookings.find(x=>x.id===v),t=T(b.tripId);t.checkedIn=(t.checkedIn||[]).concat(v);const l=live(t);if(l)l.checkedIn=t.checkedIn.length;save();M.keepScroll=true;M.render();toast(b.customer+' checked in')},
+scan:v=>{const t=T(v);sheet('Scan ticket',`<div class="tc">${ic('qr',64)}<p class="sm m">Point the camera at the QR code on the ticket. Demo: type the PNR or pick one.</p></div>${fld('pnr','Enter the PNR on the ticket','',{ph:'ABRK5001A'})}<div class="row rw">${paxOf(t).slice(0,3).map(b=>`<button class="ch" data-a="pick" data-v="${esc(b.pnr)}">${esc(b.pnr)}</button>`).join('')}<button class="ch" data-a="pick" data-v="ABRX0000Z">Wrong ticket</button></div>`,`<button class="cta gh" data-a="sheet_x">Close</button><button class="cta" data-a="scan_ok" data-v="${v}">Check in</button>`)},
+pick:v=>{const e=$('#f_pnr');if(e)e.value=v},
+scan_ok:v=>{const t=T(v),p=gv('pnr').trim().toUpperCase(),b=DB().bookings.find(x=>x.pnr===p);
+if(t.status==='SCHEDULED'){closeSheet();return toast('Start boarding first')}
+if(!b)return toast('No ticket with PNR '+p);if(b.tripId!==v)return toast('This ticket is for another trip ('+b.route+')');if(b.status==='CANCELLED')return toast('This booking was cancelled');
+if((t.checkedIn||[]).includes(b.id))return toast(b.customer+' is already checked in');closeSheet();M.A.ci(b.id)},
+sos:()=>sheet('Emergency SOS',`<b>What happened?</b><div class="col">${['Accident','Breakdown','Medical emergency','Threat or fight'].map((x,i)=>`<button class="ch ${i===0?'on':''}" style="justify-content:flex-start" data-a="sosk" data-v="${x}">${x}</button>`).join('')}</div>${hb('Abra\'s safety team and your company get your location at once. Call 112 if anyone is hurt.','r','alert')}${M.proofField('sp',false,'Photo of the situation (optional)')}`,`<button class="cta gh" data-a="sheet_x">Cancel</button><button class="cta dg" data-a="sos_ok">Send SOS</button>`),
+sosk:(v,el)=>{S.sosk=v;$$('[data-a=sosk]').forEach(b=>b.classList.toggle('on',b===el))},
+sos_ok:async()=>{const ids=await M.readProofs('sp',false,'Driver '+S.who);if(ids===null)return;const t=current(),l=t&&live(t),m=me(),k=S.sosk||'Accident';DB().sos.unshift({id:AbraStore.uid('SOS'),customer:'Driver '+S.who,phone:m.phone,trip:t.id,route:t.route,bus:t.bus,driver:S.who,operator:t.operator,status:'NEW',at:new Date().toISOString(),note:'Driver SOS: '+k,x:l?l.x:50,y:l?l.y:50,contacts:['Operator control room'],log:[['SOS received from the driver',new Date().toISOString(),ids]],assignee:'',fromDriver:true});closeSheet();save();M.render();toast('SOS sent. Abra safety team is calling you.')}
+});
+/* ---------- reports and trip checklists (the rules come from the driver's company) ---------- */
+const DR=AbraStore.DR,opId=()=>(me()||{}).operatorId,rules=()=>DR.rulesFor(DB(),opId());
+S.pfiles={};
+const _pk=M.A.pf_pick;M.A.pf_pick=(v,el)=>{S.pfiles[el.id]=[...el.files];_pk(v,el);if(/^f_pc_/.test(el.id)&&(S.tab==='pre'||S.tab==='endchk'))setTimeout(()=>{M.keepScroll=true;M.render()},0)};
+M.afterRender=()=>{Object.entries(S.pfiles).forEach(([id,fs])=>{const el=document.getElementById(id);if(el&&fs.length&&!(el.files&&el.files.length)){try{const dt=new DataTransfer();fs.forEach(f=>dt.items.add(f));el.files=dt.files}catch(e){}const l=document.getElementById('pfl_'+id.slice(2));if(l)l.innerHTML=fs.map(f=>`<div>${esc(f.name)}</div>`).join('')}})};
+const hasFile=id=>!!(S.pfiles['f_'+id]&&S.pfiles['f_'+id].length);
+const stChip=s=>({DUE:chip('Due','a'),OVERDUE:chip('Overdue','r'),SUBMITTED:chip('Sent','b'),APPROVED:chip('Approved','g'),RETURNED:chip('Sent back','r'),DRAFT:chip('Draft','n')}[s]||chip(s));
+const dueText=x=>{const m=Math.round((x.due-Date.now())/6e4);return x.state==='OVERDUE'?'Was due '+fdt(x.due):m>0?'Due '+(m<60?'in '+m+' min':m<1440?'in '+Math.round(m/60)+' h':fdt(x.due)):'Due '+fdt(x.due)};
+const toSend=()=>DR.statusList(opId(),S.who,DB()).filter(x=>['DUE','OVERDUE','RETURNED','DRAFT'].includes(x.state));
+function dueBanner(){const L=toSend();if(!L.length)return'';const od=L.filter(x=>x.state==='OVERDUE'||x.state==='RETURNED').length;return`<button class="c row" style="width:100%;text-align:left;border-color:${od?'var(--r)':'var(--a)'}" data-a="tab" data-v="reports">${ic('alert',20)}<span class="grow"><b>${L.length} report${L.length>1?'s':''} to send</b><div class="sm m">${od?od+' overdue or sent back. ':''}Open Reports.</div></span>${ic('chevR',16)}</button>`}
+function reportsScreen(){const L=DR.statusList(opId(),S.who,DB()),send=L.filter(x=>['DUE','OVERDUE','RETURNED','DRAFT'].includes(x.state)),ev=rules().reports.filter(r=>r.active&&r.freq==='EVENT');
+const mine=(DB().driverReports||[]).filter(r=>r.driver===S.who).sort((a,b)=>new Date(b.submittedAt||b.savedAt)-new Date(a.submittedAt||a.savedAt)).slice(0,12);
+return shell('Reports',`<p class="sm m">Your company asks you for these reports. Send them on time so the team can see how the trips went.</p>
+<h3>To send</h3>${send.length?send.map(x=>`<button class="c" style="width:100%;text-align:left;${x.state==='OVERDUE'||x.state==='RETURNED'?'border-color:var(--r)':''}" data-a="rep_open" data-v="${esc(x.key)}"><div class="row bt"><b>${esc(x.type.name)}</b>${stChip(x.state)}</div><div class="sm m">${esc(x.label)} · ${dueText(x)}</div>${x.report&&x.report.reviewComment&&x.state==='RETURNED'?`<div class="hb r mt2">${ic('alert',16)}<div>${esc(x.report.reviewComment)}</div></div>`:''}</button>`).join(''):`<div class="c">${empty('Nothing to send','You are up to date.')}</div>`}
+<h3>Report something now</h3><div class="col">${ev.map(r=>`<button class="cta gh full" style="justify-content:flex-start" data-a="rep_new" data-v="${esc(r.id)}">${ic('plus',16)} ${esc(r.name)}</button>`).join('')||'<p class="sm m">Your company has not turned on any.</p>'}</div>
+<h3>Sent by you</h3>${mine.length?mine.map(r=>`<button class="c" style="width:100%;text-align:left" data-a="rep_view" data-v="${esc(r.id)}"><div class="row bt"><b>${esc(r.typeName)}</b>${stChip(r.status)}</div><div class="sm m">${r.typeId==='weekly'?'Week of '+fd(r.period):/^\d{4}-\d\d-\d\d$/.test(r.period)?fd(r.period):fd(r.submittedAt||r.savedAt)} · ${r.status==='DRAFT'?'saved '+rel(r.savedAt||r.submittedAt):'sent '+rel(r.submittedAt)}${r.late?' (late)':''}</div>${r.reviewComment?`<div class="sm">${esc(r.reviewComment)}</div>`:''}</button>`).join(''):'<p class="sm m">Nothing sent yet.</p>'}`,1)}
+function fieldCtl(f,R,ro){const a=R.answers,id=f.id,v=a[id];
+if(f.type==='auto'){const val=DR.autoVal(f.auto,opId(),S.who,R.period,a,R.type,R.sn);return`<div class="c"><div class="sm m">${esc(f.label)}</div><b>${esc(val)}</b></div>`}
+if(ro){const fl=((R.report||{}).files||{})[id];return`<div class="c"><div class="sm m">${esc(f.label)}</div>${f.type==='photo'||f.type==='file'?(fl&&fl.length?M.fchips(fl):'<span class="m">None</span>'):`<b>${esc(v==null||v===''?'-':v)}</b>`}</div>`}
+const lab=esc(f.label)+(f.required?' *':'');
+if(f.type==='yesno')return`<div class="c"><b>${lab}</b><div class="row mt2">${['Yes','No'].map(o=>`<button class="ch ${v===o?'on':''}" data-a="rf_yn" data-v="${esc(id)}|${o}">${o}</button>`).join('')}</div></div>`;
+if(f.type==='choice')return`<div class="fd"><label for="f_rf_${esc(id)}">${lab}</label><select id="f_rf_${esc(id)}" data-ch="rf_set" data-k="${esc(id)}"><option value="">Choose</option>${(f.opts||[]).map(o=>`<option ${v===o?'selected':''}>${esc(o)}</option>`).join('')}</select></div>`;
+if(f.type==='number')return`<div class="fd"><label for="f_rf_${esc(id)}">${lab}</label><input id="f_rf_${esc(id)}" type="number" inputmode="decimal" value="${esc(v==null?'':v)}" data-ch="rf_set" data-k="${esc(id)}"></div>`;
+if(f.type==='text')return`<div class="fd"><label for="f_rf_${esc(id)}">${lab}</label><textarea id="f_rf_${esc(id)}" rows="2" data-ch="rf_set" data-k="${esc(id)}">${esc(v||'')}</textarea></div>`;
+return M.proofField('rf_'+id,f.required,f.label)}
+function sumCard(sn){if(!sn)return'';const wk=sn.kind==='WEEKLY',rows=DR.tripRows(sn),T=sn.totals;
+if(!(wk?T.trips:sn.trips.length))return`<div class="c"><b>${wk?'This week':'This day'}, from the system</b><div class="sm m">No trips were found for ${wk?'this week':'this day'}.</div></div>`;
+return`<div class="c"><b>${wk?'Your week':'Your day'}, from the system</b><div class="sm m">These numbers come from your trips, bookings and checklists. You cannot change them.</div><div class="col mt2">${wk?rows.map(r=>`<div class="row bt"><span>${esc(r[0])}</span><span class="sm m">${r[1]} trip${r[1]==1?'':'s'} · ${esc(r[2])} · ${r[3]} passengers · delays: ${esc(r[4])}</span></div>`).join(''):rows.map((r,i)=>`<div class="row bt"><span><b>${esc(r[0])}</b> ${esc(r[1])}<div class="sm m">${esc(r[2])} · ${r[4]} passengers · ${esc(r[5])} · ${esc(r[6])}</div></span>${chip(r[3],sn.trips[i].done?'g':sn.trips[i].running?'b':'n')}</div>`).join('')}</div></div>`}
+function reportForm(){const R=S.rf;if(!R)return reportsScreen();const ro=R.report&&['SUBMITTED','APPROVED'].includes(R.report.status),rt=R.type;
+R.sn=['DAILY','WEEKLY'].includes(rt.freq)?((ro&&R.report&&R.report.snapshot)||DR.summary(opId(),S.who,rt,R.period,DB())):null;
+return shell(rt.name,`<div class="row bt"><span class="sm m">${esc(R.label)}</span>${R.report?stChip(R.report.status):''}</div>${R.report&&R.report.status==='RETURNED'?hb('Sent back: '+esc(R.report.reviewComment||'Please fix and send again'),'r','alert'):''}
+${sumCard(R.sn)}<div class="col mt2">${rt.fields.map(f=>fieldCtl(f,R,ro)).join('')}</div>${ro?'':`<div class="row mt"><button class="cta gh full" data-a="rep_save" data-v="draft">Save draft</button><button class="cta full" data-a="rep_save" data-v="send">Send report</button></div>`}`,1)}
+/* checklists */
+function evalItem(i,t,vals){const v=vals[i.id];let st='PENDING',msg='';
+if(i.type==='auto'){const r=DR.auto(i.auto,t,S.who);return{item:i,state:r.ok?'PASS':'FAIL',msg:r.msg}}
+if(i.type==='number'){if(v===undefined||v==='')return{item:i,state:i.optional?'PASS':'PENDING',msg:i.optional?'Optional':'Enter the reading'};st='PASS'}
+else if(v==null||v==='')return{item:i,state:'PENDING',msg:'Answer this'};
+else st=v===i.bad?'FAIL':'PASS';
+if(i.photo&&(i.type==='number'||st==='FAIL')&&!hasFile('pc_'+i.id)&&!(i.type==='number'&&i.optional&&(v===undefined||v===''))&&!S.noPhotoCheck)return{item:i,state:'PENDING',msg:'Add a photo'};
+return{item:i,state:st,msg:st==='FAIL'?(i.type==='yesno'?'Not OK':String(v)):''}}
+function itemCtl(e,vals,pre){const i=e.item,v=vals[i.id];let c='';
+if(i.type==='auto')c=`<div class="sm ${e.state==='PASS'?'':'m'}">${esc(e.msg)}</div>`;
+else if(i.type==='yesno')c=`<div class="row mt2">${['Yes','No'].map(o=>`<button class="ch ${v===o?'on':''}" data-a="${pre}_set" data-v="${esc(i.id)}|${o}">${o}</button>`).join('')}</div>`;
+else if(i.type==='choice')c=`<div class="row rw mt2">${i.opts.map(o=>`<button class="ch ${v===o?'on':''}" data-a="${pre}_set" data-v="${esc(i.id)}|${esc(o)}">${esc(o)}</button>`).join('')}</div>`;
+else c=`<div class="fd mt2"><label for="f_${pre}n_${esc(i.id)}">${esc(i.optional?'Optional':'Required')}</label><input id="f_${pre}n_${esc(i.id)}" type="number" inputmode="decimal" value="${esc(v==null?'':v)}" data-ch="${pre}_num" data-k="${esc(i.id)}"></div>`;
+const needPhoto=i.photo&&i.type!=='auto'&&(i.type==='number'||v===i.bad);
+return`<div class="c" style="${e.state==='FAIL'&&i.level==='BLOCK'?'border-color:var(--r)':e.state==='FAIL'?'border-color:var(--a)':''}"><div class="row bt"><b>${esc(i.label)}</b>${e.state==='PASS'?chip('OK','g'):e.state==='FAIL'?(i.level==='BLOCK'?chip(i.locked?'Stops the trip':'Blocks','r'):chip('Warning','a')):chip('To do','n')}</div>${c}${needPhoto?M.proofField('pc_'+i.id,true,'Photo'):''}${e.state==='FAIL'&&e.msg&&i.type!=='yesno'&&i.type!=='choice'&&i.type!=='auto'?`<div class="sm" style="color:var(--rtx)">${esc(e.msg)}</div>`:''}</div>`}
+function checkSummary(E,kind){const block=E.filter(e=>e.state==='FAIL'&&e.item.level==='BLOCK'),locked=block.filter(e=>e.item.locked),pend=E.filter(e=>e.state==='PENDING'),warn=E.filter(e=>e.state==='FAIL'&&e.item.level==='WARN');
+return{block,locked,pend,warn,html:locked.length?hb('<b>You cannot start.</b> '+locked.map(e=>esc(e.item.label)+': '+esc(e.msg)).join(' ')+' Ask your company to fix it.','r','alert'):pend.length?hb('<b>'+pend.length+' to do.</b> Answer every item below.','a','info'):block.length?hb('<b>'+block.length+' check'+(block.length>1?'s':'')+' failed.</b> You can only continue with a reason and proof. Your company and Abra are told.','r','alert'):warn.length?hb('<b>'+warn.length+' warning'+(warn.length>1?'s':'')+'.</b> You can continue. Your company is told.','a','alert'):hb('<b>All clear.</b>','g','check')}}
+function preScreen(){const P=S.pre,t=T(P.tripId);if(!t)return home();const items=DR.itemsFor(rules(),'PRE',t,DB()),E=items.map(i=>evalItem(i,t,P.vals)),sm=checkSummary(E,'PRE'),canOv=sm.block.length&&!sm.locked.length&&!sm.pend.length;
+return shell('Before you start',`<div class="c"><b>${esc(t.id)} · ${esc(t.route)}</b><div class="sm m">${fdt(t.depart)} · ${esc(t.bus)}</div></div>${sm.html}${E.map(e=>itemCtl(e,P.vals,'pre')).join('')}
+${canOv?`<div class="c"><b>Start anyway</b><div class="fd mt2"><label for="f_ovr">Why are you starting? *</label><textarea id="f_ovr" rows="2" data-ch="pre_ovr">${esc(P.ovr||'')}</textarea></div>${M.proofField('ov',true,'Proof (photo or screenshot)')}</div>`:''}
+<button class="cta ok full big-act" data-a="pre_go" ${sm.pend.length||sm.locked.length?'disabled':''}>${ic('play')} ${canOv?'Start with override':'Start trip'}</button>`,1)}
+function endScreen(){const P=S.endc,t=T(P.tripId);if(!t)return home();const items=DR.itemsFor(rules(),'END',t,DB()),E=items.map(i=>evalItem(i,t,P.vals)),sm=checkSummary(E,'END');
+return shell('End of trip',`<div class="c"><b>${esc(t.id)} · ${esc(t.route)}</b><div class="sm m">A few quick checks before you finish.</div></div>${E.map(e=>itemCtl(e,P.vals,'end')).join('')}
+<button class="cta full big-act" data-a="end_go" ${sm.pend.length?'disabled':''}>${ic('flag')} End trip</button>`,1)}
+function view2(){if(S.tab==='reports')return reportsScreen();if(S.tab==='rform')return reportForm();if(S.tab==='pre')return preScreen();if(S.tab==='endchk')return endScreen();return null}
+const nowRef=()=>new Date();
+Object.assign(M.A,{
+rep_open:v=>{const[tid,per]=v.split('|'),x=DR.statusList(opId(),S.who,DB()).find(y=>y.key===v);if(!x)return;S.pfiles={};S.rf={type:x.type,typeId:tid,period:per,label:x.label,report:x.report,due:x.due,answers:Object.assign({},x.report?x.report.answers:{})};
+ S.tab='rform';M.render()},
+rep_new:v=>{const rt=rules().reports.find(x=>x.id===v);S.pfiles={};S.rf={type:rt,typeId:v,period:DR.ymd(new Date())+'-'+Date.now().toString(36),label:'New '+rt.name.toLowerCase(),report:null,answers:{}};S.tab='rform';M.render()},
+rep_view:v=>{const r=DB().driverReports.find(x=>x.id===v),rt=rules().reports.find(x=>x.id===r.typeId)||{name:r.typeName,fields:[]};S.pfiles={};S.rf={type:rt,typeId:r.typeId,period:r.period,label:r.typeId==='weekly'?'Week of '+fd(r.period):fd(r.period),report:r,answers:r.answers};if(r.status==='RETURNED'){M.A.rep_open(r.typeId+'|'+r.period);return}S.tab='rform';M.render()},
+rf_set:(v,el)=>{S.rf.answers[el.dataset.k]=v},
+rf_yn:v=>{const[k,o]=v.split('|');S.rf.answers[k]=S.rf.answers[k]===o?'':o;M.render()},
+rep_save:async v=>{const R=S.rf,send=v==='send',fs=R.type.fields;const files={};
+ if(send){for(const f of fs){if(f.type==='auto')continue;if(f.required&&['photo','file'].indexOf(f.type)<0&&(R.answers[f.id]==null||R.answers[f.id]===''))return toast('Fill in: '+f.label)}}
+ for(const f of fs){if(f.type==='photo'||f.type==='file'){const ids=await M.readProofs('rf_'+f.id,send&&f.required&&!(R.report&&(R.report.files||{})[f.id]&&R.report.files[f.id].length),'Driver '+S.who);if(ids===null)return;files[f.id]=ids.length?ids:((R.report&&R.report.files&&R.report.files[f.id])||[])}}
+ const d=DB();d.driverReports=d.driverReports||[];const now=new Date().toISOString(),late=R.due&&Date.now()>R.due;
+ let rep=R.report;if(!rep){rep={id:'DRP-'+AbraStore.uid('X').split('-')[1],operatorId:opId(),driver:S.who,typeId:R.typeId,typeName:R.type.name,period:R.period,answers:{},files:{},reviewComment:'',reviewedBy:''};d.driverReports.unshift(rep)}
+ rep.savedAt=now;rep.answers=Object.assign({},R.answers);rep.files=files;if(send&&['DAILY','WEEKLY'].includes(R.type.freq))rep.snapshot=DR.summary(opId(),S.who,R.type,R.period,d);rep.status=send?'SUBMITTED':'DRAFT';if(send){rep.submittedAt=now;rep.late=!!late;rep.dueAt=R.due?new Date(R.due).toISOString():now}
+ S.pfiles={};S.rf=null;S.tab='reports';save();M.render();toast(send?'Report sent to your company':'Draft saved')},
+start:v=>{const t=T(v);S.pfiles={};S.pre={tripId:v,vals:{},ovr:''};S.tab='pre';M.render()},
+pre_set:v=>{const[k,o]=v.split('|');S.pre.vals[k]=S.pre.vals[k]===o?'':o;M.render()},
+pre_num:(v,el)=>{S.pre.vals[el.dataset.k]=v;M.render()},
+pre_ovr:v=>{S.pre.ovr=v},
+pre_go:async()=>{const P=S.pre,t=T(P.tripId),items=DR.itemsFor(rules(),'PRE',t,DB()),E=items.map(i=>evalItem(i,t,P.vals)),sm=checkSummary(E,'PRE');if(sm.pend.length||sm.locked.length)return;
+ const rows=[];for(const e of E){const i=e.item;let files=[];if(i.photo&&i.type!=='auto'&&(i.type==='number'||P.vals[i.id]===i.bad)){files=await M.readProofs('pc_'+i.id,true,'Driver '+S.who);if(files===null)return}
+  rows.push({id:i.id,label:i.label,value:i.type==='auto'?e.msg:(P.vals[i.id]==null?'':P.vals[i.id]),state:e.state,level:i.level,files})}
+ let ov=null;if(sm.block.length){const reason=($('#f_ovr')||{}).value||P.ovr;if(!reason||reason.trim().length<5)return toast('Write why you are starting anyway');const ids=await M.readProofs('ov',true,'Driver '+S.who);if(ids===null)return;ov={reason:reason.trim(),files:ids}}
+ const warnings=E.filter(e=>e.state==='FAIL').map(e=>e.item.label+(e.item.type==='choice'?': '+P.vals[e.item.id]:''));
+ const d=DB();d.tripChecks=d.tripChecks||[];d.tripChecks.unshift({id:'TCH-'+AbraStore.uid('X').split('-')[1],operatorId:opId(),tripId:t.id,route:t.route,driver:S.who,kind:'PRE',at:new Date().toISOString(),items:rows,odometer:Number(P.vals.odo)||0,result:ov?'OVERRIDDEN':warnings.length?'WARNINGS':'PASSED',warnings,override:ov});
+ t.startOdo=Number(P.vals.odo)||0;S.pfiles={};S.pre=null;S.tab='trip';save();M.A.start_run(t.id)},
+end:v=>{const t=T(v);S.pfiles={};S.endc={tripId:v,vals:{}};S.tab='endchk';M.render()},
+end_set:v=>{const[k,o]=v.split('|');S.endc.vals[k]=S.endc.vals[k]===o?'':o;M.render()},
+end_num:(v,el)=>{S.endc.vals[el.dataset.k]=v;M.render()},
+end_go:async()=>{const P=S.endc,t=T(P.tripId),items=DR.itemsFor(rules(),'END',t,DB()),E=items.map(i=>evalItem(i,t,P.vals));if(E.some(e=>e.state==='PENDING'))return;
+ const rows=[];for(const e of E){const i=e.item;let files=[];if(i.photo&&i.type!=='auto'&&(i.type==='number'||P.vals[i.id]===i.bad)){files=await M.readProofs('pc_'+i.id,true,'Driver '+S.who);if(files===null)return}rows.push({id:i.id,label:i.label,value:P.vals[i.id]==null?'':P.vals[i.id],state:e.state,level:i.level,files})}
+ const warnings=E.filter(e=>e.state==='FAIL').map(e=>e.item.label);const d=DB();d.tripChecks=d.tripChecks||[];
+ d.tripChecks.unshift({id:'TCH-'+AbraStore.uid('X').split('-')[1],operatorId:opId(),tripId:t.id,route:t.route,driver:S.who,kind:'END',at:new Date().toISOString(),items:rows,odometer:Number(P.vals.odo_end)||0,result:warnings.length?'WARNINGS':'PASSED',warnings,override:null});
+ t.endOdo=Number(P.vals.odo_end)||0;S.pfiles={};S.endc=null;S.tab='home';save();M.A.end_ok(t.id)}
+});
+/* location sharing while a trip runs (the real app uses the phone GPS) */
+setInterval(()=>{if(!S.who)return;let ch=false;DB().live.forEach(l=>{if(l.driver!==S.who||l.src!=='driver')return;const t=T(l.tripId);if(!t||!['IN_TRANSIT','DELAYED'].includes(t.status))return;
+l.progress=Math.min(99,l.progress+(t.status==='DELAYED'?0.5:2));l.speed=t.status==='DELAYED'?Math.round(5+Math.random()*10):Math.round(45+Math.random()*30);l.x=+(15+70*l.progress/100).toFixed(1);l.y=+(70-40*l.progress/100+(Math.random()-.5)*2).toFixed(1);l.ping=new Date().toISOString();ch=true});
+if(ch){save('driver-live');M.keepScroll=true;if(!$('#scrim'))M.render()}},5000);
+/* ---------- AI assistant (driver): voice first, only this driver's trips ---------- */
+const AL=M.AL;
+function nextStop(t){const r=route(t),l=live(t),pr=l?l.progress:0,n=r.stops.length;if(!n)return null;const i=t.status==='SCHEDULED'||t.status==='BOARDING'?0:Math.min(n-1,Math.floor(pr/100*(n-1))+1);return{s:r.stops[i],i,at:new Date(new Date(t.depart).getTime()+r.stops[i].offset*6e4+(t.delay||0)*6e4)}}
+function needTrip(lg){return{html:AL(lg,'You have no trip right now. New trips from your company appear here at once.','ఇప్పుడు మీకు ట్రిప్ లేదు. మీ కంపెనీ కొత్త ట్రిప్‌లు ఇక్కడ వెంటనే కనిపిస్తాయి.','अभी आपकी कोई ट्रिप नहीं है। कंपनी की नई ट्रिप यहाँ तुरंत दिखेंगी।')}}
+function drvAnswer(q,lg){const H=r=>r.test(q),t=current();
+if(H(/\b(help|what can you)\b|ఏమి చేయగల|क्या कर सक/i))return{html:AL(lg,'Ask me: next stop, how many board at the next stop, who has not checked in, report a delay, start boarding, start or end the trip, directions, or a trip summary. I ask you to confirm before changing anything.','అడగండి: తదుపరి స్టాప్, తదుపరి స్టాప్‌లో ఎంత మంది ఎక్కుతారు, ఎవరు చెక్ ఇన్ కాలేదు, ఆలస్యం నివేదించు, బోర్డింగ్ ప్రారంభించు, ట్రిప్ ప్రారంభించు లేదా ముగించు, దారి, ట్రిప్ సారాంశం.','पूछें: अगला स्टॉप, अगले स्टॉप पर कितने चढ़ेंगे, किसने चेक इन नहीं किया, देरी बताओ, बोर्डिंग शुरू करो, ट्रिप शुरू या खत्म करो, रास्ता, ट्रिप सारांश।')};
+if(!t)return needTrip(lg);
+const pax=paxOf(t),ci=t.checkedIn||[],ns=nextStop(t);
+if(H(/not checked|missing|who.*(left|remaining)|చెక్ ఇన్ కాలేదు|రాలేదు|चेक इन नहीं|नहीं आए/i)){const L=pax.filter(b=>!ci.includes(b.id));return{html:L.length?AL(lg,`<b>${L.length}</b> booking(s) not checked in:`,`<b>${L.length}</b> బుకింగ్‌లు చెక్ ఇన్ కాలేదు:`,`<b>${L.length}</b> बुकिंग चेक इन नहीं हुईं:`)+`<div class="aicard">${L.map(b=>`<div class="row bt sm"><span>${esc(b.customer)} · ${esc(b.seatList)}</span><span class="m">${esc(b.board||'')}</span></div>`).join('')}</div>`:AL(lg,'Everyone is checked in.','అందరూ చెక్ ఇన్ అయ్యారు.','सभी चेक इन हो गए।'),steps:['get_passengers('+t.id+') → '+pax.length,'filter(not checked in) → '+L.length]}}
+if(H(/how many|board.*next|next.*board|ఎంత మంది|कितने/i)){const L=ns?pax.filter(b=>(b.board||route(t).stops[0].name)===ns.s.name):[];const seats=L.reduce((a,b)=>a+b.seatsN,0);return{html:AL(lg,`At <b>${esc(ns.s.name)}</b>, <b>${seats}</b> passenger(s) in ${L.length} booking(s) get on.`,`<b>${esc(ns.s.name)}</b> వద్ద ${L.length} బుకింగ్‌లలో <b>${seats}</b> మంది ఎక్కుతారు.`,`<b>${esc(ns.s.name)}</b> पर ${L.length} बुकिंग में <b>${seats}</b> यात्री चढ़ेंगे।`)+(L.length?`<div class="aicard">${L.map(b=>`<div class="sm">${esc(b.customer)} · ${esc(b.seatList)}</div>`).join('')}</div>`:''),steps:['get_next_stop('+t.id+') → '+ns.s.name,'count_boarding('+ns.s.name+') → '+seats]}}
+if(H(/next stop|where.*next|తదుపరి స్టాప్|తర్వాత స్టాప్|अगला स्टॉप|अगला पड़ाव/i)){const min=Math.max(0,Math.round((ns.at-Date.now())/6e4));return{html:AL(lg,`Next stop: <b>${esc(ns.s.name)}</b>, ${esc(ns.s.city)}, at about <b>${ft(ns.at)}</b> (${min} minutes). It is a ${ns.s.type==='DROPPING'?'drop':'pick-up'} point.`,`తదుపరి స్టాప్: <b>${esc(ns.s.name)}</b>, ${esc(ns.s.city)}, సుమారు <b>${ft(ns.at)}</b> (${min} నిమిషాలు).`,`अगला स्टॉप: <b>${esc(ns.s.name)}</b>, ${esc(ns.s.city)}, लगभग <b>${ft(ns.at)}</b> (${min} मिनट)।`)+`<div>${`<button class="cta sm gh" data-a="dai_map" data-v="${esc(ns.s.name)}">Directions</button>`}</div>`,steps:['get_route('+t.routeId+')','get_live_progress('+t.id+')']}}
+if(H(/direction|navigate|map|route to|దారి|రాస్తా|रास्ता|नक्शा/i))return{html:AL(lg,`Opening directions to ${esc(ns.s.name)}.`,`${esc(ns.s.name)} కి దారి తెరుస్తున్నాను.`,`${esc(ns.s.name)} का रास्ता खोल रहा हूँ।`)+`<div><button class="cta sm" data-a="dai_map" data-v="${esc(ns.s.name)}">Open maps</button></div>`};
+const mins=(q.match(/(\d{1,3})\s*(min|minutes|నిమి|मिनट)/i)||[])[1];
+if(H(/delay|late|ఆలస్య|లేట్|देरी|लेट/i)){const m=Number(mins||30),reason=H(/break ?down|బ్రేక్|खराब/i)?'Breakdown':H(/rain|weather|వర్షం|बारिश/i)?'Weather':H(/police|పోలీస|पुलिस/i)?'Police check':'Traffic';
+return{html:AL(lg,'This tells your passengers, your company and Abra.','ఇది మీ ప్రయాణికులు, కంపెనీ, అబ్రాకు తెలియజేస్తుంది.','इससे यात्रियों, कंपनी और अब्रा को सूचना जाएगी।'),pend:M.ai.mkPend({lg,desc:AL(lg,`Report <b>${m} minutes</b> delay on ${t.id} because of <b>${reason}</b>.`,`${t.id} లో <b>${reason}</b> వల్ల <b>${m} నిమిషాల</b> ఆలస్యం నివేదించాలి.`,`${t.id} पर <b>${reason}</b> के कारण <b>${m} मिनट</b> की देरी बताएँ।`),check:()=>['IN_TRANSIT','DELAYED','BOARDING'].includes(t.status)?'':'Start the trip first.',run:()=>{t.status='DELAYED';t.delay=m;t.delayReason=reason;const l=live(t);if(l)l.state='DELAYED';save();return AL(lg,'Delay reported. Passengers were told.','ఆలస్యం నివేదించాను. ప్రయాణికులకు తెలియజేశాం.','देरी बता दी। यात्रियों को सूचित किया।')}})}}
+if(H(/start boarding|boarding start|బోర్డింగ్ ప్రారంభ|बोर्डिंग शुरू/i))return{html:'',pend:M.ai.mkPend({lg,desc:AL(lg,`Start boarding for ${t.id} (${esc(t.route)}).`,`${t.id} కి బోర్డింగ్ ప్రారంభించాలి.`,`${t.id} की बोर्डिंग शुरू करें।`),check:()=>t.status==='SCHEDULED'?'':'Boarding has already started.',run:()=>{t.status='BOARDING';save();return AL(lg,'Boarding started. Passengers were told.','బోర్డింగ్ ప్రారంభమైంది.','बोर्डिंग शुरू हो गई।')}})};
+if(H(/start (the )?trip|start driving|ట్రిప్ ప్రారంభ|ट्रिप शुरू/i)){if(t.status!=='BOARDING')return{html:AL(lg,'Start boarding first. Then I can open the checklist for you.','మొదట బోర్డింగ్ ప్రారంభించండి.','पहले बोर्डिंग शुरू करें।')};setTimeout(()=>{M.ai.open=false;M.A.start(t.id)},500);return{html:AL(lg,'Before a trip starts you must finish the checklist. I opened it for you.','ట్రిప్ ప్రారంభించే ముందు చెక్‌లిస్ట్ పూర్తి చేయాలి. నేను తెరిచాను.','ट्रिप शुरू करने से पहले चेकलिस्ट पूरी करनी होती है। मैंने खोल दी है।')}}
+if(H(/end (the )?trip|finish|reached|arrived|ట్రిప్ ముగించ|ट्रिप खत्म|पहुँच गए/i)){if(!['IN_TRANSIT','DELAYED','DEPARTED'].includes(t.status))return{html:AL(lg,'The trip is not running.','ట్రిప్ నడవడం లేదు.','ट्रिप चल नहीं रही।')};setTimeout(()=>{M.ai.open=false;M.A.end(t.id)},500);return{html:AL(lg,'Before you end the trip, please answer the end-of-trip checks. I opened them for you.','ట్రిప్ ముగించే ముందు చెక్స్ పూర్తి చేయండి.','ट्रिप खत्म करने से पहले जाँच पूरी करें।')}}
+if(H(/call|phone|కాల్|कॉल/i))return{html:AL(lg,'Calling your company control room... (demo)','మీ కంపెనీ కంట్రోల్ రూమ్‌కు కాల్ చేస్తున్నాను... (డెమో)','आपकी कंपनी के कंट्रोल रूम को कॉल कर रहा हूँ... (डेमो)')};
+const l=live(t),seats=pax.reduce((a,b)=>a+b.seatsN,0);
+return{html:AL(lg,`<b>${t.id}</b> · ${esc(t.route)} · ${lab(t.status)}. ${seats} passengers in ${pax.length} bookings, ${ci.length} checked in.${l?' '+l.progress+'% of the route done.':''}${ns?' Next stop '+esc(ns.s.name)+' at '+ft(ns.at)+'.':''}`,`<b>${t.id}</b> · ${esc(t.route)} · ${lab(t.status)}. ${pax.length} బుకింగ్‌లలో ${seats} మంది, ${ci.length} చెక్ ఇన్.${l?' '+l.progress+'% మార్గం పూర్తి.':''}${ns?' తదుపరి స్టాప్ '+esc(ns.s.name)+' '+ft(ns.at)+'.':''}`,`<b>${t.id}</b> · ${esc(t.route)} · ${lab(t.status)}। ${pax.length} बुकिंग में ${seats} यात्री, ${ci.length} चेक इन।${l?' '+l.progress+'% रास्ता पूरा।':''}${ns?' अगला स्टॉप '+esc(ns.s.name)+' '+ft(ns.at)+'।':''}`),chips:['Next stop','Who has not checked in?','Report 30 minutes delay, traffic']}}
+Object.assign(M.ai,{enabled:()=>!!S.who&&!!me(),title:'Driver assistant',voiceFirst:true,speak:true,fabLeft:true,answer:drvAnswer,
+welcome:'Tap the microphone and speak. Ask for the next stop, who has not checked in, or say "report 30 minutes delay". I confirm before changing anything.',
+sugg:()=>['Trip summary','Next stop','How many board at the next stop?','Who has not checked in?','Start boarding','Start trip','Report 30 minutes delay, traffic','End trip']});
+M.addDict(`Tap the microphone and speak. Ask for the next stop, who has not checked in, or say "report 30 minutes delay". I confirm before changing anything.|మైక్ నొక్కి మాట్లాడండి. తదుపరి స్టాప్, ఎవరు చెక్ ఇన్ కాలేదు అడగండి, లేదా "30 నిమిషాల ఆలస్యం నివేదించు" అనండి. ఏదైనా మార్చే ముందు నిర్ధారిస్తాను.|माइक दबाएँ और बोलें। अगला स्टॉप, किसने चेक इन नहीं किया पूछें, या कहें "30 मिनट देरी बताओ"। कुछ भी बदलने से पहले पुष्टि करूँगा।
+Driver assistant|డ్రైవర్ అసిస్టెంట్|ड्राइवर असिस्टेंट
+Trip summary|ట్రిప్ సారాంశం|ट्रिप सारांश
+Next stop|తదుపరి స్టాప్|अगला स्टॉप
+How many board at the next stop?|తదుపరి స్టాప్‌లో ఎంత మంది ఎక్కుతారు?|अगले स्टॉप पर कितने चढ़ेंगे?
+Who has not checked in?|ఎవరు చెక్ ఇన్ కాలేదు?|किसने चेक इन नहीं किया?
+Report 30 minutes delay, traffic|ట్రాఫిక్ వల్ల 30 నిమిషాల ఆలస్యం నివేదించు|ट्रैफ़िक के कारण 30 मिनट देरी बताओ
+Directions|దారి|रास्ता
+Open maps|మ్యాప్ తెరవండి|मैप खोलें`);
+M.A.dai_map=v=>{const p=DB().places.find(x=>x.name===v)||{};window.open('https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(p.lat&&p.lng?p.lat+','+p.lng:v),'_blank','noopener')};
+
+M.boot('driver',view);
+</script>
+</body>
+</html>
