@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { CatalogueSharedModule } from '../catalogue-shared/catalogue_shared_manage';
+import { BannersExportController } from './banners_admin_manage';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AppConfigService } from '../../config/app-config.service';
 import { createFileStorage } from '../files/files.module';
@@ -15,8 +17,8 @@ import { BannersManageService } from './banners_admin_manage.service';
  * platform staff and shown, while live, at the top of the customer app.
  */
 @Module({
-  imports: [MongooseModule.forFeature([{ name: BANNER_MODEL, schema: bannerSchema }]), RbacModule],
-  controllers: [AdminBannersController, BannersManageController, PublicBannersController],
+  imports: [CatalogueSharedModule, MongooseModule.forFeature([{ name: BANNER_MODEL, schema: bannerSchema }]), RbacModule],
+  controllers: [BannersExportController, AdminBannersController, BannersManageController, PublicBannersController],
   providers: [
     AdminBannersService,
     BannersManageService,

@@ -174,7 +174,10 @@ describe('Catalogue deletion e2e', () => {
 
     const documentType = dataOf<Identified>(
       await call(admin).post('/catalogue/document-types', {
-        key: `READONE_${runId}`.toUpperCase().replace(/[^A-Z0-9_]/g, '').slice(0, 39),
+        key: `READONE_${runId}`
+          .toUpperCase()
+          .replace(/[^A-Z0-9_]/g, '')
+          .slice(0, 39),
         name: 'Read one document',
         appliesTo: 'OPERATOR',
       }),
@@ -184,9 +187,7 @@ describe('Catalogue deletion e2e', () => {
 
     await call(admin).delete(`/catalogue/document-types/${documentType.id}`).expect(200);
     await call(admin).get(`/catalogue/document-types/${documentType.id}`).expect(404);
-    await call(admin)
-      .get(`/catalogue/bus-types/${new Types.ObjectId().toHexString()}`)
-      .expect(404);
+    await call(admin).get(`/catalogue/bus-types/${new Types.ObjectId().toHexString()}`).expect(404);
     expect((await call(operator).get(`/catalogue/bus-types/${network.busType.id}`)).status).toBe(
       403,
     );

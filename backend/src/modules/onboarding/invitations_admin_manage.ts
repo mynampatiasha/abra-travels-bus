@@ -12,6 +12,14 @@ import { RequirePermission } from '../rbac/decorators/require-permission.decorat
 import { InvitationIdParamDto } from './dto/onboarding.dto';
 import { InvitationsManageService } from './invitations_admin_manage.service';
 import { type InvitationView } from './services/invitations.service';
+import { exportController } from '../catalogue-shared/catalogue_export_manage';
+import {
+  type ExportKind,
+  readable,
+  timeOf,
+} from '../catalogue-shared/catalogue_export_manage.service';
+import { InvitationListQueryDto } from './dto/onboarding.dto';
+import { InvitationsService } from './services/invitations.service';
 
 /** Only the fields sent change. `phone: null` removes the number. */
 export class UpdateInvitationDto extends createZodDto(
@@ -64,3 +72,33 @@ export class InvitationsManageController {
     return this.manage.update(actor, params.id, body, clientRequestInfo(request));
   }
 }
+
+/** The invitations list as a file; a pending invitation past its date is Expired. */
+export const INVITATIONS_EXPORT_KIND: ExportKind<InvitationView> = {
+  key: 'invitations',
+  columns: [
+    { header: 'ID', value: (invitation) => invitation.id },
+    { header: 'Company', value: (invitation) => invitation.companyName },
+    { header: 'Owner', value: (invitation) => invitation.ownerName },
+    { header: 'Email', value: (invitation) => invitation.email },
+    { header: 'Phone', value: (invitation) => invitation.phone },
+    {
+      header: 'Status',
+      value: (invitation) => (invitation.expired ? 'Expired' : readable(invitation.status)),
+    },
+    { header: 'Email sent', value: (invitation) => readable(invitation.emailStatus) },
+    { header: 'Link valid until', value: (invitation) => timeOf(invitation.expiresAt) },
+    { header: 'Invited on', value: (invitation) => timeOf(invitation.createdAt) },
+  ],
+};
+
+/** `GET onboarding/invitations/export`. Register it before the module's other controllers. */
+export const InvitationsExportController = exportController({
+  base: 'onboarding/invitations',
+  permission: 'operators.export',
+  kind: INVITATIONS_EXPORT_KIND,
+  service: InvitationsService,
+  query: InvitationListQueryDto,
+  title: 'invitations',
+  load: (service, query) => service.list(query as never),
+});

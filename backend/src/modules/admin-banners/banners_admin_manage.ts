@@ -11,6 +11,14 @@ import { type AuthenticatedUserActor } from '../../common/request-context/reques
 import { RequirePermission } from '../rbac/decorators/require-permission.decorator';
 import { type BannerView, BannerIdParamDto } from './admin-banners.model';
 import { type BannerOrderEntry, BannersManageService } from './banners_admin_manage.service';
+import { exportController } from '../catalogue-shared/catalogue_export_manage';
+import {
+  type ExportKind,
+  readable,
+  timeOf,
+} from '../catalogue-shared/catalogue_export_manage.service';
+import { BannerListQueryDto } from './admin-banners.model';
+import { AdminBannersService } from './admin-banners.service';
 
 /** The Up / Down arrow of the banners list: one banner, one step. */
 export class MoveBannerDto extends createZodDto(
@@ -94,3 +102,39 @@ export class BannersManageController {
     return this.manage.unarchive(actor, params.id, clientRequestInfo(request));
   }
 }
+
+/** The words of the demo for a banner status: a banner that is on is Published. */
+function bannerStatusWord(status: string): string {
+  if (status === 'LIVE') return 'Published';
+  if (status === 'INACTIVE') return 'Draft';
+  return readable(status);
+}
+
+/** The banners list as a file. */
+export const BANNERS_EXPORT_KIND: ExportKind<BannerView> = {
+  key: 'banners',
+  columns: [
+    { header: 'Banner', value: (banner) => banner.title },
+    { header: 'Subtitle', value: (banner) => banner.subtitle },
+    { header: 'Status', value: (banner) => bannerStatusWord(banner.status) },
+    { header: 'Starts', value: (banner) => timeOf(banner.startsAt) },
+    { header: 'Ends', value: (banner) => timeOf(banner.endsAt) },
+    { header: 'Shown to', value: (banner) => readable(banner.audience) },
+    { header: 'Opens', value: (banner) => readable(banner.linkType) },
+    { header: 'Link value', value: (banner) => banner.linkValue },
+    { header: 'Colour style', value: (banner) => readable(banner.colourStyle) },
+    { header: 'Order', value: (banner) => banner.sortOrder },
+    { header: 'Created', value: (banner) => timeOf(banner.createdAt) },
+  ],
+};
+
+/** `GET admin/banners/export`. Register it before the module's other controllers. */
+export const BannersExportController = exportController({
+  base: 'admin/banners',
+  permission: 'banners.export',
+  kind: BANNERS_EXPORT_KIND,
+  service: AdminBannersService,
+  query: BannerListQueryDto,
+  title: 'banners',
+  load: (service, query) => service.list(query as never),
+});

@@ -9,6 +9,7 @@ import { createZodDto } from '../../common/pipes/zod-dto.factory';
 import { type AuthenticatedUserActor } from '../../common/request-context/request-actor';
 import { RequirePermission } from '../rbac/decorators/require-permission.decorator';
 import { type PermissionKey } from '../rbac/permissions/permission-catalog';
+import { AuditLogsModule } from '../audit-logs/audit-logs.module';
 import { RbacModule } from '../rbac/rbac.module';
 import {
   CATALOGUE_KINDS,
@@ -16,6 +17,8 @@ import {
   CatalogueDeletionService,
   type DeletionResult,
 } from './catalogue_shared_manage.service';
+import { CatalogueExportService } from './catalogue_export_manage.service';
+import { CatalogueImportService } from './catalogue_import_manage.service';
 
 /*
  * Delete and restore routes of the catalogue records (documentation/abra-master-plan.md,
@@ -87,9 +90,9 @@ function deletionController({ kind, base, permission }: DeletionRoute): Type<unk
 }
 
 @Module({
-  imports: [RbacModule],
+  imports: [RbacModule, AuditLogsModule],
   controllers: DELETION_ROUTES.map(deletionController),
-  providers: [CatalogueDeletionService],
-  exports: [CatalogueDeletionService],
+  providers: [CatalogueDeletionService, CatalogueExportService, CatalogueImportService],
+  exports: [CatalogueDeletionService, CatalogueExportService, CatalogueImportService],
 })
 export class CatalogueSharedModule {}

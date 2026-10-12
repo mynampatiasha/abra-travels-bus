@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { CatalogueSharedModule } from '../catalogue-shared/catalogue_shared_manage';
+import { DocumentTypesExportController } from './kyc_config_admin_manage';
 import { MongooseModule } from '@nestjs/mongoose';
 import { RbacModule } from '../rbac/rbac.module';
 import { DocumentTypesController } from './controllers/document-types.controller';
@@ -15,11 +17,11 @@ import { DocumentTypesService } from './services/document-types.service';
  * (documentation/client-onboarding.md).
  */
 @Module({
-  imports: [
+  imports: [CatalogueSharedModule, 
     MongooseModule.forFeature([{ name: DOCUMENT_TYPE_MODEL, schema: documentTypeSchema }]),
     RbacModule,
   ],
-  controllers: [DocumentTypesController, DocumentTypesManageController],
+  controllers: [DocumentTypesExportController, DocumentTypesController, DocumentTypesManageController],
   providers: [
     DocumentTypeRepository,
     DocumentTypesService,

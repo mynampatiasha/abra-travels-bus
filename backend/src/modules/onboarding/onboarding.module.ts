@@ -1,4 +1,7 @@
 import { ClientKycController, ClientKycService } from './client_kyc';
+import { CatalogueSharedModule } from '../catalogue-shared/catalogue_shared_manage';
+import { InvitationsExportController } from './invitations_admin_manage';
+import { SubmissionsExportController } from './kyc_admin_manage';
 import {
   KYC_CONFIGURATION_MODEL,
   kycConfigurationMongoSchema,
@@ -45,7 +48,7 @@ import { SubmissionsService } from './services/submissions.service';
  * per bus, platform review, approval or rejection with reasons (documentation/client-onboarding.md).
  */
 @Module({
-  imports: [
+  imports: [CatalogueSharedModule, 
     MongooseModule.forFeature([
       { name: KYC_CONFIGURATION_MODEL, schema: kycConfigurationMongoSchema },
       { name: DOCUMENT_TYPE_MODEL, schema: documentTypeSchema },
@@ -63,7 +66,7 @@ import { SubmissionsService } from './services/submissions.service';
     FilesModule,
     EmailModule,
   ],
-  controllers: [
+  controllers: [InvitationsExportController, SubmissionsExportController, 
     InvitationsController,
     InvitationsManageController,
     SubmissionsController,
