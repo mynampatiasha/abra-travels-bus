@@ -3,6 +3,8 @@ import { APP_GUARD, DiscoveryModule } from '@nestjs/core';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AuditLogsModule } from '../audit-logs/audit-logs.module';
 import { UsersModule } from '../users/users.module';
+import { AccessMatrixAdminManageController } from './access_matrix_admin_manage';
+import { AccessMatrixAdminManageService } from './access_matrix_admin_manage.service';
 import { AuthorizationCatalogController } from './controllers/authorization-catalog.controller';
 import { MyPermissionsController } from './controllers/my-permissions.controller';
 import { UserAuthorizationController } from './controllers/user-authorization.controller';
@@ -44,6 +46,7 @@ import { SystemRolesSynchronizer } from './services/system-roles-synchronizer.se
     MyPermissionsController,
     AuthorizationCatalogController,
     UserAuthorizationController,
+    AccessMatrixAdminManageController,
   ],
   providers: [
     RoleRepository,
@@ -52,6 +55,7 @@ import { SystemRolesSynchronizer } from './services/system-roles-synchronizer.se
     EffectivePermissionsService,
     AuthorizationService,
     AuthorizationAdministrationService,
+    AccessMatrixAdminManageService,
     AuditedChangeRunner,
     EndpointAccessDeclarationCheck,
     PermissionGuard,

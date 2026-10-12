@@ -272,10 +272,23 @@ describe('Catalogue e2e: permissions and operator isolation', () => {
         seatCapacity: 28,
       });
       expect(bus.operatorId).toBe(w.a.operator.id);
+      // A bus an operator adds waits for platform approval: it cannot be sold, and the operator
+      // cannot approve it themselves
+      expect(bus).toMatchObject({ status: 'PENDING_APPROVAL' });
       const trip = await w.operatorA.create<Identified>(
         '/trips',
         tripBody(w.a, 25, { busId: bus.id }),
       );
+      await expectCode(w.operatorA.post(`/trips/${trip.id}/publish`), 400, 'VALIDATION_FAILED');
+      await expectCode(
+        w.operatorA.post(`/buses/${bus.id}/status`, { status: 'ACTIVE' }),
+        409,
+        'INVALID_STATE_TRANSITION',
+      );
+      // Platform staff approve it; then it can be sold
+      await w.superAdmin
+        .post(`/buses/${bus.id}/status`, { status: 'ACTIVE', reason: 'Documents verified' })
+        .expect(201);
       await w.operatorA.post(`/trips/${trip.id}/publish`).expect(201);
       await w.operatorA
         .put(`/operators/${w.a.operator.id}`, { displayName: `Renamed ${runId}` })

@@ -37,6 +37,10 @@ export interface UserMfa {
 }
 
 export interface User {
+  firebaseUid?: string;
+  googleFirebaseUid?: string;
+  appleFirebaseUid?: string;
+  authProvider?: string;
   name?: string;
   /** Lower-cased. */
   email?: string;
@@ -65,6 +69,10 @@ export interface User {
 /** `users` (database-architecture.md §1). */
 export const userSchema = new Schema<User>(
   {
+    firebaseUid: { type: String, maxlength: 128 },
+    googleFirebaseUid: { type: String, maxlength: 128 },
+    appleFirebaseUid: { type: String, maxlength: 128 },
+    authProvider: { type: String, enum: ['google', 'apple', 'whatsapp'] },
     name: { type: String, trim: true, maxlength: 120 },
     email: { type: String, lowercase: true, trim: true, maxlength: 254 },
     phone: { type: String, maxlength: 16 },
@@ -106,3 +114,15 @@ userSchema.index(
   { unique: true, partialFilterExpression: { phone: { $type: 'string' } } },
 );
 userSchema.index({ operatorId: 1, status: 1 });
+
+userSchema.index(
+  { firebaseUid: 1 },
+  { unique: true, partialFilterExpression: { firebaseUid: { $type: 'string' } } },
+);
+
+for (const field of ['googleFirebaseUid', 'appleFirebaseUid'] as const) {
+  userSchema.index(
+    { [field]: 1 },
+    { unique: true, partialFilterExpression: { [field]: { $type: 'string' } } },
+  );
+}

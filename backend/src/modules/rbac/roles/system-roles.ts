@@ -30,7 +30,11 @@ export interface RoleDefinition {
 }
 
 /** ADMIN runs the platform but cannot delete accounts or change system settings. */
-const ADMIN_EXCLUDED: readonly PermissionKey[] = ['users.delete', 'settings.update'];
+const ADMIN_EXCLUDED: readonly PermissionKey[] = [
+  'users.delete',
+  'settings.update',
+  'roles.manage',
+];
 
 /**
  * The twelve roles of the platform specification (documentation/authorization.md §3). These
@@ -84,6 +88,9 @@ export const SYSTEM_ROLES: readonly RoleDefinition[] = [
       'users.permissions.read',
       'users.permissions.manage',
       'roles.read',
+      'documents.read',
+      'documents.upload',
+      'documents.view',
       'buses.read',
       'buses.create',
       'buses.update',
@@ -119,6 +126,9 @@ export const SYSTEM_ROLES: readonly RoleDefinition[] = [
     userType: 'OPERATOR_STAFF',
     dataScopeType: 'OWN_OPERATOR',
     permissionKeys: [
+      'documents.read',
+      'documents.upload',
+      'documents.view',
       'buses.read',
       'buses.create',
       'buses.update',

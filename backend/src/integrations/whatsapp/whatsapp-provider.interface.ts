@@ -19,7 +19,7 @@ export interface WhatsAppTemplateMessage {
    */
   urlButtonParameter?: string;
   /** What the message is for (logs, metrics). */
-  purpose: 'OTP';
+  purpose: 'OTP' | 'NOTIFICATION';
 }
 
 /**

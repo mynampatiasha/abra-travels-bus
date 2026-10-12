@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import {
   type AuthTestContext,
   bearer,
@@ -63,6 +64,55 @@ describe('Authorization e2e: operator and partner isolation', () => {
   }
 
   describe('operator isolation', () => {
+    it('customer directory filters methods and search without exposing credentials or widening scope', async () => {
+      const customer = await seedUser(context, { roleKeys: ['CUSTOMER'] });
+      await context.users.updateOne(
+        { _id: new Types.ObjectId(customer.id) },
+        {
+          $set: {
+            name: 'Customer [sample]',
+            googleFirebaseUid: 'directory-google-test',
+            appleFirebaseUid: 'directory-apple-test',
+            phoneVerifiedAt: new Date(),
+            lastLoginAt: new Date(),
+          },
+        },
+      );
+      const response = await api()
+        .get('/api/v1/users')
+        .query({ userType: 'CUSTOMER', search: '[sample]', loginMethod: 'google' })
+        .set(...bearer(superAdmin.tokens))
+        .expect(200);
+      const users =
+        dataOf<Array<DirectoryUser & { loginMethods: string[]; lastLoginAt: string }>>(response);
+      expect(users).toHaveLength(1);
+      expect(users[0]).toMatchObject({
+        id: customer.id,
+        loginMethods: ['Google', 'Apple', 'WhatsApp OTP', 'Email / phone and password'],
+      });
+      expect(users[0]?.lastLoginAt).toEqual(expect.any(String));
+      expect(JSON.stringify(response.body)).not.toMatch(
+        /passwordHash|FirebaseUid|secretEncrypted|recoveryCodeHashes/,
+      );
+      // The current client KYC gate denies this unapproved operator before the directory runs.
+      await api()
+        .get('/api/v1/users?userType=CUSTOMER&search=sample&loginMethod=google')
+        .set(...bearer(adminA.tokens))
+        .expect(403);
+      for (const loginMethod of ['apple', 'whatsapp', 'password']) {
+        const filtered = await api()
+          .get('/api/v1/users')
+          .query({ userType: 'CUSTOMER', search: '[sample]', loginMethod })
+          .set(...bearer(superAdmin.tokens))
+          .expect(200);
+        expect(dataOf<DirectoryUser[]>(filtered).map((u) => u.id)).toEqual([customer.id]);
+      }
+      await api()
+        .get('/api/v1/users?loginMethod=unknown')
+        .set(...bearer(superAdmin.tokens))
+        .expect(400);
+      await context.users.deleteOne({ _id: new Types.ObjectId(customer.id) });
+    });
     it('an operator administrator lists only users of their own operator', async () => {
       const usersOfA = await listUsers(adminA.tokens, '?pageSize=100');
       expect(usersOfA.map((user) => user.id).sort()).toEqual([adminA.id, staffA.id].sort());

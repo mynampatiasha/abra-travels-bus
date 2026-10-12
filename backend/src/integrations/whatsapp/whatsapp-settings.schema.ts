@@ -17,6 +17,9 @@ export interface WhatsAppSettings {
   enabled?: boolean;
   /** WhatsApp Business Account (WABA) id. Informational; not needed to send. */
   businessAccountId?: string | null;
+  phoneDisplay?: string | null;
+  /** Reserved for webhook setup; storing it does not enable a receiver. */
+  webhookVerifyTokenEncrypted?: string | null;
   phoneNumberId?: string | null;
   accessTokenEncrypted?: string | null;
   accessTokenLastFour?: string | null;
@@ -24,6 +27,9 @@ export interface WhatsAppSettings {
   otpTemplateLanguage?: string | null;
   /** Whether a code that WhatsApp did not accept is sent by SMS instead. */
   otpFallbackToSms?: boolean;
+  /** Approved template for platform notifications: body {{1}} is the title, {{2}} the message. */
+  notificationTemplateName?: string | null;
+  notificationTemplateLanguage?: string | null;
   updatedByUserId?: Types.ObjectId;
   createdAt?: Date;
   updatedAt?: Date;
@@ -35,12 +41,16 @@ export const whatsAppSettingsSchema = new Schema<WhatsAppSettings>(
     key: { type: String, required: true, enum: [WHATSAPP_SETTINGS_KEY] },
     enabled: { type: Boolean },
     businessAccountId: { type: String, maxlength: 32, default: null },
+    phoneDisplay: { type: String, maxlength: 40, default: null },
+    webhookVerifyTokenEncrypted: { type: String, default: null },
     phoneNumberId: { type: String, maxlength: 32, default: null },
     accessTokenEncrypted: { type: String, default: null },
     accessTokenLastFour: { type: String, maxlength: 4, default: null },
     otpTemplateName: { type: String, maxlength: 512, default: null },
     otpTemplateLanguage: { type: String, maxlength: 8, default: null },
     otpFallbackToSms: { type: Boolean },
+    notificationTemplateName: { type: String, maxlength: 512, default: null },
+    notificationTemplateLanguage: { type: String, maxlength: 8, default: null },
     updatedByUserId: { type: Schema.Types.ObjectId },
   },
   { collection: 'whatsapp_settings', timestamps: true, versionKey: false },

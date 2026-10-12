@@ -24,7 +24,7 @@ export const phoneNumberSchema = z
   .transform((value, context) => {
     const normalized = normalizePhoneNumber(value);
     if (!normalized) {
-      context.addIssue({ code: 'custom', message: 'must be a valid mobile number' });
+      context.addIssue({ code: 'custom', message: 'must be a valid mobile number, for example 9876543210 or +919876543210' });
       return z.NEVER;
     }
     return normalized;

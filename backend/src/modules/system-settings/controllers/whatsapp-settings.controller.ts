@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Put, Req } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, Put, Req } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { type Request } from 'express';
 import { CurrentActor } from '../../../common/decorators/current-actor.decorator';
@@ -7,6 +7,7 @@ import { ZodApiBody } from '../../../common/openapi/zod-api-body';
 import { type AuthenticatedUserActor } from '../../../common/request-context/request-actor';
 import { RequirePermission } from '../../rbac/decorators/require-permission.decorator';
 import { UpdateWhatsAppSettingsDto } from '../dto/whatsapp-settings.dto';
+import { type SettingsTestResult } from '../services/email-settings-admin.service';
 import {
   WhatsAppSettingsAdminService,
   type WhatsAppSettingsView,
@@ -32,6 +33,19 @@ export class WhatsAppSettingsController {
   @ApiResponse({ status: 403, description: 'PERMISSION_DENIED' })
   describe(): Promise<WhatsAppSettingsView> {
     return this.settings.describe();
+  }
+
+  @Post('test-connection')
+  @HttpCode(200)
+  @RequirePermission('settings.update')
+  @ApiOperation({
+    summary: 'Test the saved WhatsApp credentials',
+    description:
+      'Requires settings.update. Asks Meta about the saved phone number with the saved token; ' +
+      'no message is sent. A failure is a normal answer with `ok: false` and the reason.',
+  })
+  testConnection(): Promise<SettingsTestResult> {
+    return this.settings.testConnection();
   }
 
   @Put()

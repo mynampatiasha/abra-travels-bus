@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { changeReason, objectIdString, pagingShape } from '../../../common/pipes/list-query';
 import { createZodDto } from '../../../common/pipes/zod-dto.factory';
-import { BUS_AMENITIES, BUS_STATUSES } from '../schemas/bus.schema';
+import { BUS_AMENITIES, BUS_STATUSES, MANUAL_BUS_STATUSES } from '../schemas/bus.schema';
 
 const fields = {
   name: z.string().trim().min(2).max(80),
@@ -46,5 +46,5 @@ export class BusListQueryDto extends createZodDto(
 ) {}
 
 export class ChangeBusStatusDto extends createZodDto(
-  z.object({ status: z.enum(BUS_STATUSES), reason: changeReason.optional() }),
+  z.object({ status: z.enum(MANUAL_BUS_STATUSES), reason: changeReason.optional() }),
 ) {}

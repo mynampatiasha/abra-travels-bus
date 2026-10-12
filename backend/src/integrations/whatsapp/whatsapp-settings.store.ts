@@ -25,17 +25,23 @@ export interface EffectiveWhatsAppSettings {
   apiVersion: string | undefined;
   otpTemplateName: string | undefined;
   otpTemplateLanguage: string | undefined;
+  notificationTemplateName: string | undefined;
+  notificationTemplateLanguage: string | undefined;
 }
 
 /** Fields an administrator can change. `undefined` leaves a field alone, `null` clears it. */
 export interface WhatsAppSettingsChange {
   enabled?: boolean | undefined;
   businessAccountId?: string | null | undefined;
+  phoneDisplay?: string | null | undefined;
+  webhookVerifyToken?: string | null | undefined;
   phoneNumberId?: string | null | undefined;
   accessToken?: string | null | undefined;
   otpTemplateName?: string | null | undefined;
   otpTemplateLanguage?: string | null | undefined;
   otpFallbackToSms?: boolean | undefined;
+  notificationTemplateName?: string | null | undefined;
+  notificationTemplateLanguage?: string | null | undefined;
 }
 
 const CACHE_MS = 15_000;
@@ -69,7 +75,7 @@ export class WhatsAppSettingsStore {
     updatedByUserId: Types.ObjectId,
     session: ClientSession,
   ): Promise<StoredWhatsAppSettings> {
-    const { accessToken, ...plain } = change;
+    const { accessToken, webhookVerifyToken, ...plain } = change;
     const set: Partial<WhatsAppSettings> = { updatedByUserId };
     for (const [field, value] of Object.entries(plain)) {
       if (value !== undefined) Object.assign(set, { [field]: value });
@@ -77,6 +83,10 @@ export class WhatsAppSettingsStore {
     if (accessToken !== undefined) {
       set.accessTokenEncrypted = accessToken === null ? null : this.encryption.encrypt(accessToken);
       set.accessTokenLastFour = accessToken === null ? null : accessToken.slice(-4);
+    }
+    if (webhookVerifyToken !== undefined) {
+      set.webhookVerifyTokenEncrypted =
+        webhookVerifyToken === null ? null : this.encryption.encrypt(webhookVerifyToken);
     }
     const saved = await this.model
       .findOneAndUpdate(
@@ -128,5 +138,7 @@ export function resolveWhatsAppSettings(
     otpTemplateName: stored?.otpTemplateName ?? config.get('WHATSAPP_OTP_TEMPLATE_NAME'),
     otpTemplateLanguage:
       stored?.otpTemplateLanguage ?? config.get('WHATSAPP_OTP_TEMPLATE_LANGUAGE'),
+    notificationTemplateName: stored?.notificationTemplateName ?? undefined,
+    notificationTemplateLanguage: stored?.notificationTemplateLanguage ?? undefined,
   };
 }

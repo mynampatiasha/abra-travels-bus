@@ -1,3 +1,4 @@
+import { BANNER_PERMISSIONS } from '../../admin-banners/admin-banners.model';
 import {
   definePermissions,
   EVERY_ACCOUNT_KIND,
@@ -77,6 +78,12 @@ export const ROLE_PERMISSIONS = definePermissions('roles', {
     description: 'View the role catalogue and the permission catalogue.',
     grantableTo: PLATFORM_AND_OPERATOR,
   },
+  manage: {
+    name: 'Manage roles and the access matrix',
+    description: 'Create, rename and delete roles and change what each role may do on each page.',
+    grantableTo: PLATFORM_AND_OPERATOR,
+    sensitive: true,
+  },
 });
 
 export const BOOKING_PERMISSIONS = definePermissions('bookings', {
@@ -123,6 +130,36 @@ export const CATALOGUE_PERMISSIONS = definePermissions('catalogue', {
     name: 'Manage the platform catalogue',
     description: 'Create, edit, enable and disable cities and bus types.',
     grantableTo: PLATFORM_ONLY,
+  },
+});
+
+export const DOCUMENT_PERMISSIONS = definePermissions('documents', {
+  read: {
+    name: 'View required documents',
+    description: 'View the documents an operator and its buses must provide to be approved.',
+    grantableTo: PLATFORM_AND_OPERATOR,
+  },
+  manage: {
+    name: 'Manage required documents',
+    description: 'Add, edit, enable and disable the document types operators must provide.',
+    grantableTo: PLATFORM_ONLY,
+  },
+  review: {
+    name: 'Review onboarding submissions',
+    description:
+      'Check the documents of an operator or a bus, and approve or reject the submission.',
+    grantableTo: PLATFORM_ONLY,
+    sensitive: true,
+  },
+  upload: {
+    name: 'Upload documents',
+    description: 'Upload document files for an operator, within the data scope.',
+    grantableTo: PLATFORM_AND_OPERATOR,
+  },
+  view: {
+    name: 'View uploaded documents',
+    description: 'Open and download uploaded document files, within the data scope.',
+    grantableTo: PLATFORM_AND_OPERATOR,
   },
 });
 
@@ -283,6 +320,7 @@ export const PERMISSION_CATALOG = {
   ...BOOKING_PERMISSIONS,
   ...BUS_PERMISSIONS,
   ...CATALOGUE_PERMISSIONS,
+  ...DOCUMENT_PERMISSIONS,
   ...ROUTE_PERMISSIONS,
   ...TRIP_PERMISSIONS,
   ...FARE_PERMISSIONS,
@@ -294,6 +332,7 @@ export const PERMISSION_CATALOG = {
   ...NOTIFICATION_PERMISSIONS,
   ...SETTING_PERMISSIONS,
   ...AUDIT_PERMISSIONS,
+  ...BANNER_PERMISSIONS,
 } as const;
 
 /** Union of every declared permission key; the only values `@RequirePermission` accepts. */

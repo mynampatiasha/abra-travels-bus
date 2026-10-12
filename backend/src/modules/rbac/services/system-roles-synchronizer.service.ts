@@ -1,7 +1,8 @@
 import { Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common';
 import { PERMISSION_CATALOG } from '../permissions/permission-catalog';
 import { validatePermissionDefinitions } from '../permissions/permission-registry';
-import { RoleRepository } from '../repositories/role.repository';
+import { audienceOfUserType, permissionKeysFromLevels } from '../permissions/access-pages';
+import { RoleRepository, type StoredRole } from '../repositories/role.repository';
 import { SYSTEM_ROLES, validateRoleDefinitions } from '../roles/system-roles';
 
 /**
@@ -25,16 +26,41 @@ export class SystemRolesSynchronizer implements OnApplicationBootstrap {
     validateRoleDefinitions(SYSTEM_ROLES);
 
     await this.roles.ensureIndexes();
+    const stored = new Map((await this.roles.findAll()).map((role) => [role.key, role]));
     for (const role of SYSTEM_ROLES) {
-      await this.roles.upsertSystemRole({
-        key: role.key,
-        name: role.name,
-        description: role.description,
-        userType: role.userType,
-        dataScopeType: role.dataScopeType,
-        permissionKeys: [...role.permissionKeys],
-      });
+      const edited = stored.get(role.key)?.pageLevels;
+      await this.roles.upsertSystemRole(
+        {
+          key: role.key,
+          name: role.name,
+          description: role.description,
+          userType: role.userType,
+          dataScopeType: role.dataScopeType,
+          permissionKeys: [...role.permissionKeys],
+        },
+        edited !== undefined,
+      );
     }
+    await this.refreshEditedRoles(stored);
     this.logger.log({ roles: SYSTEM_ROLES.length }, 'System roles synchronised');
+  }
+
+  /**
+   * Roles edited in the access matrix keep their page levels. Permissions added to a module
+   * after the edit reach them here, because the keys are derived again from the levels.
+   */
+  private async refreshEditedRoles(stored: ReadonlyMap<string, StoredRole>): Promise<void> {
+    let refreshed = 0;
+    for (const role of stored.values()) {
+      if (!role.pageLevels) continue;
+      const audience = audienceOfUserType(role.userType);
+      if (!audience) continue;
+      const keys = permissionKeysFromLevels(audience, role.pageLevels, role.permissionKeys);
+      const current = [...role.permissionKeys].sort();
+      if (keys.length === current.length && keys.every((key, i) => key === current[i])) continue;
+      await this.roles.setAccess(role.key, { pageLevels: role.pageLevels, permissionKeys: keys });
+      refreshed += 1;
+    }
+    if (refreshed > 0) this.logger.log({ roles: refreshed }, 'Matrix-edited roles refreshed');
   }
 }

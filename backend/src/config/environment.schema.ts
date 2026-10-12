@@ -53,6 +53,8 @@ export const environmentShape = z.object({
   PORT: z.coerce.number().int().min(1).max(65535),
   PUBLIC_API_BASE_URL: z.url(),
   CORS_ALLOWED_ORIGINS: commaSeparatedOrigins,
+  /** Where bus owners sign in; invitation emails link to `<this>/accept-invite?token=...`. */
+  CLIENT_PORTAL_URL: z.url().default('http://localhost:5000'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   API_DOCS_ENABLED: booleanFlag.optional(),
 
@@ -151,12 +153,14 @@ export const environmentShape = z.object({
   SMS_SENDER_ID: optionalText,
   SMS_DLT_ENTITY_ID: optionalText,
 
-  EMAIL_PROVIDER: z.enum(['development']),
+  // `smtp`: send through the SMTP server saved in Settings. `development`: only record.
+  EMAIL_PROVIDER: z.enum(['smtp', 'development']),
   EMAIL_API_KEY: optionalText,
   EMAIL_FROM: z.email(),
 
   PUSH_PROVIDER: z.enum(['fcm', 'development']),
   FCM_SERVICE_ACCOUNT_JSON: optionalText,
+  FIREBASE_PROJECT_ID: optionalText,
 
   MAPS_PROVIDER: z.enum(['google', 'osm', 'development']),
   MAPS_API_KEY: optionalText,

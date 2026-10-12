@@ -30,6 +30,8 @@ export const REDACTED_LOG_PATHS = [
     'refreshTokenHash',
     'token',
     'accessToken',
+    'webhookVerifyToken',
+    'webhookVerifyTokenEncrypted',
     'refreshToken',
     'secret',
     'apiKey',

@@ -8,6 +8,7 @@ import { setupApiDocumentation } from './common/openapi/api-documentation.setup'
 import { ZodValidationPipe } from './common/pipes/zod-validation.pipe';
 import { requestIdMiddleware } from './common/request-context/request-id.middleware';
 import { AppConfigService } from './config/app-config.service';
+import { RedisIoAdapter } from './modules/notifications/realtime/realtime';
 
 export const API_PREFIX = 'api/v1';
 
@@ -21,6 +22,11 @@ export function configureHttpApplication(app: NestExpressApplication): void {
   app.set('trust proxy', config.get('TRUST_PROXY_HOPS'));
   app.use(requestIdMiddleware);
   app.useLogger(app.get(Logger));
+
+  // Live notifications: web origins from CORS_ALLOWED_ORIGINS, rooms shared through Redis
+  app.useWebSocketAdapter(
+    new RedisIoAdapter(app, config.get('REDIS_URL'), config.get('CORS_ALLOWED_ORIGINS')),
+  );
 
   app.use(helmet());
   app.enableCors({

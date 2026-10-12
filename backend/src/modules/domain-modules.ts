@@ -7,6 +7,8 @@ import { OperatorsModule } from './operators/operators.module';
 import { OperatorStaffModule } from './operator-staff/operator-staff.module';
 import { BusesModule } from './buses/buses.module';
 import { BusTypesModule } from './bus-types/bus-types.module';
+import { DocumentTypesModule } from './document-types/document-types.module';
+import { OnboardingModule } from './onboarding/onboarding.module';
 import { SeatLayoutsModule } from './seat-layouts/seat-layouts.module';
 import { CitiesModule } from './cities/cities.module';
 import { LocationsModule } from './locations/locations.module';
@@ -38,7 +40,7 @@ import { TripOperationsModule } from './trip-operations/trip-operations.module';
 import { LiveTrackingModule } from './live-tracking/live-tracking.module';
 import { WomenSafetyModule } from './women-safety/women-safety.module';
 import { SupportModule } from './support/support.module';
-import { BannersModule } from './banners/banners.module';
+import { AdminBannersModule } from './admin-banners/admin-banners.module';
 import { OffersModule } from './offers/offers.module';
 import { ContentModule } from './content/content.module';
 import { PopularRoutesModule } from './popular-routes/popular-routes.module';
@@ -52,7 +54,7 @@ import { ReportsModule } from './reports/reports.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 
 /**
- * Every domain module of the modular monolith, grouped as in architecture.md §5.
+ * Every domain module of the modular monolith, grouped as in architecture.md ï¿½5.
  * Each module owns its collections; other modules call its service, never its repository.
  */
 export const DOMAIN_MODULES = [
@@ -67,6 +69,8 @@ export const DOMAIN_MODULES = [
   OperatorStaffModule,
   BusesModule,
   BusTypesModule,
+  DocumentTypesModule,
+  OnboardingModule,
   SeatLayoutsModule,
   CitiesModule,
   LocationsModule,
@@ -103,7 +107,7 @@ export const DOMAIN_MODULES = [
   WomenSafetyModule,
   SupportModule,
   // Content
-  BannersModule,
+  AdminBannersModule,
   OffersModule,
   ContentModule,
   PopularRoutesModule,

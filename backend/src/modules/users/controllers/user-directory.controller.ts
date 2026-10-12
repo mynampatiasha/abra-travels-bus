@@ -15,6 +15,8 @@ export class UserDirectoryQueryDto extends createZodDto(
     status: z.enum(USER_STATUSES).optional(),
     operatorId: objectId.optional(),
     partnerId: objectId.optional(),
+    search: z.string().trim().max(120).optional(),
+    loginMethod: z.enum(['google', 'apple', 'whatsapp', 'password']).optional(),
     page: z.coerce.number().int().min(1).default(1),
     pageSize: z.coerce.number().int().min(1).max(100).default(20),
   }),

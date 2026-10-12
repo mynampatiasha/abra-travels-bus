@@ -20,8 +20,16 @@ export const BUS_AMENITIES = [
 ] as const;
 export type BusAmenity = (typeof BUS_AMENITIES)[number];
 
-export const BUS_STATUSES = ['ACTIVE', 'MAINTENANCE', 'RETIRED'] as const;
+/**
+ * PENDING_APPROVAL: added by a bus owner and not yet approved by platform staff (client
+ * onboarding). It becomes ACTIVE only when its documents are approved. A bus can only have trips
+ * published once it is ACTIVE.
+ */
+export const BUS_STATUSES = ['PENDING_APPROVAL', 'ACTIVE', 'MAINTENANCE', 'RETIRED'] as const;
 export type BusStatus = (typeof BUS_STATUSES)[number];
+
+/** What a person can change a bus to by hand; PENDING_APPROVAL only comes from creation. */
+export const MANUAL_BUS_STATUSES = ['ACTIVE', 'MAINTENANCE', 'RETIRED'] as const;
 
 /** A vehicle of an operator. Tenant-owned: managed through the operator's data scope. */
 export interface Bus {

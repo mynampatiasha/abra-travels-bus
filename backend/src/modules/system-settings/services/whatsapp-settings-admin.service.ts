@@ -13,6 +13,8 @@ import {
 } from '../../../integrations/whatsapp/whatsapp-settings.store';
 import { AuditLogService } from '../../audit-logs/services/audit-log.service';
 import { EffectivePermissionsService } from '../../rbac/services/effective-permissions.service';
+import { type SettingsTestResult } from './email-settings-admin.service';
+import { checkWhatsAppConnection } from './whatsapp-connection-check';
 
 /** READY: can send. DISABLED: turned off by an administrator. INCOMPLETE: something is missing. */
 export type WhatsAppStatus = 'READY' | 'DISABLED' | 'INCOMPLETE';
@@ -29,11 +31,15 @@ export interface WhatsAppSettingsView {
   missing: string[];
   enabled: boolean;
   businessAccountId: string | null;
+  phoneDisplay: string | null;
+  webhookVerifyToken: { configured: boolean };
   phoneNumberId: string | null;
   accessToken: { configured: boolean; source: SettingSource; lastFour: string | null };
   otpTemplateName: string | null;
   otpTemplateLanguage: string | null;
   otpFallbackToSms: boolean;
+  notificationTemplateName: string | null;
+  notificationTemplateLanguage: string | null;
   graphApiVersion: string | null;
   updatedAt: string | null;
   updatedByUserId: string | null;
@@ -42,11 +48,15 @@ export interface WhatsAppSettingsView {
 const CHANGE_FIELDS = [
   'enabled',
   'businessAccountId',
+  'phoneDisplay',
+  'webhookVerifyToken',
   'phoneNumberId',
   'accessToken',
   'otpTemplateName',
   'otpTemplateLanguage',
   'otpFallbackToSms',
+  'notificationTemplateName',
+  'notificationTemplateLanguage',
 ] as const satisfies ReadonlyArray<keyof WhatsAppSettingsChange>;
 
 /**
@@ -65,6 +75,19 @@ export class WhatsAppSettingsAdminService {
 
   async describe(): Promise<WhatsAppSettingsView> {
     return this.viewOf(await this.store.stored());
+  }
+
+  /** Asks Meta about the saved phone number, to prove the token and the number ID work. */
+  async testConnection(): Promise<SettingsTestResult> {
+    if (this.config.get('WHATSAPP_PROVIDER') !== 'meta') {
+      return {
+        ok: false,
+        message:
+          'This server uses the development WhatsApp adapter, so nothing is sent to Meta. ' +
+          'Set WHATSAPP_PROVIDER=meta to use the real service.',
+      };
+    }
+    return checkWhatsAppConnection(await this.store.effective());
   }
 
   async update(
@@ -93,6 +116,7 @@ export class WhatsAppSettingsAdminService {
             ...this.auditStateOf(after),
             // Says that the token was replaced or removed, never what it is
             ...(change.accessToken !== undefined ? { accessTokenChanged: true } : {}),
+            ...(change.webhookVerifyToken !== undefined ? { webhookVerifyTokenChanged: true } : {}),
           },
           reason,
           client,
@@ -127,6 +151,8 @@ export class WhatsAppSettingsAdminService {
       missing,
       enabled: effective.enabled,
       businessAccountId: stored?.businessAccountId ?? null,
+      phoneDisplay: stored?.phoneDisplay ?? null,
+      webhookVerifyToken: { configured: Boolean(stored?.webhookVerifyTokenEncrypted) },
       phoneNumberId: effective.phoneNumberId ?? null,
       accessToken: {
         configured: effective.accessToken !== undefined,
@@ -137,6 +163,8 @@ export class WhatsAppSettingsAdminService {
       otpTemplateName: effective.otpTemplateName ?? null,
       otpTemplateLanguage: effective.otpTemplateLanguage ?? null,
       otpFallbackToSms: effective.otpFallbackToSms,
+      notificationTemplateName: effective.notificationTemplateName ?? null,
+      notificationTemplateLanguage: effective.notificationTemplateLanguage ?? null,
       graphApiVersion: effective.apiVersion ?? null,
       updatedAt: stored?.updatedAt?.toISOString() ?? null,
       updatedByUserId: stored?.updatedByUserId?.toHexString() ?? null,
@@ -148,11 +176,15 @@ export class WhatsAppSettingsAdminService {
     return {
       enabled: stored?.enabled ?? null,
       businessAccountId: stored?.businessAccountId ?? null,
+      phoneDisplay: stored?.phoneDisplay ?? null,
+      webhookVerifyTokenSet: Boolean(stored?.webhookVerifyTokenEncrypted),
       phoneNumberId: stored?.phoneNumberId ?? null,
       accessTokenSet: Boolean(stored?.accessTokenEncrypted),
       otpTemplateName: stored?.otpTemplateName ?? null,
       otpTemplateLanguage: stored?.otpTemplateLanguage ?? null,
       otpFallbackToSms: stored?.otpFallbackToSms ?? null,
+      notificationTemplateName: stored?.notificationTemplateName ?? null,
+      notificationTemplateLanguage: stored?.notificationTemplateLanguage ?? null,
     };
   }
 }

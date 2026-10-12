@@ -1,4 +1,13 @@
-import { type CanActivate, type ExecutionContext, Injectable, SetMetadata } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { type Model } from 'mongoose';
+import { OPERATOR_MODEL, type Operator } from '../../operators/schemas/operator.schema';
+import {
+  type CanActivate,
+  type ExecutionContext,
+  Injectable,
+  SetMetadata,
+  Optional,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { type Request } from 'express';
 import { IS_PUBLIC_ENDPOINT } from '../../../common/decorators/public-endpoint.decorator';
@@ -62,6 +71,7 @@ export class AccessTokenAuthenticationGuard implements CanActivate {
     private readonly accessTokens: AccessTokenService,
     private readonly sessions: SessionsService,
     private readonly users: UsersService,
+    @Optional() @InjectModel(OPERATOR_MODEL) private readonly operators?: Model<Operator>,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -95,6 +105,30 @@ export class AccessTokenAuthenticationGuard implements CanActivate {
       );
     }
 
+    if (user.userType === 'OPERATOR_STAFF' && user.operatorId && this.operators) {
+      const operator = await this.operators.findById(user.operatorId).lean();
+      const path = request.path.replace(/^\/api\/v1/, '');
+      const onboardingAccess = [
+        '/auth/',
+        '/me',
+        '/client/kyc',
+        '/notifications',
+        '/files',
+        '/onboarding/submissions',
+      ];
+      if (
+        operator?.status !== 'ACTIVE' &&
+        !onboardingAccess.some(
+          (prefix) =>
+            path === prefix || path.startsWith(prefix.endsWith('/') ? prefix : prefix + '/'),
+        )
+      ) {
+        throw new ApiException(
+          'PERMISSION_DENIED',
+          'Complete KYC and wait for admin approval before accessing account features.',
+        );
+      }
+    }
     RequestContextService.attachActor(buildActor(user, session));
     return true;
   }

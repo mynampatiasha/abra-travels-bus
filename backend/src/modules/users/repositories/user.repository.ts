@@ -35,6 +35,22 @@ export class UserRepository {
       .exec();
   }
 
+  /** Active accounts holding any of the roles, optionally of one operator. For notifications. */
+  findActiveByRoleIds(
+    roleIds: readonly Types.ObjectId[],
+    filter: { operatorId?: Types.ObjectId | undefined } = {},
+  ): Promise<StoredUser[]> {
+    if (roleIds.length === 0) return Promise.resolve([]);
+    return this.model
+      .find({
+        roleIds: { $in: [...roleIds] },
+        status: 'ACTIVE',
+        ...(filter.operatorId ? { operatorId: filter.operatorId } : {}),
+      })
+      .lean<StoredUser[]>()
+      .exec();
+  }
+
   countWithRole(roleId: Types.ObjectId, options: WriteOptions = {}): Promise<number> {
     return this.model
       .countDocuments({ roleIds: roleId })
@@ -80,6 +96,23 @@ export class UserRepository {
       { session, runValidators: true },
     );
     return result.matchedCount === 1;
+  }
+
+  /**
+   * A role's permissions changed: every holder's access tokens must stop working so the next
+   * refresh carries the new access. Returns how many users hold the role.
+   */
+  async bumpPermissionVersionForRoles(
+    roleIds: readonly Types.ObjectId[],
+    session: ClientSession,
+  ): Promise<number> {
+    if (roleIds.length === 0) return 0;
+    const result = await this.model.updateMany(
+      { roleIds: { $in: roleIds } },
+      { $inc: { permissionVersion: 1 } },
+      { session },
+    );
+    return result.matchedCount;
   }
 
   /** Stores a new MFA secret awaiting confirmation; refused when MFA is already enabled. */

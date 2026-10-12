@@ -103,7 +103,9 @@ export class BusesService {
                 busTypeId,
                 amenities: input.amenities,
                 seatCapacity: input.seatCapacity,
-                status: 'ACTIVE',
+                // A bus owner's new bus waits for its documents to be approved; platform staff
+                // add buses they have already checked
+                status: actor.userType === 'STAFF' ? 'ACTIVE' : 'PENDING_APPROVAL',
               },
               { session },
             ),
@@ -142,6 +144,12 @@ export class BusesService {
   ): Promise<BusView> {
     const before = await this.buses.getById(id);
     if (before.status === input.status) return busViewOf(before);
+    if (before.status === 'PENDING_APPROVAL' && actor.userType !== 'STAFF') {
+      throw new ApiException(
+        'INVALID_STATE_TRANSITION',
+        'This bus is waiting for its documents to be approved. Platform staff approve it.',
+      );
+    }
     if (before.status === 'RETIRED') {
       throw new ApiException('INVALID_STATE_TRANSITION', 'A retired bus cannot be put back.');
     }

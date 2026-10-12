@@ -309,6 +309,10 @@ describe('Catalogue e2e: validation, lists and audit', () => {
         seatCapacity: 32,
       });
       await w.operatorA.put(`/buses/${bus.id}`, { name: 'Audited bus, renamed' }).expect(200);
+      // new buses of an operator start unapproved; platform staff approve this one
+      await w.superAdmin
+        .post(`/buses/${bus.id}/status`, { status: 'ACTIVE', reason: 'Documents verified' })
+        .expect(201);
       await w.operatorA
         .post(`/buses/${bus.id}/status`, { status: 'MAINTENANCE', reason: 'Service due' })
         .expect(201);
@@ -323,9 +327,10 @@ describe('Catalogue e2e: validation, lists and audit', () => {
       expect(entries.map((entry) => entry.action).sort()).toEqual([
         'catalogue.created',
         'catalogue.status-changed',
+        'catalogue.status-changed',
         'catalogue.updated',
       ]);
-      expect(entries.find((entry) => entry.action === 'catalogue.status-changed')).toMatchObject({
+      expect(entries.find((entry) => entry.reason === 'Service due')).toMatchObject({
         entityType: 'bus',
         operatorId: w.a.operator.id,
         reason: 'Service due',

@@ -147,6 +147,13 @@ export class UsersService {
     return this.repository.applyAuthorizationChange(id, change, session);
   }
 
+  bumpPermissionVersionForRoles(
+    roleIds: readonly Types.ObjectId[],
+    session: ClientSession,
+  ): Promise<number> {
+    return this.repository.bumpPermissionVersionForRoles(roleIds, session);
+  }
+
   setPendingMfaSecret(id: string, pendingSecretEncrypted: string): Promise<boolean> {
     return this.repository.setPendingMfaSecret(id, pendingSecretEncrypted);
   }
@@ -212,6 +219,55 @@ export class UsersService {
       if (!isDuplicateKeyError(error)) throw error;
       throw new ApiException('ALREADY_REGISTERED', 'An account already exists for this email');
     }
+  }
+
+  /**
+   * Creates the first account of a bus operator, the owner who accepted an invitation. Sees only
+   * its own operator's data. The email address is already proven: the invitation link was sent to
+   * it.
+   */
+  async createOperatorAdmin(
+    input: {
+      name: string;
+      email: string;
+      phone?: string | undefined;
+      passwordHash: string;
+      roleIds: Types.ObjectId[];
+      operatorId: Types.ObjectId;
+    },
+    session: ClientSession,
+  ): Promise<StoredUser> {
+    const now = new Date();
+    try {
+      return await this.repository.insert(
+        {
+          name: input.name,
+          email: input.email,
+          emailVerifiedAt: now,
+          ...(input.phone ? { phone: input.phone } : {}),
+          passwordHash: input.passwordHash,
+          passwordChangedAt: now,
+          userType: 'OPERATOR_STAFF',
+          roleIds: input.roleIds,
+          operatorId: input.operatorId,
+          dataScope: { type: 'OWN_OPERATOR', operatorIds: [input.operatorId] },
+          status: 'ACTIVE',
+          preferredLanguage: 'en',
+        },
+        { session },
+      );
+    } catch (error) {
+      if (!isDuplicateKeyError(error)) throw error;
+      throw new ApiException('ALREADY_REGISTERED', 'An account already exists for this email');
+    }
+  }
+
+  /** Active accounts holding any of the roles, optionally of one operator. For notifications. */
+  findActiveByRoleIds(
+    roleIds: readonly Types.ObjectId[],
+    filter: { operatorId?: Types.ObjectId | undefined } = {},
+  ): Promise<StoredUser[]> {
+    return this.repository.findActiveByRoleIds(roleIds, filter);
   }
 
   /** Number of accounts holding the role, whatever their status. */

@@ -1,3 +1,17 @@
+import {
+  GoogleSignInController,
+  ClientPhoneSignInController,
+  ClientLoginMethodsController,
+  GoogleSignInService,
+  FirebaseGoogleVerifier,
+} from './google_sign_in';
+import { USER_MODEL, userSchema } from '../users/schemas/user.schema';
+import { OPERATOR_MODEL, operatorSchema } from '../operators/schemas/operator.schema';
+import { ROLE_MODEL, roleSchema } from '../rbac/schemas/role.schema';
+import {
+  ONBOARDING_SUBMISSION_MODEL,
+  onboardingSubmissionSchema,
+} from '../onboarding/schemas/onboarding-submission.schema';
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -32,7 +46,13 @@ import { TokenRefreshService } from './services/token-refresh.service';
  */
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: OTP_CHALLENGE_MODEL, schema: otpChallengeSchema }]),
+    MongooseModule.forFeature([
+      { name: OTP_CHALLENGE_MODEL, schema: otpChallengeSchema },
+      { name: USER_MODEL, schema: userSchema },
+      { name: OPERATOR_MODEL, schema: operatorSchema },
+      { name: ROLE_MODEL, schema: roleSchema },
+      { name: ONBOARDING_SUBMISSION_MODEL, schema: onboardingSubmissionSchema },
+    ]),
     CryptoModule,
     RateLimitModule,
     OtpDeliveryModule,
@@ -40,8 +60,16 @@ import { TokenRefreshService } from './services/token-refresh.service';
     CustomersModule,
     SessionsModule,
   ],
-  controllers: [AuthenticationController, CurrentUserController],
+  controllers: [
+    AuthenticationController,
+    CurrentUserController,
+    GoogleSignInController,
+    ClientPhoneSignInController,
+    ClientLoginMethodsController,
+  ],
   providers: [
+    GoogleSignInService,
+    FirebaseGoogleVerifier,
     PasswordHasher,
     AccessTokenService,
     OtpChallengeRepository,
