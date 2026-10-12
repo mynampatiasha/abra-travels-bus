@@ -14,7 +14,7 @@ Abra Travels is a bus booking platform: travellers book seats, bus owners (opera
 | Repository | `D:\New_project\abra-travels` (monorepo) |
 | Functional source of truth | `Abra Travels.pdf` (122 sections) in the repo root; the older design notes are in `documentation/` |
 | The demos (the specification) | `prototypes/index.html` opens five working HTML demos: admin, client (operator), customer, driver, website. They share one data store and sync live. Everything in this document was read from them. |
-| Backend | NestJS + TypeScript in `backend/`. 26 controllers and 113 routes exist today (Appendix I). |
+| Backend | NestJS + TypeScript in `backend/`. 26 controllers and 113 routes in `*.controller.ts` files, plus 4 more controllers in `<feature>_manage` style files (access matrix, Google/Apple sign-in, client KYC, KYC configuration; see Appendix I.1). Only about 19 of the 56 module folders have real code; the rest are empty placeholders (Appendix I.2). |
 | Database | MongoDB Atlas, database `abra_travels`. The connection string is in `backend/.env.development` (git-ignored). **Never put it in a document, a chat or git.** Connection tested: working. |
 | Redis | Needed for seat holds, queues and live updates. Runs in Docker from `infrastructure/docker-compose.development.yml` (container `abra-redis`); start Docker Desktop first. |
 | Flutter apps today | `apps/customer_app` (built on mock data, some screens missing), `apps/admin_app` and `apps/client_portal` (partly built: sign-in, KYC, banners, catalogue, settings). Shared code is in `packages/shared_*`. |
@@ -136,6 +136,11 @@ Abra Travels is a bus booking platform: travellers book seats, bus owners (opera
 | Operator app | The client portal is the operator app. One app, not two. |
 | Driver rules | The operator maintains pre-trip and end-of-trip checklists and the report types. Abra provides default templates and a locked minimum that operators cannot remove. |
 | Driver reports | Daily and weekly numbers come from the system and are frozen when the driver sends the report. The driver only adds what the system cannot know. |
+| Shared catalogue mechanism (decided 12 Oct 2026) | One soft-delete field + restore route + audit hook, written once and used by every catalogue feature, built before the Phase 1 features. Per-module delete and export permission keys are added first so the access matrix can tell Edit from Edit+Delete; every new route gets its own key. |
+| Export and import (decided 12 Oct 2026) | Server-side as in the plan: `GET .../export?format=csv\|xlsx` with the list's filters and permissions; import = template + dry run with row-by-row errors + save. The current client-side CSV import stays until the new one replaces it. |
+| Proof files (decided 12 Oct 2026) | The existing files service: local storage in development, an S3-style bucket before staging. Not GridFS. |
+| Three-file rule (decided 12 Oct 2026) | New code only. Working files are not rewritten. New endpoints on an existing module go in the new `<feature>_<app>_manage` `.ts` and `.service.ts` files. |
+| KYC questionnaire (decided 12 Oct 2026) | Keep the one-configuration design at `/settings/kyc-configuration`; add only what the demo's three tabs need. |
 | Database separation | This project uses its own database (`abra_travels`) on the Atlas cluster the user shared. Keep it separate from the databases of other Abra projects. |
 
 ## Part 3. The file rule: three files per feature
@@ -266,6 +271,12 @@ Each phase builds backend and screens together for the features inside it, so ev
 | **KYC review and company onboarding** (`kyc`) | Admin: kyc<br>Client: kyc, company | Done (onboarding) | submissions | 4 new / 2 existing | Submissions, per-document review, approve and reject exist. Add history, export, bus-level KYC from the client portal. |
 | **Operators** (`operators`) | Admin: operators | Partly built (operators) | operators | 6 new / 2 existing | List, read, update, status exist. Add suspend and reactivate with reason and proof, message to owner, bank verification. |
 | **Banners** (`banners`) | Admin: banners<br>Customer: home banner<br>Website: home | Done (admin-banners) | banners | 5 new / 5 existing | Done. Add click and impression counts and the archive job. |
+
+#### Phase 1: build order (approved 12 October 2026)
+
+0. Checkpoint commit (done) and this document corrected. 1. Per-module delete and export permission keys, then the shared mechanism (soft delete, restore, audit hook, shared list query, "in use" check). 2. Small items: banner duplicate, archive and reorder; read-one routes; invitation edit and expiry. 3. Server-side export for every list, then import with template and dry run. 4. Amenities. 5. Place requests (backend, admin tabs, client Places page). 6. Operator detail page with tabs, suspend with proof, message owner. 7. Payout mode and bank verification. 8. Company profile and bank details (client portal). 9. Bus KYC (client portal) and KYC history. 10. KYC questionnaire compared with the demo's three tabs (can run early, in parallel). One step at a time; you test after each.
+
+Boundaries: do not run prettier or eslint --fix across `rbac` or `users`; the audit action list is shared, so only add actions; stay out of `whatsapp`, `notifications`, `system-settings` and `chatbot` (another session works there).
 
 #### Phase 1: your test checklist
 
@@ -3800,6 +3811,19 @@ Read from the controllers in `backend/src`: 26 controllers, 113 routes. Everythi
 | system-settings | GET /settings/integrations/email<br>PUT /settings/integrations/email<br>POST /settings/integrations/email/test-connection<br>POST /settings/integrations/email/test-email<br>GET /settings/integrations/whatsapp<br>POST /settings/integrations/whatsapp/test-connection<br>PUT /settings/integrations/whatsapp |
 | trips | GET /trips/search<br>GET /trips/search/filters<br>GET /trips/:tripId<br>GET /catalogue/trips<br>GET /catalogue/trips/:id<br>POST /catalogue/trips<br>PUT /catalogue/trips/:id<br>POST /catalogue/trips/:id/publish<br>POST /catalogue/trips/:id/cancel |
 | users | GET /users |
+
+### I.1 Controllers in `<feature>_manage` style files (not in the table above)
+
+Checked 12 October 2026 against `backend/src`. These routes exist and count as "Exists".
+
+| File | Routes |
+|---|---|
+| rbac/access_matrix_admin_manage.ts | GET /access-matrix<br>PUT /access-matrix/roles/:roleKey/pages/:pageId<br>PUT /access-matrix/roles/:roleKey<br>POST /access-matrix/roles<br>PATCH /access-matrix/roles/:roleKey<br>DELETE /access-matrix/roles/:roleKey |
+| authentication/google_sign_in.ts | POST /auth/google<br>POST /auth/apple<br>POST /auth/client/otp/verify<br>GET /client/kyc/login-methods<br>POST /client/kyc/login-methods/phone<br>POST /client/kyc/login-methods/social |
+| onboarding/client_kyc.ts | GET /client/kyc<br>PUT /client/kyc |
+| system-settings/admin_kyc_configuration.ts | GET /settings/kyc-configuration<br>PUT /settings/kyc-configuration<br>POST /settings/kyc-configuration/validate-import<br>POST /settings/kyc-configuration/preview |
+
+Corrections found on the same check: Apple sign-in already has a route; the KYC questionnaire is one configuration document at `/settings/kyc-configuration`, not the `/admin/kyc/...` routes named in D.12 (to be rewritten in Phase 1 step 10).
 
 ### I.2 Modules with no controller yet
 
