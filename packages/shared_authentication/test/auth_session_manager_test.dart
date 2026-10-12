@@ -96,6 +96,37 @@ const storedSession = <String, String>{
 Future<void> settle() => Future<void>.delayed(Duration.zero);
 
 void main() {
+  group('Google session exchange', () {
+    test(
+      'Google uses the existing session and sends only the identity token, app audience and device',
+      () async {
+        final h = Harness((_) async => FakeResponse.ok(tokens(1)));
+        await h.manager.signInWithGoogle(
+          'firebase-id-token',
+          audience: 'CUSTOMER',
+        );
+        expect(h.manager.state, isA<AuthSignedIn>());
+        expect(await h.manager.accessToken(), 'access-1');
+        expect(h.adapter.requests.single.path, 'auth/google');
+        final body = h.adapter.requests.single.body! as Map<Object?, Object?>;
+        expect(body['idToken'], 'firebase-id-token');
+        expect(body['audience'], 'CUSTOMER');
+        expect(body.containsKey('email'), false);
+        expect(body.containsKey('role'), false);
+      },
+    );
+    test('a rejected Google token never starts a session', () async {
+      final h = Harness(
+        (_) async => FakeResponse.error(401, 'INVALID_CREDENTIALS'),
+      );
+      await expectLater(
+        h.manager.signInWithGoogle('invalid-token', audience: 'CLIENT'),
+        throwsA(isA<AppException>()),
+      );
+      expect(h.manager.state, isA<AuthUnknown>());
+      expect(await h.manager.accessToken(), isNull);
+    });
+  });
   group('sign-in', () {
     test(
       'password sign-in stores the tokens in secure storage and publishes the user',

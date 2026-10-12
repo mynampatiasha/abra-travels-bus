@@ -2,6 +2,7 @@ import 'package:shared_authentication/shared_authentication.dart';
 import 'package:shared_core/shared_core.dart';
 import 'package:shared_localization/shared_localization.dart';
 import 'package:shared_network/shared_network.dart';
+import 'package:shared_notifications/shared_notifications.dart';
 import 'package:shared_storage/shared_storage.dart';
 
 /// The long-lived objects of the app, created once at start-up and handed
@@ -16,6 +17,7 @@ class AppDependencies {
     required this.translations,
     required this.apiClient,
     required this.sessionManager,
+    this.notifications,
   });
 
   /// Creates the production object graph on the device.
@@ -49,6 +51,13 @@ class AppDependencies {
       translations: bundledTranslations,
       apiClient: apiClient,
       sessionManager: sessionManager,
+      notifications: NotificationCenter(
+        repository: NotificationsRepository(apiClient),
+        live: SocketLiveNotificationSource(config.apiBaseUrl.origin),
+        // Push for a closed app: Android and iOS read the Firebase file added
+        // at build time. Without it push stays off and the app still works.
+        push: FirebaseDevicePush(),
+      ),
     );
   }
 
@@ -68,4 +77,7 @@ class AppDependencies {
   final TranslationSource translations;
   final ApiClient apiClient;
   final AuthSessionManager sessionManager;
+
+  /// The person's notifications (list, live socket, push). Null in tests.
+  final NotificationCenter? notifications;
 }

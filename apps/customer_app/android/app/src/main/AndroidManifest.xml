@@ -3,6 +3,8 @@
          Runtime permissions (location, camera, notifications) are added with the
          feature that needs them and are requested in context, never at start-up. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Android 13 and newer: shown in context by the notification banner, never at start-up. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <!-- allowBackup is off so that session data never leaves the device through
          cloud backup or device transfer. -->
     <application
@@ -38,6 +40,11 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Push messages shown while the app is closed use this channel (created in
+             MainActivity) so they appear as heads-up notifications with sound. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="high_priority_channel" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

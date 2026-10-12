@@ -52,6 +52,44 @@ class AuthApi {
     if (deviceName != null) 'deviceName': deviceName,
   };
 
+  Future<SignInResult> google(
+    String idToken, {
+    required String audience,
+    String? linkPassword,
+  }) async {
+    final response = await _client.post(
+      'auth/google',
+      authenticated: false,
+      body: <String, Object?>{
+        'idToken': idToken,
+        'audience': audience,
+        'acceptTerms': true,
+        'device': _device,
+        'linkPassword': ?linkPassword,
+      },
+    );
+    return response.decodeObject(SignInResult.fromJson);
+  }
+
+  Future<SignInResult> apple(
+    String idToken, {
+    String audience = 'CUSTOMER',
+    String? linkPassword,
+  }) async {
+    final response = await _client.post(
+      'auth/apple',
+      authenticated: false,
+      body: <String, Object?>{
+        'idToken': idToken,
+        'audience': audience,
+        'acceptTerms': true,
+        'device': _device,
+        'linkPassword': ?linkPassword,
+      },
+    );
+    return response.decodeObject(SignInResult.fromJson);
+  }
+
   Future<OtpDispatch> sendOtp(
     String phone, {
     OtpPurpose purpose = OtpPurpose.signIn,
@@ -67,10 +105,16 @@ class AuthApi {
   Future<SignInResult> verifyOtp({
     required String phone,
     required String code,
+    String audience = 'CUSTOMER',
   }) async {
     final response = await _client.post(
-      'auth/otp/verify',
-      body: <String, Object?>{'phone': phone, 'code': code, 'device': _device},
+      audience == 'CLIENT' ? 'auth/client/otp/verify' : 'auth/otp/verify',
+      body: <String, Object?>{
+        'phone': phone,
+        'code': code,
+        'device': _device,
+        if (audience == 'CLIENT') 'acceptTerms': true,
+      },
       authenticated: false,
     );
     return response.decodeObject(SignInResult.fromJson);

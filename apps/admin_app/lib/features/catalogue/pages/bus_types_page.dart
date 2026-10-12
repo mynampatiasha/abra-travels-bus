@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_localization/shared_localization.dart';
 import 'package:shared_permissions/shared_permissions.dart';
+import 'package:shared_theme/shared_theme.dart';
 
 import '../../../app/providers.dart';
 import '../../../l10n/admin_strings.dart';
 import '../catalogue_repository.dart';
 import '../widgets/catalogue_common.dart';
+import '../widgets/import_dialog.dart';
 import '../widgets/resource_form.dart';
 import '../widgets/resource_page.dart';
 
@@ -35,6 +37,37 @@ class BusTypesPage extends ConsumerWidget {
 
     return ResourcePage(
       path: 'bus-types',
+      exportName: 'bus-types',
+      stats: const <StatSpec>[
+        StatSpec(
+          AdminStrings.statusActive,
+          <String, String>{'active': 'true'},
+          Icons.check_circle_outline,
+          AbraColors.tealDark,
+        ),
+        StatSpec(
+          AdminStrings.statusInactive,
+          <String, String>{'active': 'false'},
+          Icons.pause_circle_outline,
+          AbraColors.navySecondary,
+        ),
+      ],
+      importSpec: canManage
+          ? ImportSpec(
+              name: 'bus types',
+              fields: const <FieldSpec>[
+                TextSpec('key', AdminStrings.fieldKey, isRequired: true),
+                ..._editFields,
+              ],
+              sampleRow: const <String>[
+                'AC_SLEEPER',
+                'AC Sleeper',
+                'yes',
+                'SLEEPER',
+              ],
+              save: (values) => repository.post('bus-types', values),
+            )
+          : null,
       filters: const <FilterSpec>[
         ChoiceFilter(
           'active',
@@ -43,14 +76,25 @@ class BusTypesPage extends ConsumerWidget {
         ),
       ],
       columns: <ColumnSpec>[
-        ColumnSpec(AdminStrings.fieldKey, (_, r) => textCell(r['key'])),
-        ColumnSpec(AdminStrings.fieldName, (_, r) => textCell(r['name'])),
+        ColumnSpec(
+          AdminStrings.fieldKey,
+          (_, r) => textCell(r['key']),
+          text: (r) => plainText(r['key']),
+        ),
+        ColumnSpec(
+          AdminStrings.fieldName,
+          (_, r) => textCell(r['name']),
+          text: (r) => plainText(r['name']),
+        ),
         ColumnSpec(
           AdminStrings.fieldAc,
           (_, r) => Text(
             l10n.text(
               r['isAc'] == true ? AdminStrings.formYes : AdminStrings.formNo,
             ),
+          ),
+          text: (r) => l10n.text(
+            r['isAc'] == true ? AdminStrings.formYes : AdminStrings.formNo,
           ),
         ),
         ColumnSpec(
@@ -61,10 +105,19 @@ class BusTypesPage extends ConsumerWidget {
                   AdminStrings.berthMixed,
             ),
           ),
+          text: (r) => l10n.text(
+            CatalogueLabels.berthTypes['${r['berthType']}'] ??
+                AdminStrings.berthMixed,
+          ),
         ),
         ColumnSpec(
           AdminStrings.fieldStatus,
           (_, r) => StatusBadge.active(isActive: r['isActive'] == true),
+          text: (r) => l10n.text(
+            r['isActive'] == true
+                ? AdminStrings.statusActive
+                : AdminStrings.statusInactive,
+          ),
         ),
       ],
       onCreate: canManage

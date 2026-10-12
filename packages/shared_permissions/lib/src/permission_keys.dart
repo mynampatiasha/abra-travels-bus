@@ -26,6 +26,13 @@ abstract final class PermissionKeys {
   static const busesDelete = 'buses.delete';
   static const catalogueRead = 'catalogue.read';
   static const catalogueManage = 'catalogue.manage';
+  static const documentsRead = 'documents.read';
+  static const documentsManage = 'documents.manage';
+  static const documentsReview = 'documents.review';
+  static const documentsUpload = 'documents.upload';
+  static const documentsView = 'documents.view';
+  static const bannersManage = 'banners.manage';
+  static const bannersDelete = 'banners.delete';
   static const routesRead = 'routes.read';
   static const routesCreate = 'routes.create';
   static const routesUpdate = 'routes.update';
@@ -75,6 +82,13 @@ abstract final class PermissionKeys {
     busesDelete,
     catalogueRead,
     catalogueManage,
+    documentsRead,
+    documentsManage,
+    documentsReview,
+    documentsUpload,
+    documentsView,
+    bannersManage,
+    bannersDelete,
     routesRead,
     routesCreate,
     routesUpdate,

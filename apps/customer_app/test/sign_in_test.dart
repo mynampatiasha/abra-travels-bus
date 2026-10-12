@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:customer_app/app/providers.dart';
 import 'package:customer_app/features/authentication/field_error.dart';
 import 'package:customer_app/features/authentication/login_screen.dart';
-import 'package:customer_app/features/authentication/otp_screen.dart';
+import 'package:customer_app/features/authentication/gate/sign_in_flow.dart';
 import 'package:customer_app/features/authentication/otp_sign_in_controller.dart';
 import 'package:customer_app/features/authentication/sign_in_problem.dart';
+import 'package:customer_app/features/my_trips/booking_details_screen.dart';
+import 'package:customer_app/features/unavailable/feature_unavailable_screen.dart';
 import 'package:customer_app/routing/customer_router.dart';
 import 'package:customer_app/shell/app_shell.dart';
 import 'package:flutter/material.dart';
@@ -25,6 +27,8 @@ const code = '482915';
 const incorrect = 'That code is incorrect. Please try again.';
 const expired = 'That code has expired. Please request a new one.';
 const tooMany = 'Too many attempts. Please try again later.';
+const guestProfileMessage =
+    'Book faster, find your tickets and manage your trips.';
 
 /// A backend that answers the authentication endpoints like the real one.
 /// Individual tests replace single answers.
@@ -70,22 +74,28 @@ Future<void> settle(WidgetTester tester) async {
 }
 
 Finder get phoneField => find.descendant(
-  of: find.byType(LoginScreen),
+  of: find.byType(PhoneStep),
   matching: find.byType(TextField),
 );
 Finder get codeField => find.descendant(
-  of: find.byType(OtpScreen),
+  of: find.byType(CodeStep),
   matching: find.byType(TextField),
 );
+
+/// The code step is a step of the sign-in flow, not a location of its own.
+Finder get codeStep => find.byType(CodeStep);
 
 Future<void> requestCode(
   WidgetTester tester, [
   String number = '98765 43210',
 ]) async {
   await tester.enterText(phoneField, number);
-  final button = find.widgetWithText(AbraButton, 'Send code');
+  final button = find.widgetWithText(AbraButton, 'Continue');
+  // Typing brings the field into view; let that finish before scrolling to
+  // the button, or the two scrolls fight on a small screen.
+  await tester.pumpAndSettle();
   await tester.ensureVisible(button);
-  await tester.pump();
+  await tester.pumpAndSettle();
   await tester.tap(button);
   await settle(tester);
 }
@@ -170,7 +180,7 @@ void main() {
         expect((request.body! as Map)['phone'], phoneE164, reason: typed);
         expect((request.body! as Map)['purpose'], 'SIGN_IN');
         expect(request.header('Authorization'), isNull);
-        expect(locationOf(tester), '/otp');
+        expect(codeStep, findsOneWidget);
       }
     });
 
@@ -183,17 +193,17 @@ void main() {
           request.path == 'auth/otp/send' ? answer.future : backend(request);
 
       await tester.enterText(phoneField, '9876543210');
-      await tester.tap(find.widgetWithText(AbraButton, 'Send code'));
+      await tester.tap(find.widgetWithText(AbraButton, 'Continue'));
       await tester.pump(const Duration(milliseconds: 20));
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      await tester.tap(find.text('Send code'), warnIfMissed: false);
-      await tester.tap(find.text('Send code'), warnIfMissed: false);
+      await tester.tap(find.text('Continue'), warnIfMissed: false);
+      await tester.tap(find.text('Continue'), warnIfMissed: false);
       await tester.pump(const Duration(milliseconds: 20));
 
       answer.complete(otpSentResponse());
       await settle(tester);
       expect(requestsTo(app, 'auth/otp/send'), hasLength(1));
-      expect(locationOf(tester), '/otp');
+      expect(codeStep, findsOneWidget);
     });
 
     testWidgets('no connection: says so, and the same button retries', (
@@ -209,9 +219,9 @@ void main() {
       expect(locationOf(tester), '/login');
 
       backend.isOnline = true;
-      await tester.tap(find.widgetWithText(AbraButton, 'Send code'));
+      await tester.tap(find.widgetWithText(AbraButton, 'Continue'));
       await settle(tester);
-      expect(locationOf(tester), '/otp');
+      expect(codeStep, findsOneWidget);
     });
 
     testWidgets('rate limited: explains, shows the wait and blocks the button '
@@ -228,20 +238,20 @@ void main() {
       expect(errorOf(tester, phoneField), tooMany);
       expect(find.text('Try again in 45 seconds'), findsOneWidget);
       expect(find.textContaining('bucket'), findsNothing);
-      expect(isEnabled(tester, 'Send code'), isFalse);
+      expect(isEnabled(tester, 'Continue'), isFalse);
 
       await tester.pump(const Duration(seconds: 15));
       expect(find.text('Try again in 30 seconds'), findsOneWidget);
-      await tester.tap(find.text('Send code'), warnIfMissed: false);
+      await tester.tap(find.text('Continue'), warnIfMissed: false);
       await settle(tester);
       expect(requestsTo(app, 'auth/otp/send'), hasLength(1));
 
       backend.send = otpSentResponse;
       await tester.pump(const Duration(seconds: 31));
-      expect(isEnabled(tester, 'Send code'), isTrue);
-      await tester.tap(find.widgetWithText(AbraButton, 'Send code'));
+      expect(isEnabled(tester, 'Continue'), isTrue);
+      await tester.tap(find.widgetWithText(AbraButton, 'Continue'));
       await settle(tester);
-      expect(locationOf(tester), '/otp');
+      expect(codeStep, findsOneWidget);
     });
 
     testWidgets('the code could not be sent on any channel', (tester) async {
@@ -360,7 +370,7 @@ void main() {
       expect(errorOf(tester, codeField), incorrect);
       expect(tester.widget<TextField>(codeField).controller!.text, isEmpty);
       expect(find.textContaining('66f0'), findsNothing);
-      expect(locationOf(tester), '/otp');
+      expect(codeStep, findsOneWidget);
       expect(app.sessionManager.state, const AuthSignedOut());
       expect(await app.secureStore.read(AuthTokenStore.accessTokenKey), isNull);
 
@@ -505,7 +515,7 @@ void main() {
 
         expect(errorOf(tester, codeField), message);
         expect(find.textContaining('stack'), findsNothing);
-        expect(locationOf(tester), '/otp');
+        expect(codeStep, findsOneWidget);
         expect(app.sessionManager.state, const AuthSignedOut());
       });
     }
@@ -526,13 +536,30 @@ void main() {
       expect(locationOf(tester), '/home');
     });
 
-    testWidgets('"Change number" returns to the number step', (tester) async {
+    testWidgets('"Change number" returns to the number step, with the '
+        'number kept', (tester) async {
       await start(tester);
       await requestCode(tester);
       await tester.tap(find.text('Change number'));
       await settle(tester);
       expect(locationOf(tester), '/login');
-      expect(find.byType(LoginScreen), findsOneWidget);
+      expect(find.byType(PhoneStep), findsOneWidget);
+      expect(codeStep, findsNothing);
+      expect(
+        tester.widget<TextField>(phoneField).controller!.text,
+        '9876543210',
+      );
+    });
+
+    testWidgets('Back on the code step returns to the number step', (
+      tester,
+    ) async {
+      await start(tester);
+      await requestCode(tester);
+      await tester.tap(find.byType(BackButton));
+      await settle(tester);
+      expect(find.byType(PhoneStep), findsOneWidget);
+      expect(locationOf(tester), '/login');
     });
 
     testWidgets('opened without a pending code, it goes to the number step', (
@@ -545,26 +572,31 @@ void main() {
   });
 
   group('returning to where the user was heading', () {
-    testWidgets('protected screen → number → code → that screen', (
-      tester,
-    ) async {
+    testWidgets('a protected link: the sheet opens over it; after the code '
+        'the screen itself appears', (tester) async {
       await start(tester);
       await open(tester, '/my-trips/bk-1');
-      expect(locationOf(tester), '/login?from=%2Fmy-trips%2Fbk-1');
+      expect(find.text('Log in or sign up'), findsOneWidget);
 
       await requestCode(tester);
-      expect(locationOf(tester), '/otp?from=%2Fmy-trips%2Fbk-1');
+      expect(codeStep, findsOneWidget);
       await enterCode(tester, code);
+      expect(find.text('Log in or sign up'), findsNothing);
       expect(locationOf(tester), '/my-trips/bk-1');
+      expect(find.byType(BookingDetailsScreen), findsOneWidget);
     });
 
-    testWidgets('the destination survives "Change number"', (tester) async {
+    testWidgets('the sign-in page opens the destination in its link, also '
+        'after "Change number"', (tester) async {
       await start(tester);
-      await open(tester, '/ticket/tkt-1');
+      await open(tester, '/login?from=%2Fticket%2Ftkt-1');
       await requestCode(tester);
       await tester.tap(find.text('Change number'));
       await settle(tester);
       expect(locationOf(tester), '/login?from=%2Fticket%2Ftkt-1');
+      await requestCode(tester);
+      await enterCode(tester, code);
+      expect(locationOf(tester), '/ticket/tkt-1');
     });
   });
 
@@ -575,11 +607,15 @@ void main() {
       await open(tester, '/profile');
       await app.run(tester, app.sessionManager.onSessionRejected());
 
-      expect(find.byType(LoginScreen), findsOneWidget);
+      expect(find.text('Session ended'), findsOneWidget);
+      await tester.tap(find.widgetWithText(AbraButton, 'Log in / Sign up'));
+      await tester.pumpAndSettle();
+      expect(find.byType(PhoneStep), findsOneWidget);
       expect(
         find.text('Your session has ended. Please sign in again.'),
         findsOneWidget,
       );
+      expect(locationOf(tester), '/profile');
     });
 
     testWidgets('the notice is not shown after an ordinary sign-out', (
@@ -631,7 +667,8 @@ void main() {
       await settle(tester);
 
       expect(await reload, isA<AppException>());
-      expect(find.byType(LoginScreen), findsOneWidget);
+      expect(find.text('Session ended'), findsOneWidget);
+      expect(locationOf(tester), '/profile');
       expect(
         await app.secureStore.read(AuthTokenStore.refreshTokenKey),
         isNull,
@@ -649,6 +686,12 @@ void main() {
     }
 
     Future<void> confirmSignOut(WidgetTester tester) async {
+      // At the end of the Profile list.
+      await tester.scrollUntilVisible(
+        find.widgetWithText(AbraButton, 'Sign out'),
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
       await tester.tap(find.widgetWithText(AbraButton, 'Sign out'));
       await tester.pumpAndSettle();
       expect(find.text('Sign out?'), findsOneWidget);
@@ -664,8 +707,10 @@ void main() {
 
       final request = requestsTo(app, 'auth/logout').single;
       expect((request.body! as Map)['refreshToken'], 'session-1.refresh-1');
-      expect(find.byType(LoginScreen), findsOneWidget);
-      expect(find.byType(AppShell), findsNothing);
+      // Still on Profile, now as a guest.
+      expect(locationOf(tester), '/profile');
+      expect(find.text(guestProfileMessage), findsOneWidget);
+      expect(find.byType(AppShell), findsOneWidget);
       expect(app.sessionManager.state, const AuthSignedOut());
       expect(await app.secureStore.read(AuthTokenStore.accessTokenKey), isNull);
       expect(
@@ -677,6 +722,12 @@ void main() {
 
     testWidgets('cancelling keeps the user signed in', (tester) async {
       await openProfile(tester);
+      // At the end of the Profile list.
+      await tester.scrollUntilVisible(
+        find.widgetWithText(AbraButton, 'Sign out'),
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
       await tester.tap(find.widgetWithText(AbraButton, 'Sign out'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Cancel'));
@@ -705,7 +756,7 @@ void main() {
         configure(backend);
         await confirmSignOut(tester);
 
-        expect(find.byType(LoginScreen), findsOneWidget);
+        expect(find.text(guestProfileMessage), findsOneWidget);
         expect(
           await app.secureStore.read(AuthTokenStore.accessTokenKey),
           isNull,
@@ -717,13 +768,14 @@ void main() {
       });
     }
 
-    testWidgets('after sign-out the signed-in screens cannot be reopened', (
+    testWidgets('after sign-out the personal screens show the guest card', (
       tester,
     ) async {
       await openProfile(tester);
       await confirmSignOut(tester);
-      await open(tester, '/profile');
-      expect(Uri.parse(locationOf(tester)).path, '/login');
+      await open(tester, '/profile/edit');
+      expect(find.text('Log in to continue'), findsOneWidget);
+      expect(find.byType(FeatureUnavailableBody), findsNothing);
     });
   });
 
@@ -783,7 +835,7 @@ void main() {
       await start(tester, size: const Size(320, 568));
       expect(tester.takeException(), isNull);
       await requestCode(tester);
-      expect(find.byType(OtpScreen), findsOneWidget);
+      expect(codeStep, findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });

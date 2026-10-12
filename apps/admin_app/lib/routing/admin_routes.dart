@@ -7,11 +7,29 @@ abstract final class AdminRoutes {
   static const home = '/';
   static const cities = '/cities';
   static const busTypes = '/bus-types';
+  static const documentTypes = '/document-types';
+  static const kycConfiguration = '/kyc-configuration';
+  static const customers = '/customers';
+  static const settings = '/settings';
+  static const invitations = '/invitations';
+  static const reviews = '/reviews';
+
+  /// One onboarding file of the review queue.
+  static String reviewOf(String id) => '$reviews/$id';
+
+  /// The section a path belongs to: a review file belongs to Reviews.
+  static String sectionOf(String path) =>
+      path.startsWith('$reviews/') ? reviews : path;
   static const operators = '/operators';
   static const locations = '/locations';
   static const buses = '/buses';
   static const routes = '/routes';
   static const trips = '/trips';
+  static const banners = '/banners';
+
+  /// Query parameter that carries the section to return to after the
+  /// session check or sign-in.
+  static const fromParameter = 'from';
 
   /// The permission needed to open each management section. The backend
   /// enforces the same permission on the section's API; this map only
@@ -19,11 +37,18 @@ abstract final class AdminRoutes {
   static const Map<String, String> requiredPermission = <String, String>{
     cities: PermissionKeys.catalogueRead,
     busTypes: PermissionKeys.busesRead,
+    documentTypes: PermissionKeys.documentsRead,
+    kycConfiguration: PermissionKeys.documentsRead,
+    customers: PermissionKeys.usersRead,
+    settings: PermissionKeys.settingsRead,
+    invitations: PermissionKeys.operatorsCreate,
+    reviews: PermissionKeys.documentsReview,
     operators: PermissionKeys.operatorsRead,
     locations: PermissionKeys.routesRead,
     buses: PermissionKeys.busesRead,
     routes: PermissionKeys.routesRead,
     trips: PermissionKeys.tripsRead,
+    banners: PermissionKeys.bannersManage,
   };
 
   /// Sections in the order they are listed.
@@ -33,7 +58,14 @@ abstract final class AdminRoutes {
     routes,
     locations,
     operators,
+    invitations,
+    reviews,
+    customers,
     cities,
     busTypes,
+    documentTypes,
+    kycConfiguration,
+    banners,
+    settings,
   ];
 }

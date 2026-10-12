@@ -26,6 +26,12 @@ void main() {
   group('design tokens', () {
     test('brand colours match the specification', () {
       expect(AbraColors.navy, const Color(0xFF12304A));
+      expect(AbraColors.deepBlue, const Color(0xFF0B4EA2));
+      expect(AbraColors.skyContainer, const Color(0xFFDDF3FC));
+      expect(AbraColors.navySecondary, const Color(0xFF0B3B6E));
+      expect(AbraColors.brightBlue, const Color(0xFF0878C9));
+      expect(AbraColors.skyBlue, const Color(0xFF36BDF5));
+      expect(AbraColors.lightBlue, const Color(0xFFE8F6FD));
       expect(AbraColors.blue, const Color(0xFF1677C8));
       expect(AbraColors.teal, const Color(0xFF1B8A5A));
       expect(AbraColors.orange, const Color(0xFFF28C28));
@@ -74,7 +80,7 @@ void main() {
       expect(theme.useMaterial3, isTrue);
       expect(theme.colorScheme.primary, AbraColors.blue);
       expect(theme.colorScheme.secondary, AbraColors.navy);
-      expect(theme.colorScheme.tertiary, AbraColors.orange);
+      expect(theme.colorScheme.tertiary, AbraColors.skyBlue);
       expect(theme.colorScheme.surface, AbraColors.white);
       expect(theme.scaffoldBackgroundColor, AbraColors.lightGray);
       expect(theme.appBarTheme.backgroundColor, AbraColors.navy);

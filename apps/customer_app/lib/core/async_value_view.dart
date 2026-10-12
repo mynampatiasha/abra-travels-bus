@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:shared_core/shared_core.dart';
 import 'package:shared_ui/shared_ui.dart';
 
-import '../routing/app_routes.dart';
+import '../features/authentication/gate/require_sign_in.dart';
+import '../features/authentication/gate/sign_in_intent.dart';
 
 /// The failure behind an error thrown by a repository or controller.
 /// Anything that is not already an [AppFailure] becomes an
@@ -49,7 +49,10 @@ class AsyncValueView<T> extends StatelessWidget {
     AsyncError<T>(:final error) => AbraFailureView(
       failure: failureOf(error),
       onRetry: onRetry,
-      onSignIn: () => context.go(AppRoutes.login),
+      onSignIn: () => requireSignIn(
+        context,
+        SignInIntent(returnLocation: currentLocation(context)),
+      ),
     ),
     _ => AbraLoadingView(label: loadingLabel),
   };

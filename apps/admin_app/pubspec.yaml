@@ -9,6 +9,10 @@ environment:
   flutter: ">=3.35.0"
 
 dependencies:
+  csv: 6.0.0
+  dio: ^5.7.0
+  excel: 4.0.6
+  file_picker: ^11.0.3
   flutter:
     sdk: flutter
   flutter_localizations:
@@ -21,13 +25,14 @@ dependencies:
   shared_localization:
   shared_models:
   shared_network:
+  shared_notifications:
   shared_permissions:
   shared_storage:
   shared_theme:
   shared_ui:
+  web: ^1.1.1
 
 dev_dependencies:
-  dio: ^5.7.0
   flutter_test:
     sdk: flutter
 

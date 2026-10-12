@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_localization/shared_localization.dart';
 import 'package:shared_permissions/shared_permissions.dart';
+import 'package:shared_theme/shared_theme.dart';
 
 import '../../../app/providers.dart';
 import '../../../l10n/admin_strings.dart';
+import '../../invitations/invitations_page.dart';
 import '../catalogue_repository.dart';
 import '../widgets/catalogue_common.dart';
 import '../widgets/resource_form.dart';
@@ -30,6 +32,27 @@ class OperatorsPage extends ConsumerWidget {
 
     return ResourcePage(
       path: 'operators',
+      exportName: 'operators',
+      stats: const <StatSpec>[
+        StatSpec(
+          AdminStrings.operatorActive,
+          <String, String>{'status': 'ACTIVE'},
+          Icons.verified_outlined,
+          AbraColors.tealDark,
+        ),
+        StatSpec(
+          AdminStrings.operatorPending,
+          <String, String>{'status': 'PENDING_APPROVAL'},
+          Icons.hourglass_top,
+          AbraColors.orangeDark,
+        ),
+        StatSpec(
+          AdminStrings.operatorSuspended,
+          <String, String>{'status': 'SUSPENDED'},
+          Icons.block,
+          AbraColors.danger,
+        ),
+      ],
       filters: const <FilterSpec>[
         ChoiceFilter(
           'status',
@@ -41,10 +64,12 @@ class OperatorsPage extends ConsumerWidget {
         ColumnSpec(
           AdminStrings.fieldCompanyName,
           (_, r) => textCell(r['companyName']),
+          text: (r) => plainText(r['companyName']),
         ),
         ColumnSpec(
           AdminStrings.fieldDisplayName,
           (_, r) => textCell(r['displayName']),
+          text: (r) => plainText(r['displayName']),
         ),
         ColumnSpec(
           AdminStrings.fieldStatus,
@@ -52,15 +77,11 @@ class OperatorsPage extends ConsumerWidget {
             r['status']! as String,
             CatalogueLabels.operatorStatuses,
           ),
+          text: (r) => CatalogueLabels.readable('${r['status']}'),
         ),
       ],
       onCreate: access.can(PermissionKeys.operatorsCreate)
-          ? (context) => showResourceForm(
-              context,
-              title: l10n.text(AdminStrings.operatorCreateTitle),
-              fields: _fields,
-              onSubmit: (values) => repository.post('operators', values),
-            )
+          ? (context) => InvitationsPage.inviteOwner(context, repository)
           : null,
       rowActions: canEdit || canApprove
           ? (record) {

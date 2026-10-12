@@ -17,6 +17,8 @@ const _explainedByServer = <String>{
 String failureText(AbraLocalizations l10n, Object error) {
   final failure = failureOf(error);
   return switch (failure) {
+    ApiFailure() when failure.code == ApiErrorCodes.validationFailed =>
+      _validationText(failure),
     ApiFailure(:final code, :final message)
         when _explainedByServer.contains(code) && message.isNotEmpty =>
       message,
@@ -32,4 +34,33 @@ String failureText(AbraLocalizations l10n, Object error) {
     ),
     _ => l10n.text(AbraStrings.stateErrorMessage),
   };
+}
+
+/// The server's message, with the fields that failed when it lists them:
+/// "Owner's phone: must be a valid mobile number, ...".
+String _validationText(ApiFailure failure) {
+  final issues = failure.details['issues'];
+  if (issues is! List || issues.isEmpty) return failure.message;
+  final lines = <String>{
+    for (final issue in issues.whereType<Map<Object?, Object?>>())
+      _issueLine('${issue['path'] ?? ''}', '${issue['message'] ?? ''}'),
+  }..remove('');
+  return lines.isEmpty ? failure.message : lines.join(String.fromCharCode(10));
+}
+
+String _issueLine(String path, String message) {
+  if (message.isEmpty) return '';
+  final field = path.split('.').last;
+  if (field.isEmpty) return message;
+  final words = field
+      .replaceAllMapped(RegExp('[A-Z]'), (m) => ' ${m[0]!.toLowerCase()}')
+      .trim();
+  final label = words.isEmpty
+      ? field
+      : words[0].toUpperCase() + words.substring(1);
+  // Raw type errors are for developers: say what a person can act on.
+  final clean = message.startsWith('Invalid input: expected')
+      ? 'is required'
+      : message;
+  return '$label $clean';
 }

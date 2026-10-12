@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_localization/shared_localization.dart';
 import 'package:shared_permissions/shared_permissions.dart';
+import 'package:shared_theme/shared_theme.dart';
 
 import '../../../app/providers.dart';
 import '../../../l10n/admin_strings.dart';
@@ -46,6 +47,27 @@ class BusesPage extends ConsumerWidget {
 
     return ResourcePage(
       path: 'buses',
+      exportName: 'buses',
+      stats: const <StatSpec>[
+        StatSpec(
+          AdminStrings.busActive,
+          <String, String>{'status': 'ACTIVE'},
+          Icons.directions_bus_outlined,
+          AbraColors.tealDark,
+        ),
+        StatSpec(
+          AdminStrings.operatorPending,
+          <String, String>{'status': 'PENDING_APPROVAL'},
+          Icons.hourglass_top,
+          AbraColors.orangeDark,
+        ),
+        StatSpec(
+          AdminStrings.busMaintenance,
+          <String, String>{'status': 'MAINTENANCE'},
+          Icons.build_outlined,
+          AbraColors.navySecondary,
+        ),
+      ],
       filters: <FilterSpec>[
         // Offered to platform staff only. Operator staff have no operator to
         // choose: the backend returns their own buses whatever is asked.
@@ -63,10 +85,15 @@ class BusesPage extends ConsumerWidget {
         ),
       ],
       columns: <ColumnSpec>[
-        ColumnSpec(AdminStrings.fieldName, (_, r) => textCell(r['name'])),
+        ColumnSpec(
+          AdminStrings.fieldName,
+          (_, r) => textCell(r['name']),
+          text: (r) => plainText(r['name']),
+        ),
         ColumnSpec(
           AdminStrings.fieldRegistration,
           (_, r) => textCell(r['registrationNumber']),
+          text: (r) => plainText(r['registrationNumber']),
         ),
         if (isPlatform)
           ColumnSpec(
@@ -85,11 +112,13 @@ class BusesPage extends ConsumerWidget {
           AdminStrings.fieldSeatCapacity,
           (_, r) => textCell(r['seatCapacity']),
           isNumeric: true,
+          text: (r) => plainText(r['seatCapacity']),
         ),
         ColumnSpec(
           AdminStrings.fieldStatus,
           (_, r) =>
               StatusBadge(r['status']! as String, CatalogueLabels.busStatuses),
+          text: (r) => CatalogueLabels.readable('${r['status']}'),
         ),
       ],
       onCreate: access.can(PermissionKeys.busesCreate)

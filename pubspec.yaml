@@ -10,6 +10,7 @@ environment:
 workspace:
   - apps/customer_app
   - apps/admin_app
+  - apps/client_portal
   - packages/shared_core
   - packages/shared_models
   - packages/shared_validation
@@ -20,6 +21,7 @@ workspace:
   - packages/shared_theme
   - packages/shared_localization
   - packages/shared_ui
+  - packages/shared_notifications
 
 dev_dependencies:
   flutter_lints: ^6.0.0

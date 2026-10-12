@@ -8,6 +8,11 @@ environment:
   sdk: ^3.9.0
 
 dependencies:
+  flutter:
+    sdk: flutter
+  firebase_core: ^4.15.0
+  firebase_auth: ^6.0.0
+  google_sign_in: ^6.2.2
   meta: ^1.16.0
   shared_core:
   shared_models:

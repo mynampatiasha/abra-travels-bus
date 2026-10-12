@@ -3,7 +3,8 @@ import 'package:shared_theme/shared_theme.dart';
 
 /// Visual weight of an [AbraButton].
 enum AbraButtonVariant {
-  /// The one main action of a screen, and payment actions (orange).
+  /// The one main action of a screen, and payment actions (brand
+  /// gradient).
   callToAction,
 
   /// A regular primary action (blue).
@@ -49,9 +50,14 @@ class AbraButton extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
         if (isLoading)
-          const SizedBox.square(
+          SizedBox.square(
             dimension: AbraSizes.iconSmall,
-            child: CircularProgressIndicator(strokeWidth: 2),
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: variant == AbraButtonVariant.callToAction
+                  ? AbraColors.white
+                  : null,
+            ),
           )
         else if (icon != null)
           Icon(icon, size: AbraSizes.iconSmall + AbraSpacing.xs),
@@ -63,13 +69,30 @@ class AbraButton extends StatelessWidget {
     );
 
     final Widget button = switch (variant) {
-      AbraButtonVariant.callToAction => FilledButton(
-        onPressed: effectiveOnPressed,
-        style: FilledButton.styleFrom(
-          backgroundColor: scheme.tertiary,
-          foregroundColor: scheme.onTertiary,
+      // The brand gradient under a transparent button, so focus, hover and
+      // press feedback stay the standard ones.
+      AbraButtonVariant.callToAction => DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: onPressed == null ? null : AbraGradients.action,
+          color: onPressed == null
+              ? scheme.onSurface.withValues(alpha: 0.12)
+              : null,
+          borderRadius: AbraRadius.medium,
+          boxShadow: onPressed == null ? null : AbraShadows.card,
         ),
-        child: content,
+        child: FilledButton(
+          onPressed: effectiveOnPressed,
+          style: FilledButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            disabledBackgroundColor: Colors.transparent,
+            foregroundColor: AbraColors.white,
+            disabledForegroundColor: onPressed == null
+                ? null
+                : AbraColors.white,
+            shadowColor: Colors.transparent,
+          ),
+          child: content,
+        ),
       ),
       AbraButtonVariant.primary => FilledButton(
         onPressed: effectiveOnPressed,

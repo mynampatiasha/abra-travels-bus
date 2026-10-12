@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:customer_app/app/providers.dart';
 import 'package:customer_app/bootstrap/app_dependencies.dart';
 import 'package:customer_app/bootstrap/error_handling.dart';
 import 'package:customer_app/core/async_value_view.dart';
@@ -29,23 +30,27 @@ Future<void> pumpView(WidgetTester tester, Widget child) async {
         path: '/',
         builder: (_, _) => Scaffold(body: child),
       ),
-      GoRoute(
-        path: '/login',
-        builder: (_, _) => const Scaffold(body: Text('sign-in screen')),
-      ),
     ],
   );
   addTearDown(router.dispose);
   final config = AbraLocaleConfig();
+  // The app's services, for the sign-in sheet that "Sign in" opens.
+  final app = TestApp();
   await tester.pumpWidget(
-    MaterialApp.router(
-      routerConfig: router,
-      theme: AbraTheme.light(),
-      supportedLocales: config.supportedLocales,
-      localizationsDelegates: [
-        AbraLocalizationsDelegate(config: config, source: englishTranslations),
-        ...GlobalMaterialLocalizations.delegates,
-      ],
+    ProviderScope(
+      overrides: [appDependenciesProvider.overrideWithValue(app.dependencies)],
+      child: MaterialApp.router(
+        routerConfig: router,
+        theme: AbraTheme.light(),
+        supportedLocales: config.supportedLocales,
+        localizationsDelegates: [
+          AbraLocalizationsDelegate(
+            config: config,
+            source: englishTranslations,
+          ),
+          ...GlobalMaterialLocalizations.delegates,
+        ],
+      ),
     ),
   );
   await tester.pump();
@@ -273,7 +278,8 @@ void main() {
       }
     });
 
-    testWidgets('session ended: offers sign-in and goes there', (tester) async {
+    testWidgets('session ended: offers sign-in, which opens the sign-in '
+        'sheet over the screen', (tester) async {
       await pumpView(
         tester,
         view(
@@ -286,9 +292,14 @@ void main() {
       );
       expect(find.text('Session ended'), findsOneWidget);
       expect(find.text('Try again'), findsNothing);
+      // The stored session is no longer being checked: nobody is signed in.
+      await ProviderScope.containerOf(
+        tester.element(find.byType(MaterialApp)),
+      ).read(sessionManagerProvider).restore();
       await tester.tap(find.text('Sign in'));
       await tester.pumpAndSettle();
-      expect(find.text('sign-in screen'), findsOneWidget);
+      expect(find.text('Log in or sign up'), findsOneWidget);
+      expect(find.text('Mobile number'), findsOneWidget);
     });
 
     testWidgets('a programming error is shown as a generic problem, without '

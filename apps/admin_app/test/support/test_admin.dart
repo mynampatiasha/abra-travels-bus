@@ -1,4 +1,7 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:admin_app/app/admin_app.dart';
 import 'package:admin_app/app/providers.dart';
@@ -13,6 +16,7 @@ import 'package:shared_core/shared_core.dart';
 import 'package:shared_localization/shared_localization.dart';
 import 'package:shared_models/shared_models.dart';
 import 'package:shared_network/shared_network.dart';
+import 'package:shared_notifications/shared_notifications.dart';
 import 'package:shared_permissions/shared_permissions.dart';
 
 /// The real English resources (app + shared).
@@ -192,6 +196,47 @@ class FakeBackend {
   bool mfaEnrollmentRequired = false;
   String validPassword = 'correct-horse-battery';
   final Map<String, List<JsonMap>> records = <String, List<JsonMap>>{};
+  JsonMap kycConfiguration = <String, Object?>{
+    'schemaVersion': 1,
+    'version': 0,
+    'questions': <JsonMap>[],
+    'rules': <JsonMap>[],
+  };
+
+  /// The settings the backend holds, by integration (`whatsapp`, `email`).
+  /// Secrets are never in them: only whether one is set.
+  final Map<String, JsonMap> settings = <String, JsonMap>{
+    'whatsapp': <String, Object?>{
+      'provider': 'meta',
+      'status': 'INCOMPLETE',
+      'missing': <String>['accessToken', 'phoneNumberId'],
+      'enabled': true,
+      'businessAccountId': null,
+      'phoneNumberId': null,
+      'accessToken': <String, Object?>{
+        'configured': false,
+        'source': 'NONE',
+        'lastFour': null,
+      },
+      'otpTemplateName': null,
+      'otpTemplateLanguage': null,
+      'otpFallbackToSms': true,
+    },
+    'email': <String, Object?>{
+      'provider': 'smtp',
+      'status': 'INCOMPLETE',
+      'missing': <String>['host', 'port'],
+      'enabled': true,
+      'host': null,
+      'port': null,
+      'security': 'STARTTLS',
+      'username': null,
+      'password': <String, Object?>{'configured': false},
+      'fromName': null,
+      'fromAddress': 'no-reply@abratravels.local',
+      'replyTo': null,
+    },
+  };
 
   /// Replaces the answer to one request (`METHOD path`), for error cases.
   final Map<String, FakeResponse Function(RecordedRequest request)> overrides =
@@ -258,7 +303,280 @@ class FakeBackend {
         return FakeResponse.ok(persona.permissionsJson);
     }
     if (path.startsWith('catalogue/')) return _catalogue(request);
+    // The admin lists (`admin/banners`) behave like the catalogue ones.
+    if (path.startsWith('admin/')) return _catalogue(request);
+    if (path.startsWith('settings/integrations/')) return _settings(request);
+    if (path.startsWith('settings/kyc-configuration')) {
+      return _kycConfiguration(request);
+    }
+    if (path.startsWith('notifications')) return _notifications(request);
+    if (path.startsWith('onboarding/')) return _onboarding(request);
     return FakeResponse.error(404, 'RESOURCE_NOT_FOUND');
+  }
+
+  FakeResponse _kycConfiguration(RecordedRequest request) {
+    if (!persona.permissions.contains('documents.read')) {
+      return FakeResponse.error(403, 'PERMISSION_DENIED');
+    }
+    if (request.options.method == 'GET') {
+      return FakeResponse.ok(<String, Object?>{
+        ...kycConfiguration,
+        'documents': of('document-types'),
+      });
+    }
+    final body = asJsonMap(request.body! as Map<Object?, Object?>);
+    if (request.path.endsWith('/preview')) {
+      return FakeResponse.ok(<String, Object?>{
+        'missingQuestions': <String>[],
+        'documents': <JsonMap>[],
+      });
+    }
+    if (!persona.permissions.contains('documents.manage')) {
+      return FakeResponse.error(403, 'PERMISSION_DENIED');
+    }
+    if (request.path.endsWith('/validate-import')) {
+      return FakeResponse.ok(<String, Object?>{'valid': true});
+    }
+    if (body['expectedVersion'] != kycConfiguration['version']) {
+      return FakeResponse.error(
+        409,
+        'INVALID_STATE_TRANSITION',
+        message: 'Configuration changed. Refresh and try again.',
+      );
+    }
+    kycConfiguration = asJsonMap(
+      jsonDecode(
+            jsonEncode(<String, Object?>{
+              'schemaVersion': 1,
+              'version': (kycConfiguration['version']! as int) + 1,
+              'questions': body['questions'],
+              'rules': body['rules'],
+            }),
+          )
+          as Map<Object?, Object?>,
+    );
+    return FakeResponse.ok(<String, Object?>{
+      ...kycConfiguration,
+      'documents': of('document-types'),
+    });
+  }
+
+  /// `onboarding/invitations` and `onboarding/submissions`: lists with a status filter, the
+  /// invite, resend and withdraw calls, and the review calls of one file.
+  FakeResponse _onboarding(RecordedRequest request) {
+    final method = request.options.method;
+    final parts = request.path.split('/');
+    final resource = parts[1];
+    final records = of(resource);
+    final body = request.body == null
+        ? <String, Object?>{}
+        : asJsonMap(request.body! as Map);
+
+    if (parts.length == 2 && method == 'GET') {
+      final status = request.options.queryParameters['status'];
+      final items = records
+          .where((record) => status == null || record['status'] == status)
+          .toList();
+      return FakeResponse(200, <String, Object?>{
+        'success': true,
+        'data': items,
+        'meta': <String, Object?>{
+          'requestId': 'test-request',
+          'page': 1,
+          'pageSize': request.options.queryParameters['pageSize'] ?? 20,
+          'total': items.length,
+        },
+      });
+    }
+    if (resource == 'invitations' && parts.length == 2 && method == 'POST') {
+      final created = add('invitations', <String, Object?>{
+        'operatorId': 'op-${records.length}',
+        'companyName': body['companyName'],
+        'ownerName': body['ownerName'],
+        'email': body['email'],
+        'phone': body['phone'],
+        'status': 'PENDING',
+        'expired': false,
+        'emailStatus': 'SENT',
+        'emailProblem': null,
+        'inviteUrl': 'http://localhost:5001/accept-invite?token=TESTTOKEN',
+        'expiresAt': '2026-10-14T10:00:00.000Z',
+        'createdAt': '2026-10-07T10:00:00.000Z',
+      });
+      return FakeResponse(201, <String, Object?>{
+        'success': true,
+        'data': created,
+        'meta': <String, Object?>{'requestId': 'test-request'},
+      });
+    }
+    final record = records.where((item) => item['id'] == parts[2]).firstOrNull;
+    if (record == null) return FakeResponse.error(404, 'RESOURCE_NOT_FOUND');
+    if (parts.length == 3) return FakeResponse.ok(record);
+    final action = parts[3];
+    if (resource == 'invitations') {
+      if (action == 'revoke') record['status'] = 'REVOKED';
+      return FakeResponse.ok(record);
+    }
+    // submissions
+    final documents = (record['documents']! as List).cast<JsonMap>();
+    switch (action) {
+      case 'documents': // .../documents/<typeId>/review
+        final document = documents.firstWhere(
+          (item) => item['documentTypeId'] == parts[4],
+        );
+        document['status'] = body['decision'];
+        document['rejectionReason'] = body['reason'];
+      case 'approve':
+        record['status'] = 'APPROVED';
+      case 'reject':
+        record['status'] = 'REJECTED';
+        record['decisionNote'] = body['note'];
+    }
+    return FakeResponse.ok(record);
+  }
+
+  /// A file waiting for review, as the API returns it.
+  JsonMap addSubmission({String status = 'PENDING'}) =>
+      add('submissions', <String, Object?>{
+        'operatorId': 'op-1',
+        'companyName': 'Alpha Lines',
+        'subjectType': 'OPERATOR',
+        'busId': null,
+        'busRegistrationNumber': null,
+        'busName': null,
+        'status': status,
+        'submitCount': 1,
+        'submittedAt': '2026-10-06T10:00:00.000Z',
+        'decidedAt': null,
+        'updatedAt': '2026-10-06T10:00:00.000Z',
+        'decisionNote': null,
+        'problems': <String>[],
+        'canSubmit': false,
+        'checklist': <Object?>[
+          <String, Object?>{
+            'documentTypeId': 'pan-type',
+            'name': 'PAN card',
+            'isRequired': true,
+            'state': 'MISSING',
+          },
+        ],
+        'documents': <Object?>[
+          <String, Object?>{
+            'documentTypeId': 'gst-type',
+            'key': 'GST',
+            'name': 'GST certificate',
+            'status': 'PENDING',
+            'rejectionReason': null,
+            'expiryDate': null,
+            'reviewedAt': null,
+            'files': <Object?>[
+              <String, Object?>{
+                'id': 'file-1',
+                'originalName': 'gst.pdf',
+                'mimeType': 'application/pdf',
+                'sizeBytes': 20480,
+              },
+            ],
+          },
+        ],
+        'history': <Object?>[
+          <String, Object?>{
+            'at': '2026-10-06T10:00:00.000Z',
+            'action': 'SUBMITTED',
+            'byUserId': 'u1',
+            'documentTypeKey': null,
+            'note': null,
+          },
+        ],
+      });
+
+  /// The notification list: nobody has any in these tests.
+  FakeResponse _notifications(RecordedRequest request) =>
+      request.path == 'notifications/unread-count'
+      ? FakeResponse.ok(<String, Object?>{'count': 0})
+      : const FakeResponse(200, <String, Object?>{
+          'success': true,
+          'data': <Object?>[],
+          'meta': <String, Object?>{
+            'requestId': 'test-request',
+            'page': 1,
+            'pageSize': 20,
+            'total': 0,
+          },
+        });
+
+  /// `settings/integrations/<channel>[/test-connection|/test-email]`. Like
+  /// the backend: anyone with `settings.read` may read, only
+  /// `settings.update` may change or test, and a secret is never returned.
+  FakeResponse _settings(RecordedRequest request) {
+    final parts = request.path.split('/');
+    final channel = parts[2];
+    final current = settings[channel];
+    if (current == null) return FakeResponse.error(404, 'RESOURCE_NOT_FOUND');
+    final method = request.options.method;
+    if (method == 'GET') return FakeResponse.ok(current);
+    if (!persona.permissions.contains('settings.update')) {
+      return FakeResponse.error(403, 'PERMISSION_DENIED');
+    }
+    final body = request.body == null
+        ? <String, Object?>{}
+        : asJsonMap(request.body! as Map);
+
+    if (parts.length == 4) {
+      final isWhatsApp = channel == 'whatsapp';
+      if (parts[3] == 'test-email') {
+        return FakeResponse.ok(<String, Object?>{
+          'ok': true,
+          'message': 'A test email was sent to ${body['to']}.',
+        });
+      }
+      final ready = isWhatsApp
+          ? (current['accessToken']! as Map)['configured'] == true
+          : current['host'] != null;
+      return FakeResponse.ok(<String, Object?>{
+        'ok': ready,
+        'message': ready
+            ? (isWhatsApp
+                  ? 'Connected to WhatsApp: number +91 98765 43210.'
+                  : 'Connected to ${current['host']}:${current['port']} and signed in.')
+            : (isWhatsApp
+                  ? 'Save the access token first.'
+                  : 'Enter the host and the port and save, then test again.'),
+      });
+    }
+
+    for (final entry in body.entries) {
+      switch (entry.key) {
+        case 'reason':
+          break;
+        case 'accessToken':
+          final token = entry.value as String?;
+          current['accessToken'] = <String, Object?>{
+            'configured': token != null,
+            'source': token == null ? 'NONE' : 'ADMIN',
+            'lastFour': token?.substring(token.length - 4),
+          };
+        case 'password':
+          current['password'] = <String, Object?>{
+            'configured': entry.value != null,
+          };
+        case 'webhookVerifyToken':
+          current['webhookVerifyToken'] = <String, Object?>{
+            'configured': entry.value != null,
+          };
+        default:
+          current[entry.key] = entry.value;
+      }
+    }
+    final ready = channel == 'whatsapp'
+        ? (current['accessToken']! as Map)['configured'] == true &&
+              current['phoneNumberId'] != null
+        : current['host'] != null && current['port'] != null;
+    current['status'] = current['enabled'] == false
+        ? 'DISABLED'
+        : (ready ? 'READY' : 'INCOMPLETE');
+    current['missing'] = ready ? <String>[] : <String>['setup'];
+    return FakeResponse.ok(current);
   }
 
   /// Records the signed-in persona may see: operator staff get their own
@@ -277,9 +595,14 @@ class FakeBackend {
 
   FakeResponse _catalogue(RecordedRequest request) {
     final method = request.options.method;
-    final parts = request.path.split('/').skip(1).toList();
+    // A query may be part of the path (`.../image?variant=desktop`).
+    final address = Uri.parse(request.path);
+    final parts = address.path.split('/').skip(1).toList();
     final resource = parts[0];
-    final query = request.options.queryParameters;
+    final query = <String, Object?>{
+      ...request.options.queryParameters,
+      ...address.queryParameters,
+    };
     final body = request.body == null
         ? <String, Object?>{}
         : asJsonMap(request.body! as Map);
@@ -340,11 +663,23 @@ class FakeBackend {
     ).where((item) => item['id'] == parts[1]).firstOrNull;
     if (record == null) return FakeResponse.error(404, 'RESOURCE_NOT_FOUND');
     if (parts.length == 2 && method == 'GET') return FakeResponse.ok(record);
+    if (parts.length == 2 && method == 'DELETE') {
+      of(resource).remove(record);
+      return FakeResponse.ok(null);
+    }
     if (parts.length == 2 && method == 'PUT') {
       record.addAll(body);
       return FakeResponse.ok(record);
     }
     switch (parts[2]) {
+      case 'image':
+        // Banner images: `variant` is mobile or desktop.
+        final key = query['variant'] == 'desktop'
+            ? 'desktopImageUrl'
+            : 'imageUrl';
+        record[key] = method == 'DELETE'
+            ? null
+            : '$resource/${record['id']}/image?variant=${query['variant']}';
       case 'active':
         record['isActive'] = body['active'];
       case 'status':
@@ -378,7 +713,7 @@ class TestAdmin {
     );
     final client = ApiClient(
       config: config,
-      dio: Dio()..httpClientAdapter = adapter,
+      dio: Dio()..httpClientAdapter = _UploadsAccepted(adapter),
       logger: logger,
     );
     dependencies = AppDependencies(
@@ -396,6 +731,10 @@ class TestAdmin {
         logger: logger,
       ),
       permissions: PermissionsController(PermissionsRepository(client)),
+      notifications: NotificationCenter(
+        repository: NotificationsRepository(client),
+        live: const _SilentLive(),
+      ),
     );
   }
 
@@ -463,4 +802,41 @@ String locationOf(WidgetTester tester) => containerOf(
 Future<void> open(WidgetTester tester, String location) async {
   containerOf(tester).read(adminRouterProvider).go(location);
   await settle(tester);
+}
+
+/// Lets file uploads (`multipart/form-data`) through to the fake backend,
+/// which reads only JSON bodies: the upload is recorded without its body.
+class _UploadsAccepted implements HttpClientAdapter {
+  _UploadsAccepted(this._inner);
+
+  final FakeHttpAdapter _inner;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    final isUpload = options.contentType?.startsWith('multipart/') ?? false;
+    if (isUpload && requestStream != null) {
+      await requestStream.drain<void>();
+      return _inner.fetch(options, null, cancelFuture);
+    }
+    return _inner.fetch(options, requestStream, cancelFuture);
+  }
+
+  @override
+  void close({bool force = false}) => _inner.close(force: force);
+}
+
+/// No live channel in tests: a stream that never has anything to say.
+class _SilentLive implements LiveNotificationSource {
+  const _SilentLive();
+
+  @override
+  Stream<NotificationItem> connect(Future<String?> Function() accessToken) =>
+      StreamController<NotificationItem>.broadcast().stream;
+
+  @override
+  Future<void> disconnect() async {}
 }

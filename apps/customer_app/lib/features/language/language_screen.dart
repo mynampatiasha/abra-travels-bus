@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_localization/shared_localization.dart';
 import 'package:shared_theme/shared_theme.dart';
 
 import '../../app/providers.dart';
+import '../../core/ui/gradient_header.dart';
+import '../../core/ui/sticky_action_bar.dart';
 import '../../l10n/customer_strings.dart';
+import '../../routing/app_routes.dart';
 
 /// Lets the user pick the app language, or follow the device. The choice
-/// applies immediately and is remembered on the device.
+/// applies immediately and is remembered on the device. Also the last step
+/// of the first launch ([isFirstLaunch]), with "Continue" to Home.
 class LanguageScreen extends ConsumerWidget {
-  const LanguageScreen({super.key});
+  const LanguageScreen({this.isFirstLaunch = false, super.key});
+
+  final bool isFirstLaunch;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -17,7 +24,17 @@ class LanguageScreen extends ConsumerWidget {
     final controller = ref.watch(appDependenciesProvider).localeController;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.text(CustomerStrings.languageTitle))),
+      appBar: GradientAppBar(
+        title: l10n.text(CustomerStrings.languageTitle),
+        automaticallyImplyLeading: !isFirstLaunch,
+      ),
+      bottomNavigationBar: isFirstLaunch
+          ? StickyActionBar(
+              actionLabel: l10n.text(AbraStrings.commonContinue),
+              actionIcon: Icons.arrow_forward,
+              onAction: () => context.go(AppRoutes.home),
+            )
+          : null,
       body: AbraPageContainer(
         maxWidth: AbraSizes.maxFormWidth,
         child: ListenableBuilder(

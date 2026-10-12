@@ -7,3 +7,5 @@ export 'src/auth_api.dart';
 export 'src/auth_session_manager.dart';
 export 'src/auth_state.dart';
 export 'src/auth_token_store.dart';
+
+export 'src/google_sign_in_button.dart';

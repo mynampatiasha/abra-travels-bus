@@ -302,9 +302,21 @@ void main() {
   group('parity with the backend (no second registry)', () {
     // Parses definePermissions('<module>', { <action>: { ... }, ... }) blocks.
     Set<String> backendPermissionKeys() {
-      final source = File(
+      final catalog = File(
         '../../backend/src/modules/rbac/permissions/permission-catalog.ts',
-      ).readAsStringSync();
+      );
+      // A module may define its permissions next to its model and the
+      // catalogue spreads them in: read the files it imports too.
+      final sources = StringBuffer(catalog.readAsStringSync());
+      for (final link in RegExp(
+        r"from '(\.{1,2}/[^']+)'",
+      ).allMatches(sources.toString()).toList()) {
+        final file = File.fromUri(
+          catalog.absolute.uri.resolve('${link.group(1)}.ts'),
+        );
+        if (file.existsSync()) sources.write(file.readAsStringSync());
+      }
+      final source = sources.toString();
       final keys = <String>{};
       final group = RegExp(r"definePermissions\('([a-z.-]+)',\s*\{");
       for (final match in group.allMatches(source)) {
@@ -335,7 +347,7 @@ void main() {
 
     test('PermissionKeys is exactly the backend catalogue', () {
       final backend = backendPermissionKeys();
-      expect(backend, hasLength(46), reason: 'backend catalogue size changed');
+      expect(backend, hasLength(53), reason: 'backend catalogue size changed');
       expect(
         PermissionKeys.all.difference(backend),
         isEmpty,

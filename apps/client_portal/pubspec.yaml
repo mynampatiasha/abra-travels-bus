@@ -1,0 +1,41 @@
+name: client_portal
+description: "Abra Travels portal for bus owners - documents, buses and approval status (web)."
+publish_to: none
+version: 0.1.0+1
+resolution: workspace
+
+environment:
+  sdk: ^3.9.0
+  flutter: ">=3.35.0"
+
+dependencies:
+  dio: ^5.7.0
+  file_picker: ^11.0.3
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  flutter_riverpod: ^3.0.0
+  go_router: ^16.0.0
+  meta: ^1.16.0
+  shared_authentication:
+  shared_core:
+  shared_localization:
+  shared_models:
+  shared_network:
+  shared_notifications:
+  shared_permissions:
+  shared_storage:
+  shared_theme:
+  shared_ui:
+  web: ^1.1.1
+
+dev_dependencies:
+  firebase_auth: ^6.0.0
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+  assets:
+    - l10n/

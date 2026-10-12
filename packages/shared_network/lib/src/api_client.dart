@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:shared_core/shared_core.dart';
@@ -98,6 +100,77 @@ class ApiClient {
     bool authenticated = true,
   }) => _send('DELETE', path, body: body, authenticated: authenticated);
 
+  /// Uploads a form with files (`multipart/form-data`), for example a document.
+  Future<ApiSuccess> postForm(String path, FormData form) => _send(
+    'POST',
+    path,
+    body: form,
+    authenticated: true,
+    contentType: Headers.multipartFormDataContentType,
+  );
+
+  /// Downloads a file the signed-in person may see (a document). Refreshes the session once
+  /// when the token merely expired, like every other call.
+  Future<Uint8List> getBytes(String path) =>
+      _download(path, isRetryAfterRefresh: false);
+
+  Future<Uint8List> _download(
+    String path, {
+    required bool isRetryAfterRefresh,
+  }) async {
+    final tokenSource = _tokenSource;
+    final accessToken = await tokenSource?.accessToken();
+    if (accessToken == null) throw const AppException(SessionExpiredFailure());
+    final Response<List<int>> response;
+    try {
+      response = await _dio.request<List<int>>(
+        path.startsWith('/') ? path.substring(1) : path,
+        options: Options(
+          method: 'GET',
+          responseType: ResponseType.bytes,
+          headers: <String, Object?>{
+            'X-Request-Id': _requestIdFactory(),
+            'Authorization': 'Bearer $accessToken',
+            if (_config.clientType == ClientType.web) 'X-Abra-Client': 'web',
+          },
+          extra: <String, Object?>{
+            if (_config.clientType == ClientType.web) 'withCredentials': true,
+          },
+        ),
+      );
+    } on DioException catch (exception) {
+      throw AppException(FailureMapper.fromDioException(exception));
+    }
+    final status = response.statusCode ?? 0;
+    final bytes = Uint8List.fromList(response.data ?? const <int>[]);
+    if (status >= 200 && status < 300) return bytes;
+
+    Object? errorBody;
+    try {
+      errorBody = jsonDecode(utf8.decode(bytes));
+    } on FormatException {
+      errorBody = null;
+    }
+    final failure = FailureMapper.fromErrorResponse(
+      status,
+      errorBody,
+      requestIdHeader: response.headers.value('x-request-id') ?? '',
+    );
+    if (failure is ApiFailure &&
+        failure.isUnauthenticated &&
+        tokenSource != null) {
+      if (failure.isRefreshable && !isRetryAfterRefresh) {
+        if (await tokenSource.refreshAccessToken()) {
+          return _download(path, isRetryAfterRefresh: true);
+        }
+        throw const AppException(SessionExpiredFailure());
+      }
+      await tokenSource.onSessionRejected();
+      throw const AppException(SessionExpiredFailure());
+    }
+    throw AppException(failure);
+  }
+
   Future<ApiSuccess> _send(
     String method,
     String path, {
@@ -105,6 +178,7 @@ class ApiClient {
     Object? body,
     required bool authenticated,
     String? idempotencyKey,
+    String? contentType,
     bool isRetryAfterRefresh = false,
   }) async {
     final tokenSource = _tokenSource;
@@ -141,6 +215,7 @@ class ApiClient {
         options: Options(
           method: method,
           headers: headers,
+          contentType: contentType,
           // Lets the browser send and store the HttpOnly refresh cookie.
           extra: <String, Object?>{
             if (_config.clientType == ClientType.web) 'withCredentials': true,
@@ -201,6 +276,7 @@ class ApiClient {
           body: body,
           authenticated: true,
           idempotencyKey: idempotencyKey,
+          contentType: contentType,
           isRetryAfterRefresh: true,
         ),
       );

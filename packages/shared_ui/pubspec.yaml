@@ -21,3 +21,7 @@ dev_dependencies:
     sdk: flutter
   flutter_test:
     sdk: flutter
+
+flutter:
+  assets:
+    - assets/abra_logo.png

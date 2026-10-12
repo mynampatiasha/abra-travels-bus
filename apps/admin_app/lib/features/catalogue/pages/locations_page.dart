@@ -55,6 +55,7 @@ class LocationsPage extends ConsumerWidget {
 
     return ResourcePage(
       path: 'locations',
+      exportName: 'locations',
       filters: <FilterSpec>[
         if (canListCities)
           const RefFilter(
@@ -70,13 +71,21 @@ class LocationsPage extends ConsumerWidget {
         ),
       ],
       columns: <ColumnSpec>[
-        ColumnSpec(AdminStrings.fieldName, (_, r) => textCell(r['name'])),
+        ColumnSpec(
+          AdminStrings.fieldName,
+          (_, r) => textCell(r['name']),
+          text: (r) => plainText(r['name']),
+        ),
         if (canListCities)
           ColumnSpec(
             AdminStrings.fieldCity,
             (_, r) => LookupName('cities', r['cityId'] as String?),
           ),
-        ColumnSpec(AdminStrings.fieldAddress, (_, r) => textCell(r['address'])),
+        ColumnSpec(
+          AdminStrings.fieldAddress,
+          (_, r) => textCell(r['address']),
+          text: (r) => plainText(r['address']),
+        ),
         ColumnSpec(
           AdminStrings.fieldOwner,
           (_, r) => Text(
@@ -86,10 +95,20 @@ class LocationsPage extends ConsumerWidget {
                   : AdminStrings.ownerOperator,
             ),
           ),
+          text: (r) => l10n.text(
+            r['operatorId'] == null
+                ? AdminStrings.ownerShared
+                : AdminStrings.ownerOperator,
+          ),
         ),
         ColumnSpec(
           AdminStrings.fieldStatus,
           (_, r) => StatusBadge.active(isActive: r['isActive'] == true),
+          text: (r) => l10n.text(
+            r['isActive'] == true
+                ? AdminStrings.statusActive
+                : AdminStrings.statusInactive,
+          ),
         ),
       ],
       onCreate: access.can(PermissionKeys.routesCreate) && canListCities

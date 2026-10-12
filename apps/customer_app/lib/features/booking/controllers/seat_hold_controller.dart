@@ -1,0 +1,69 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:meta/meta.dart';
+
+import '../models/booking_models.dart';
+
+/// The seats a customer is holding for a trip, until [expiresAt].
+@immutable
+class SeatHold {
+  const SeatHold({
+    required this.lockId,
+    required this.expiresAt,
+    this.released = false,
+  });
+
+  final String lockId;
+  final DateTime expiresAt;
+
+  /// The hold was let go of on purpose (the booking is paid, or the hold ran
+  /// out and the customer was told). Unlike "no hold", this never sends the
+  /// customer back to the seats.
+  final bool released;
+
+  /// Whole seconds left at [now], never negative.
+  int secondsLeft(DateTime now) {
+    if (released) return 0;
+    final left = expiresAt.difference(now).inSeconds;
+    return left < 0 ? 0 : left;
+  }
+
+  bool isExpired(DateTime now) => released || !expiresAt.isAfter(now);
+
+  /// Seats are still held and can be paid for.
+  bool isActive(DateTime now) => !isExpired(now);
+}
+
+/// The hold on the seats of [tripId]; null when nothing is held.
+final seatHoldProvider =
+    NotifierProvider.family<SeatHoldController, SeatHold?, String>(
+      SeatHoldController.new,
+    );
+
+class SeatHoldController extends Notifier<SeatHold?> {
+  SeatHoldController(this.tripId);
+
+  final String tripId;
+
+  @override
+  SeatHold? build() => null;
+
+  void start(SeatLock lock) =>
+      state = SeatHold(lockId: lock.lockId, expiresAt: lock.expiresAt);
+
+  void release() {
+    final hold = state;
+    if (hold == null) return;
+    state = SeatHold(
+      lockId: hold.lockId,
+      expiresAt: hold.expiresAt,
+      released: true,
+    );
+  }
+}
+
+/// "09:58": minutes and seconds left, always two digits each.
+String formatHold(int seconds) {
+  final minutes = (seconds ~/ 60).toString().padLeft(2, '0');
+  final rest = (seconds % 60).toString().padLeft(2, '0');
+  return '$minutes:$rest';
+}

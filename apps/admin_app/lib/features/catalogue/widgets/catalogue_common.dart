@@ -10,8 +10,23 @@ import '../catalogue_repository.dart';
 import 'resource_form.dart';
 import 'resource_page.dart';
 
+/// A value as plain text for the export; nothing is an empty cell.
+String plainText(Object? value) => value == null ? '' : '$value';
+
 /// Label keys and badge tones of the status values of the catalogue.
 abstract final class CatalogueLabels {
+  static const documentSubjects = <String, String>{
+    'OPERATOR': AdminStrings.subjectOperator,
+    'BUS': AdminStrings.subjectBus,
+  };
+
+  /// File types a document may be uploaded as, by MIME type.
+  static const documentFileTypes = <String, String>{
+    'application/pdf': 'PDF',
+    'image/jpeg': 'JPG photo',
+    'image/png': 'PNG photo',
+  };
+
   static const berthTypes = <String, String>{
     'SEATER': AdminStrings.berthSeater,
     'SLEEPER': AdminStrings.berthSleeper,
@@ -36,6 +51,7 @@ abstract final class CatalogueLabels {
   };
 
   static const busStatuses = <String, String>{
+    'PENDING_APPROVAL': AdminStrings.operatorPending,
     'ACTIVE': AdminStrings.busActive,
     'MAINTENANCE': AdminStrings.busMaintenance,
     'RETIRED': AdminStrings.busRetired,
@@ -156,6 +172,7 @@ Future<bool> confirmSetActive(
   required String path,
   required JsonMap record,
   required bool active,
+  String Function(JsonMap record) labelOf = nameOf,
 }) async {
   final l10n = AbraLocalizations.of(context);
   final confirmed = await showAbraConfirmDialog(
@@ -164,7 +181,7 @@ Future<bool> confirmSetActive(
       active
           ? AdminStrings.confirmEnableTitle
           : AdminStrings.confirmDisableTitle,
-      <String, Object?>{'name': nameOf(record)},
+      <String, Object?>{'name': labelOf(record)},
     ),
     message: l10n.text(AdminStrings.confirmStatusMessage),
     confirmLabel: l10n.text(
@@ -180,8 +197,14 @@ Future<bool> confirmSetActive(
   return true;
 }
 
-/// The enable/disable action for a record with an `isActive` flag.
-RowAction activeToggleAction(WidgetRef ref, String path, JsonMap record) {
+/// The enable/disable action for a record with an `isActive` flag. [labelOf] names the record
+/// in the confirmation (its `name` by default).
+RowAction activeToggleAction(
+  WidgetRef ref,
+  String path,
+  JsonMap record, {
+  String Function(JsonMap record) labelOf = nameOf,
+}) {
   final isActive = record['isActive'] as bool? ?? false;
   return RowAction(
     isActive ? AdminStrings.actionDisable : AdminStrings.actionEnable,
@@ -192,6 +215,7 @@ RowAction activeToggleAction(WidgetRef ref, String path, JsonMap record) {
       path: path,
       record: record,
       active: !isActive,
+      labelOf: labelOf,
     ),
   );
 }

@@ -28,6 +28,7 @@ class TextSpec extends FieldSpec {
     this.maxLines = 1,
     this.clearable = false,
     this.helpKey,
+    this.helpKeyOf,
   });
 
   final int maxLines;
@@ -35,6 +36,10 @@ class TextSpec extends FieldSpec {
   /// When editing, emptying the field sends `null` (the backend clears it).
   final bool clearable;
   final String? helpKey;
+
+  /// A help line that depends on the other values of the form (what to enter
+  /// for the chosen kind); wins over [helpKey] when it returns a key.
+  final String? Function(JsonMap values)? helpKeyOf;
 }
 
 class NumberSpec extends FieldSpec {
@@ -50,6 +55,12 @@ class NumberSpec extends FieldSpec {
 
   /// The value sent is the entered number times this (rupees to paise: 100).
   final int scale;
+}
+
+/// A calendar day, sent as `YYYY-MM-DD`. Picked from a calendar; may be
+/// emptied again (when editing, emptying it sends `null`).
+class DateSpec extends FieldSpec {
+  const DateSpec(super.key, super.labelKey, {super.isRequired});
 }
 
 class BoolSpec extends FieldSpec {
@@ -94,6 +105,22 @@ class RowsSpec extends FieldSpec {
   final int minRows;
 }
 
+/// Thrown by an `onSubmit` to show [message] in the form as it is (for
+/// example: saved, but a file could not be uploaded).
+class ResourceFormMessage implements Exception {
+  const ResourceFormMessage(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
+/// Something a page adds below the fields (files, a preview). It sees the
+/// values as they are typed and is rebuilt on every change.
+typedef ResourceFormExtra =
+    Widget Function(BuildContext context, JsonMap values, bool isSaving);
+
 /// Opens a create or edit form. [onSubmit] receives the values to send;
 /// when it throws, the reason from the backend is shown in the form and the
 /// form stays open. Returns true when the form was saved.
@@ -105,6 +132,7 @@ Future<bool> showResourceForm(
   JsonMap initial = const <String, Object?>{},
   String? submitLabel,
   String? message,
+  ResourceFormExtra? extra,
 }) async {
   final saved = await showDialog<bool>(
     context: context,
@@ -116,6 +144,7 @@ Future<bool> showResourceForm(
       onSubmit: onSubmit,
       submitLabel: submitLabel,
       message: message,
+      extra: extra,
     ),
   );
   return saved ?? false;
@@ -129,8 +158,10 @@ class _ResourceFormDialog extends ConsumerStatefulWidget {
     required this.onSubmit,
     this.submitLabel,
     this.message,
+    this.extra,
   });
 
+  final ResourceFormExtra? extra;
   final String title;
   final List<FieldSpec> fields;
   final JsonMap initial;
@@ -170,12 +201,23 @@ class _ResourceFormState extends ConsumerState<_ResourceFormDialog> {
               ? ''
               : _numberText((widget.initial[field.key]! as num) / scale),
         BoolSpec() => widget.initial[field.key] as bool? ?? false,
+        DateSpec() => _dayOf(widget.initial[field.key]),
         _ => widget.initial[field.key]?.toString() ?? '',
       },
   };
   bool _showErrors = false;
   bool _isSaving = false;
   String? _failure;
+
+  /// `YYYY-MM-DD` of a date or time from the API (in local time), or empty.
+  static String _dayOf(Object? value) {
+    final time = DateTime.tryParse('${value ?? ''}');
+    if (time == null) return '';
+    return (time.isUtc ? time.toLocal() : time).toIso8601String().substring(
+      0,
+      10,
+    );
+  }
 
   static String _numberText(num value) =>
       value == value.roundToDouble() ? value.toInt().toString() : '$value';
@@ -250,8 +292,7 @@ class _ResourceFormState extends ConsumerState<_ResourceFormDialog> {
           if (text.isNotEmpty) {
             body[field.key] = _apiValue(field, text);
           } else if (isEdit &&
-              field is TextSpec &&
-              field.clearable &&
+              (field is TextSpec && field.clearable || field is DateSpec) &&
               widget.initial[field.key] != null) {
             body[field.key] = null;
           }
@@ -277,7 +318,9 @@ class _ResourceFormState extends ConsumerState<_ResourceFormDialog> {
       if (!mounted) return;
       setState(() {
         _isSaving = false;
-        _failure = failureText(l10n, error);
+        _failure = error is ResourceFormMessage
+            ? error.message
+            : failureText(l10n, error);
       });
     }
   }
@@ -306,11 +349,57 @@ class _ResourceFormState extends ConsumerState<_ResourceFormDialog> {
           decoration: InputDecoration(
             labelText: label,
             errorText: error,
-            helperText: field is TextSpec && field.helpKey != null
-                ? l10n.text(field.helpKey!)
-                : null,
+            helperText: switch (field) {
+              TextSpec(:final helpKeyOf?) when helpKeyOf(values) != null =>
+                l10n.text(helpKeyOf(values)!),
+              TextSpec(:final helpKey?) => l10n.text(helpKey),
+              _ => null,
+            },
           ),
-          onChanged: (text) => values[field.key] = text,
+          onChanged: (text) {
+            values[field.key] = text;
+            // What the page added may show what is typed (a preview).
+            if (widget.extra != null) setState(() {});
+          },
+        );
+      case DateSpec():
+        final day = values[field.key]! as String;
+        return InkWell(
+          key: key,
+          borderRadius: AbraRadius.medium,
+          onTap: _isSaving
+              ? null
+              : () async {
+                  final now = DateTime.now();
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: DateTime.tryParse(day) ?? now,
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime(now.year + 10),
+                  );
+                  if (picked == null || !mounted) return;
+                  setState(
+                    () => values[field.key] = picked
+                        .toIso8601String()
+                        .substring(0, 10),
+                  );
+                },
+          child: InputDecorator(
+            decoration: InputDecoration(
+              labelText: label,
+              errorText: error,
+              suffixIcon: day.isEmpty
+                  ? const Icon(Icons.calendar_today_outlined, size: 18)
+                  : IconButton(
+                      icon: const Icon(Icons.close, size: 18),
+                      tooltip: l10n.text(AdminStrings.formClearDate),
+                      onPressed: _isSaving
+                          ? null
+                          : () => setState(() => values[field.key] = ''),
+                    ),
+            ),
+            child: Text(day),
+          ),
         );
       case BoolSpec():
         return SwitchListTile(
@@ -517,6 +606,8 @@ class _ResourceFormState extends ConsumerState<_ResourceFormDialog> {
                   padding: const EdgeInsets.only(bottom: AbraSpacing.md),
                   child: _field(field, _values),
                 ),
+              if (widget.extra != null)
+                widget.extra!(context, _values, _isSaving),
             ],
           ),
         ),

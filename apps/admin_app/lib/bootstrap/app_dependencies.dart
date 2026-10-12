@@ -3,6 +3,7 @@ import 'package:shared_authentication/shared_authentication.dart';
 import 'package:shared_core/shared_core.dart';
 import 'package:shared_localization/shared_localization.dart';
 import 'package:shared_network/shared_network.dart';
+import 'package:shared_notifications/shared_notifications.dart';
 import 'package:shared_permissions/shared_permissions.dart';
 import 'package:shared_storage/shared_storage.dart';
 
@@ -18,6 +19,7 @@ class AppDependencies {
     required this.apiClient,
     required this.sessionManager,
     required this.permissions,
+    required this.notifications,
   });
 
   static Future<AppDependencies> create({
@@ -54,6 +56,12 @@ class AppDependencies {
       apiClient: apiClient,
       sessionManager: sessionManager,
       permissions: PermissionsController(PermissionsRepository(apiClient)),
+      notifications: NotificationCenter(
+        repository: NotificationsRepository(apiClient),
+        live: SocketLiveNotificationSource(config.apiBaseUrl.origin),
+        // Push when the page is closed needs a browser; the admin app is a web app
+        push: kIsWeb ? FirebaseDevicePush() : null,
+      ),
     );
   }
 
@@ -74,4 +82,8 @@ class AppDependencies {
   /// What the signed-in user may see. For showing and hiding only: the
   /// backend authorizes every request itself.
   final PermissionsController permissions;
+
+  /// The person's notifications: the list, the live socket for an open app and push for a
+  /// closed one.
+  final NotificationCenter notifications;
 }

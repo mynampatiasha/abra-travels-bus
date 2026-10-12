@@ -156,32 +156,41 @@ class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen> {
           ),
           const Divider(height: 1),
           Expanded(
-            child: AsyncValueView<TripSearchState>(
-              value: results,
-              onRetry: () => ref.invalidate(provider),
-              data: (context, state) => state.trips.isEmpty
-                  ? AbraPageContainer(
-                      child: AbraStateView(
-                        kind: AbraStateKind.empty,
-                        title: l10n.text(CustomerStrings.resultsEmptyTitle),
-                        message: l10n.text(
-                          _filters.isEmpty
-                              ? CustomerStrings.resultsEmptyMessage
-                              : CustomerStrings.resultsEmptyFilteredMessage,
-                        ),
-                        actionLabel: _filters.isEmpty
-                            ? null
-                            : l10n.text(CustomerStrings.resultsClearFilters),
-                        onAction: _filters.isEmpty
-                            ? null
-                            : () => setState(() => _filters = TripFilters.none),
-                      ),
-                    )
-                  : _TripList(
-                      state: state,
-                      onLoadMore: ref.read(provider.notifier).loadMore,
-                    ),
-            ),
+            child: results.isLoading && !results.hasValue
+                ? const _ResultsSkeleton()
+                : AsyncValueView<TripSearchState>(
+                    value: results,
+                    onRetry: () => ref.invalidate(provider),
+                    data: (context, state) => state.trips.isEmpty
+                        ? AbraPageContainer(
+                            child: AbraStateView(
+                              kind: AbraStateKind.empty,
+                              title: l10n.text(
+                                CustomerStrings.resultsEmptyTitle,
+                              ),
+                              message: l10n.text(
+                                _filters.isEmpty
+                                    ? CustomerStrings.resultsEmptyMessage
+                                    : CustomerStrings
+                                          .resultsEmptyFilteredMessage,
+                              ),
+                              actionLabel: _filters.isEmpty
+                                  ? null
+                                  : l10n.text(
+                                      CustomerStrings.resultsClearFilters,
+                                    ),
+                              onAction: _filters.isEmpty
+                                  ? null
+                                  : () => setState(
+                                      () => _filters = TripFilters.none,
+                                    ),
+                            ),
+                          )
+                        : _TripList(
+                            state: state,
+                            onLoadMore: ref.read(provider.notifier).loadMore,
+                          ),
+                  ),
           ),
         ],
       ),
@@ -199,28 +208,66 @@ class _DateBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AbraLocalizations.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AbraSpacing.sm),
-      child: Row(
-        children: <Widget>[
-          IconButton(
-            icon: const Icon(Icons.chevron_left),
-            tooltip: l10n.text(CustomerStrings.resultsPreviousDay),
-            onPressed: onPrevious,
-          ),
-          Expanded(
-            child: Text(
-              label,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium,
+    final arrow = IconButton.styleFrom(
+      foregroundColor: AbraColors.white,
+      disabledForegroundColor: AbraColors.onNavyMuted.withValues(alpha: 0.5),
+    );
+    // Continues the navy top bar: the day belongs to the search, not to the
+    // list under it.
+    return Material(
+      color: AbraColors.navy,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          bottom: Radius.circular(AbraRadius.lg),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AbraSpacing.sm,
+          0,
+          AbraSpacing.sm,
+          AbraSpacing.sm,
+        ),
+        child: Row(
+          children: <Widget>[
+            IconButton(
+              style: arrow,
+              icon: const Icon(Icons.chevron_left),
+              tooltip: l10n.text(CustomerStrings.resultsPreviousDay),
+              onPressed: onPrevious,
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.chevron_right),
-            tooltip: l10n.text(CustomerStrings.resultsNextDay),
-            onPressed: onNext,
-          ),
-        ],
+            Expanded(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  const ExcludeSemantics(
+                    child: Icon(
+                      Icons.calendar_today_outlined,
+                      size: AbraSizes.iconSmall,
+                      color: AbraColors.skyBlue,
+                    ),
+                  ),
+                  const SizedBox(width: AbraSpacing.sm),
+                  Flexible(
+                    child: Text(
+                      label,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: AbraColors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              style: arrow,
+              icon: const Icon(Icons.chevron_right),
+              tooltip: l10n.text(CustomerStrings.resultsNextDay),
+              onPressed: onNext,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -347,9 +394,13 @@ class _TripList extends StatelessWidget {
           itemBuilder: (context, index) {
             if (index < state.trips.length) {
               final trip = state.trips[index];
-              return TripCard(
-                trip: trip,
-                onTap: () => context.push(AppRoutes.trip(trip.id)),
+              return AbraEntrance(
+                key: ValueKey<String>(trip.id),
+                index: index,
+                child: TripCard(
+                  trip: trip,
+                  onTap: () => context.push(AppRoutes.trip(trip.id)),
+                ),
               );
             }
             return Column(
@@ -384,4 +435,77 @@ class _TripList extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The shape of the result list while the first page loads.
+class _ResultsSkeleton extends StatelessWidget {
+  const _ResultsSkeleton();
+
+  @override
+  Widget build(BuildContext context) => AbraSkeletonGroup(
+    child: Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          maxWidth: AbraSizes.maxFormWidth * 1.5,
+        ),
+        child: ListView.separated(
+          physics: const NeverScrollableScrollPhysics(),
+          padding: EdgeInsets.all(AbraResponsive.gutter(context)),
+          itemCount: 4,
+          separatorBuilder: (_, _) => const SizedBox(height: AbraSpacing.md),
+          itemBuilder: (context, _) => const AbraCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    AbraSkeleton(width: 36, height: 36, radius: AbraRadius.md),
+                    SizedBox(width: AbraSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          AbraSkeleton(width: 160, height: 16),
+                          SizedBox(height: AbraSpacing.sm),
+                          AbraSkeleton(width: 110, height: 12),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: AbraSpacing.lg),
+                Row(
+                  children: <Widget>[
+                    AbraSkeleton(width: 72, height: 22),
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AbraSpacing.md,
+                        ),
+                        child: AbraSkeleton(height: 4),
+                      ),
+                    ),
+                    AbraSkeleton(width: 72, height: 22),
+                  ],
+                ),
+                SizedBox(height: AbraSpacing.lg),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    AbraSkeleton(
+                      width: 96,
+                      height: 22,
+                      radius: AbraRadius.pill,
+                    ),
+                    AbraSkeleton(width: 88, height: 22),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }

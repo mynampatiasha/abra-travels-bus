@@ -28,8 +28,22 @@ class TripCard extends StatelessWidget {
       color: AbraColors.textSecondary,
     );
 
+    // Large text: times and the line between them no longer fit side by
+    // side, so they stack.
+    final isLargeText = MediaQuery.textScalerOf(context).scale(10) > 13;
+    final seatsBadge = AbraStatusBadge(
+      label: text.seats(trip),
+      icon: trip.isSoldOut ? Icons.block : Icons.event_seat_outlined,
+      tone: trip.isSoldOut
+          ? AbraStatusTone.neutral
+          : trip.availableSeats <= 5
+          ? AbraStatusTone.warning
+          : AbraStatusTone.success,
+    );
+
     return AbraCard(
       onTap: onTap,
+      padding: EdgeInsetsDirectional.zero,
       semanticLabel: l10n
           .text(CustomerStrings.tripCardSemantics, <String, Object?>{
             'operator': trip.operator.name,
@@ -41,68 +55,122 @@ class TripCard extends StatelessWidget {
           }),
       child: ExcludeSemantics(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        trip.operator.name,
-                        style: textTheme.titleMedium,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AbraSpacing.lg,
+                AbraSpacing.lg,
+                AbraSpacing.lg,
+                AbraSpacing.md,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: AbraColors.lightBlue,
+                      borderRadius: AbraRadius.medium,
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.all(AbraSpacing.sm),
+                      child: Icon(
+                        Icons.directions_bus_filled_rounded,
+                        color: AbraColors.blueDark,
+                        size: 20,
                       ),
-                      Text(
-                        busType,
-                        style: secondary,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: AbraSpacing.md),
-                Flexible(
-                  child: Text(
-                    text.fareFrom(trip),
-                    textAlign: TextAlign.end,
-                    style: textTheme.titleMedium?.copyWith(
-                      color: AbraColors.navy,
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: AbraSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          trip.operator.name,
+                          style: textTheme.titleMedium,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          busType,
+                          style: secondary,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: AbraSpacing.md),
-            // Wraps onto further lines when the times do not fit side by side
-            // (narrow screen, large text).
-            Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: AbraSpacing.md,
-              children: <Widget>[
-                Text(departure, style: textTheme.titleLarge),
-                Text(text.duration(trip.durationMinutes), style: secondary),
-                Text(arrival, style: textTheme.titleLarge),
-              ],
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AbraSpacing.lg),
+              child: isLargeText
+                  ? Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: AbraSpacing.md,
+                      children: <Widget>[
+                        Text(departure, style: textTheme.titleLarge),
+                        Text(
+                          text.duration(trip.durationMinutes),
+                          style: secondary,
+                        ),
+                        Text(arrival, style: textTheme.titleLarge),
+                      ],
+                    )
+                  : Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: <Widget>[
+                        Text(departure, style: textTheme.titleLarge),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AbraSpacing.md,
+                            ),
+                            child: AbraJourneyLine(
+                              label: text.duration(trip.durationMinutes),
+                            ),
+                          ),
+                        ),
+                        Text(arrival, style: textTheme.titleLarge),
+                      ],
+                    ),
             ),
             if (later != null)
-              Align(
-                alignment: AlignmentDirectional.centerEnd,
-                child: Text(later, style: secondary),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AbraSpacing.lg),
+                child: Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: Text(later, style: secondary),
+                ),
               ),
             const SizedBox(height: AbraSpacing.md),
-            AbraStatusBadge(
-              label: text.seats(trip),
-              tone: trip.isSoldOut
-                  ? AbraStatusTone.neutral
-                  : trip.availableSeats <= 5
-                  ? AbraStatusTone.warning
-                  : AbraStatusTone.success,
+            // Fare and seats on a tinted band: what the choice comes down to.
+            ColoredBox(
+              color: AbraColors.lightGray,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AbraSpacing.lg,
+                  vertical: AbraSpacing.md,
+                ),
+                child: Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: AbraSpacing.md,
+                  runSpacing: AbraSpacing.sm,
+                  children: <Widget>[
+                    seatsBadge,
+                    Text(
+                      text.fareFrom(trip),
+                      style: textTheme.titleLarge?.copyWith(
+                        color: AbraColors.blueDark,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),

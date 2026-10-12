@@ -98,6 +98,7 @@ class TripsPage extends ConsumerWidget {
 
     return ResourcePage(
       path: 'trips',
+      exportName: 'trips',
       filters: <FilterSpec>[
         if (isPlatform)
           const RefFilter(
@@ -114,10 +115,15 @@ class TripsPage extends ConsumerWidget {
         const SearchFilter('travelDate', AdminStrings.fieldTravelDate),
       ],
       columns: <ColumnSpec>[
-        ColumnSpec(AdminStrings.fieldDate, (_, r) => textCell(r['travelDate'])),
+        ColumnSpec(
+          AdminStrings.fieldDate,
+          (_, r) => textCell(r['travelDate']),
+          text: (r) => plainText(r['travelDate']),
+        ),
         ColumnSpec(
           AdminStrings.fieldDeparture,
           (_, r) => textCell(r['departureTime']),
+          text: (r) => plainText(r['departureTime']),
         ),
         ColumnSpec(
           AdminStrings.fieldRoute,
@@ -126,6 +132,7 @@ class TripsPage extends ConsumerWidget {
         ColumnSpec(
           AdminStrings.fieldBus,
           (_, r) => textCell((r['bus'] as JsonMap?)?['name']),
+          text: (r) => plainText((r['bus'] as JsonMap?)?['name']),
         ),
         ColumnSpec(
           AdminStrings.fieldFare,
@@ -133,11 +140,14 @@ class TripsPage extends ConsumerWidget {
             l10n.formatters.currencyFromMinor(r['startingFarePaise']! as int),
           ),
           isNumeric: true,
+          text: (r) =>
+              l10n.formatters.currencyFromMinor(r['startingFarePaise']! as int),
         ),
         ColumnSpec(
           AdminStrings.fieldStatus,
           (_, r) =>
               StatusBadge(r['status']! as String, CatalogueLabels.tripStatuses),
+          text: (r) => CatalogueLabels.readable('${r['status']}'),
         ),
       ],
       onCreate: access.can(PermissionKeys.tripsCreate)
@@ -467,10 +477,17 @@ class _TripSummary extends StatelessWidget {
         ),
         row(
           AdminStrings.fieldSeats,
-          l10n.text(AdminStrings.tripSeatsValue, <String, Object?>{
-            'available': seats['available'],
-            'total': seats['total'],
-          }),
+          // A draft has no seats on sale yet; "0 of 0" would read as full.
+          switch (trip['status']) {
+            'DRAFT' => l10n.text(AdminStrings.tripSeatsNotOnSale),
+            'CANCELLED' when seats['total'] == 0 => l10n.text(
+              AdminStrings.tripSeatsClosed,
+            ),
+            _ => l10n.text(AdminStrings.tripSeatsValue, <String, Object?>{
+              'available': seats['available'],
+              'total': seats['total'],
+            }),
+          },
         ),
         row(AdminStrings.fieldBoardingPoints, points('boardingPoints')),
         row(AdminStrings.fieldDroppingPoints, points('droppingPoints')),

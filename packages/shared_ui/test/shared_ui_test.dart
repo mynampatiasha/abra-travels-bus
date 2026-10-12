@@ -116,7 +116,7 @@ void main() {
     });
 
     testWidgets(
-      'variants map to the right Material buttons; the call to action is orange',
+      'variants map to the right Material buttons; the call to action uses the brand gradient',
       (tester) async {
         await pumpUi(
           tester,
@@ -146,12 +146,20 @@ void main() {
           find.widgetWithText(FilledButton, 'cta'),
         );
         expect(
-          cta.style!.backgroundColor!.resolve(<WidgetState>{}),
-          AbraColors.orange,
+          cta.style!.foregroundColor!.resolve(<WidgetState>{}),
+          AbraColors.white,
+        );
+        final fill = tester.widget<DecoratedBox>(
+          find
+              .ancestor(
+                of: find.widgetWithText(FilledButton, 'cta'),
+                matching: find.byType(DecoratedBox),
+              )
+              .first,
         );
         expect(
-          cta.style!.foregroundColor!.resolve(<WidgetState>{}),
-          AbraColors.navy,
+          (fill.decoration as BoxDecoration).gradient,
+          AbraGradients.action,
         );
       },
     );
@@ -489,6 +497,71 @@ void main() {
       await tester.pump();
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
       expect(find.bySemanticsLabel('Loading…'), findsOneWidget);
+    });
+
+    testWidgets('entrance shows its child at once when motion is reduced', (
+      tester,
+    ) async {
+      await pumpUi(
+        tester,
+        const MediaQuery(
+          data: MediaQueryData(disableAnimations: true),
+          child: AbraEntrance(index: 3, child: Text('row')),
+        ),
+      );
+      expect(tester.widget<Opacity>(find.byType(Opacity).first).opacity, 1);
+      expect(tester.hasRunningAnimations, isFalse);
+    });
+
+    testWidgets('entrance fades its child in and then rests', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(home: AbraEntrance(child: Text('row'))),
+      );
+      expect(find.text('row'), findsOneWidget);
+      expect(
+        tester.widget<Opacity>(find.byType(Opacity).first).opacity,
+        lessThan(1),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.widget<Opacity>(find.byType(Opacity).first).opacity, 1);
+    });
+
+    testWidgets('skeletons are announced once as loading and stay still when '
+        'motion is reduced', (tester) async {
+      await pumpUi(
+        tester,
+        const MediaQuery(
+          data: MediaQueryData(disableAnimations: true),
+          child: AbraSkeletonGroup(
+            child: Column(
+              children: [AbraSkeleton(width: 80), AbraSkeleton(width: 40)],
+            ),
+          ),
+        ),
+      );
+      expect(find.bySemanticsLabel('Loading…'), findsOneWidget);
+      expect(tester.hasRunningAnimations, isFalse);
+    });
+
+    testWidgets('brand surface and mark render at phone and desktop widths', (
+      tester,
+    ) async {
+      for (final width in const [320.0, 1440.0]) {
+        await pumpUi(
+          tester,
+          Center(
+            child: SizedBox(
+              width: width,
+              height: 200,
+              child: const AbraBrandSurface(
+                child: AbraBrandMark(name: 'Abra Travels', caption: 'Caption'),
+              ),
+            ),
+          ),
+        );
+        expect(find.text('Abra Travels'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      }
     });
 
     testWidgets('confirm dialog returns true only for the confirm button', (

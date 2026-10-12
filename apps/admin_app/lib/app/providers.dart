@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_authentication/shared_authentication.dart';
 import 'package:shared_core/shared_core.dart';
 import 'package:shared_models/shared_models.dart';
+import 'package:shared_notifications/shared_notifications.dart';
 import 'package:shared_permissions/shared_permissions.dart';
 
 import '../bootstrap/app_dependencies.dart';
@@ -9,6 +10,10 @@ import '../bootstrap/app_dependencies.dart';
 /// Overridden in `bootstrap` (and in tests).
 final appDependenciesProvider = Provider<AppDependencies>(
   (ref) => throw StateError('appDependenciesProvider was not overridden'),
+);
+
+final notificationCenterProvider = Provider<NotificationCenter>(
+  (ref) => ref.watch(appDependenciesProvider).notifications,
 );
 
 final sessionManagerProvider = Provider<AuthSessionManager>(

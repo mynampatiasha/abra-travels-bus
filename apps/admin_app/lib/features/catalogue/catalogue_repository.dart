@@ -73,9 +73,15 @@ class CatalogueRepository {
 
   final ApiClient _client;
 
+  /// Catalogue paths are given below `/catalogue`; the onboarding and admin APIs are given in full.
+  static String _fullPath(String path) =>
+      path.startsWith('onboarding/') || path.startsWith('admin/')
+      ? path
+      : 'catalogue/$path';
+
   Future<PageOf> list(ResourceQuery query) async {
     final response = await _client.get(
-      'catalogue/${query.path}',
+      _fullPath(query.path),
       query: <String, Object?>{
         'page': query.page,
         'pageSize': query.pageSize,
@@ -94,18 +100,20 @@ class CatalogueRepository {
   }
 
   Future<JsonMap> get(String path) async =>
-      (await _client.get('catalogue/$path')).decodeObject((json) => json);
+      (await _client.get(_fullPath(path))).decodeObject((json) => json);
 
   Future<JsonMap> post(String path, [JsonMap body = const {}]) async =>
       (await _client.post(
-        'catalogue/$path',
+        _fullPath(path),
         body: body,
       )).decodeObject((json) => json);
 
   Future<JsonMap> put(String path, JsonMap body) async => (await _client.put(
-    'catalogue/$path',
+    _fullPath(path),
     body: body,
   )).decodeObject((json) => json);
+
+  Future<void> delete(String path) => _client.delete(_fullPath(path));
 }
 
 /// A page of a catalogue list.

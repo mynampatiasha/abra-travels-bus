@@ -1,6 +1,7 @@
 import 'package:customer_app/app/providers.dart';
 import 'package:customer_app/app/startup_failure_app.dart';
 import 'package:customer_app/features/language/language_screen.dart';
+import 'package:customer_app/features/my_trips/booking_details_screen.dart';
 import 'package:customer_app/features/startup/splash_screen.dart';
 import 'package:customer_app/features/unavailable/feature_unavailable_screen.dart';
 import 'package:customer_app/features/unavailable/page_not_found_screen.dart';
@@ -33,6 +34,13 @@ Future<void> open(WidgetTester tester, String location) async {
 
 const notBuiltLabel = 'Not available yet';
 
+/// "Log in" in the shell's top bar (guests only).
+Finder get logInInBar =>
+    find.descendant(of: find.byType(AppBar), matching: find.text('Log in'));
+
+/// The sign-in sheet (the login gate).
+Finder get signInSheet => find.text('Log in or sign up');
+
 void main() {
   group('start-up', () {
     testWidgets('with no stored session the app opens as a guest on the home '
@@ -42,7 +50,7 @@ void main() {
 
       expect(locationOf(tester), '/home');
       expect(find.byType(AppShell), findsOneWidget);
-      expect(find.widgetWithText(TextButton, 'Sign in'), findsOneWidget);
+      expect(logInInBar, findsOneWidget);
       expect(app.requestedPaths, isEmpty);
       expect(app.sessionManager.state, const AuthSignedOut());
     });
@@ -77,9 +85,15 @@ void main() {
         await app.secureStore.read(AuthTokenStore.refreshTokenKey),
         isNull,
       );
-      // Personal sections now need sign-in, and say why.
+      // No "session ended" sheet at start-up: the customer was not using
+      // the session. Personal sections show the guest card; sign-in says
+      // why it is needed again.
+      expect(find.text('Session ended'), findsNothing);
       await open(tester, '/my-trips');
-      expect(Uri.parse(locationOf(tester)).path, '/login');
+      expect(locationOf(tester), '/my-trips');
+      expect(find.text('Log in to see your trips'), findsOneWidget);
+      await tester.tap(find.widgetWithText(AbraButton, 'Log in / Sign up'));
+      await tester.pumpAndSettle();
       expect(
         find.text('Your session has ended. Please sign in again.'),
         findsOneWidget,
@@ -96,9 +110,13 @@ void main() {
       );
       await app.pump(tester);
 
+      // Browsing does not wait for the check.
+      expect(locationOf(tester), '/home');
+      expect(app.sessionManager.state, isA<AuthUnknown>());
+      // A personal screen does, and offers the retry.
+      await open(tester, '/my-trips/bk-1');
       expect(find.byType(SplashScreen), findsOneWidget);
       expect(find.text('No internet connection'), findsOneWidget);
-      expect(app.sessionManager.state, isA<AuthUnknown>());
       expect(
         await app.secureStore.read(AuthTokenStore.refreshTokenKey),
         'session-1.refresh-1',
@@ -112,7 +130,8 @@ void main() {
       online = true;
       await tester.tap(find.text('Try again'));
       await tester.pumpAndSettle();
-      expect(locationOf(tester), '/home');
+      expect(locationOf(tester), '/my-trips/bk-1');
+      expect(app.sessionManager.state, isA<AuthSignedIn>());
     });
 
     testWidgets('a server failure at start-up is shown as such, with a retry', (
@@ -123,6 +142,8 @@ void main() {
         handler: (_) async => FakeResponse.error(503, 'SERVICE_UNAVAILABLE'),
       );
       await app.pump(tester);
+      expect(locationOf(tester), '/home');
+      await open(tester, '/ticket/t-1');
 
       expect(find.text('Service unavailable'), findsOneWidget);
       expect(find.text('Try again'), findsOneWidget);
@@ -131,29 +152,38 @@ void main() {
   });
 
   group('authentication gate', () {
-    testWidgets('a signed-out user cannot open a protected screen', (
+    testWidgets('a guest opening a personal screen stays there: the guest '
+        'card is shown in its place and the sign-in sheet opens', (
       tester,
     ) async {
       final app = TestApp();
       await app.pump(tester);
 
-      for (final location in ['/my-trips', '/payment', '/ticket/tkt-1']) {
+      for (final location in ['/payment', '/ticket/tkt-1', '/my-trips/bk-1']) {
         await open(tester, location);
-        expect(Uri.parse(locationOf(tester)).path, '/login', reason: location);
-        expect(find.byType(AppShell), findsNothing);
+        expect(locationOf(tester), location);
+        expect(signInSheet, findsOneWidget, reason: location);
+        expect(find.byType(FeatureUnavailableBody), findsNothing);
+        // Closing the sheet leaves the guest card, not the screen.
+        await tester.tap(find.byTooltip('Close'));
+        await tester.pumpAndSettle();
+        expect(signInSheet, findsNothing);
+        expect(find.text('Log in to continue'), findsOneWidget);
       }
     });
 
-    testWidgets('after sign-in the user lands on the screen they asked for', (
+    testWidgets('after sign-in the screen they asked for appears', (
       tester,
     ) async {
       final app = TestApp();
       await app.pump(tester);
       await open(tester, '/my-trips/bk-1');
-      expect(locationOf(tester), '/login?from=%2Fmy-trips%2Fbk-1');
+      expect(signInSheet, findsOneWidget);
 
       await app.signIn(tester);
+      expect(signInSheet, findsNothing);
       expect(locationOf(tester), '/my-trips/bk-1');
+      expect(find.byType(BookingDetailsScreen), findsOneWidget);
     });
 
     testWidgets('a deep link opened at launch survives the session check', (
@@ -165,9 +195,10 @@ void main() {
       await app.pump(tester);
 
       expect(locationOf(tester), '/ticket/tkt-9');
+      expect(signInSheet, findsNothing);
     });
 
-    testWidgets('a signed-in user is not shown the sign-in screens', (
+    testWidgets('a signed-in user is not shown the sign-in page', (
       tester,
     ) async {
       final app = TestApp(stored: storedSession);
@@ -177,34 +208,43 @@ void main() {
       expect(locationOf(tester), '/home');
     });
 
-    testWidgets('when the server ends the session the user is taken to '
-        'sign-in from wherever they are', (tester) async {
+    testWidgets('when the server ends the session the customer stays where '
+        'they are and is told so', (tester) async {
       final app = TestApp(stored: storedSession);
       await app.pump(tester);
       await open(tester, '/payment');
-      expect(locationOf(tester), '/payment');
+      expect(find.byType(FeatureUnavailableScreen), findsOneWidget);
 
       // What the API client does when the server rejects the session.
       await app.run(tester, app.sessionManager.onSessionRejected());
 
-      expect(locationOf(tester), '/login?from=%2Fpayment');
+      expect(locationOf(tester), '/payment');
+      expect(find.text('Session ended'), findsOneWidget);
       expect(await app.secureStore.read(AuthTokenStore.accessTokenKey), isNull);
+
+      await tester.tap(find.text('Not now'));
+      await tester.pumpAndSettle();
+      expect(locationOf(tester), '/payment');
+      expect(find.text('Log in to continue'), findsOneWidget);
     });
 
-    testWidgets('signing out leaves the personal sections; the public home '
-        'stays open', (tester) async {
+    testWidgets('signing out keeps the customer in the app as a guest', (
+      tester,
+    ) async {
       final app = TestApp(stored: storedSession);
       await app.pump(tester);
       await open(tester, '/my-trips');
-      expect(find.widgetWithText(TextButton, 'Sign in'), findsNothing);
+      expect(logInInBar, findsNothing);
 
       app.adapter.handler = (_) async => FakeResponse.ok(null);
       await app.run(tester, app.sessionManager.signOut());
-      expect(Uri.parse(locationOf(tester)).path, '/login');
+      expect(locationOf(tester), '/my-trips');
+      expect(find.text('Log in to see your trips'), findsOneWidget);
+      expect(find.text('Session ended'), findsNothing);
 
       await open(tester, '/home');
       expect(locationOf(tester), '/home');
-      expect(find.widgetWithText(TextButton, 'Sign in'), findsOneWidget);
+      expect(logInInBar, findsOneWidget);
     });
   });
 
@@ -296,7 +336,6 @@ void main() {
         ('/booking-review', 'Review booking'),
         ('/payment', 'Payment'),
         ('/booking-success', 'Booking'),
-        ('/ticket/t-1', 'Ticket'),
         ('/cancel-booking', 'Cancel booking'),
         ('/live-tracking', 'Live tracking'),
         ('/women-safety', 'Women Safety'),
@@ -332,10 +371,12 @@ void main() {
       final app = TestApp(stored: storedSession);
       await app.pump(tester);
 
-      for (final location in ['/my-trips', '/support']) {
-        await open(tester, location);
-        expect(find.text(notBuiltLabel), findsOneWidget, reason: location);
-      }
+      await open(tester, '/my-trips');
+      expect(find.text('Upcoming (3)'), findsOneWidget);
+      // The help centre has no articles yet; it says so.
+      await open(tester, '/support');
+      expect(find.text('Help centre'), findsWidgets);
+      expect(find.text('Coming soon'), findsOneWidget);
     });
   });
 

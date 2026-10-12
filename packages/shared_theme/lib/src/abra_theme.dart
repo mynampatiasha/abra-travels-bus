@@ -18,10 +18,10 @@ abstract final class AbraTheme {
     onSecondary: AbraColors.white,
     secondaryContainer: AbraColors.navyContainer,
     onSecondaryContainer: AbraColors.navy,
-    // Navy on orange: white on orange does not meet text contrast.
-    tertiary: AbraColors.orange,
+    // Navy on sky blue: white on sky blue does not meet text contrast.
+    tertiary: AbraColors.skyBlue,
     onTertiary: AbraColors.navy,
-    tertiaryContainer: AbraColors.orangeContainer,
+    tertiaryContainer: AbraColors.lightBlue,
     onTertiaryContainer: AbraColors.navy,
     error: AbraColors.danger,
     onError: AbraColors.white,
@@ -135,9 +135,37 @@ abstract final class AbraTheme {
       cardTheme: const CardThemeData(
         color: AbraColors.white,
         surfaceTintColor: Colors.transparent,
+        shadowColor: Color(0x3312304A),
         elevation: AbraElevation.low,
         margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(borderRadius: AbraRadius.large),
+        shape: RoundedRectangleBorder(
+          borderRadius: AbraRadius.large,
+          side: BorderSide(color: AbraColors.divider),
+        ),
+      ),
+      tooltipTheme: TooltipThemeData(
+        decoration: const BoxDecoration(
+          color: AbraColors.navy,
+          borderRadius: AbraRadius.small,
+        ),
+        textStyle: textTheme.bodySmall?.copyWith(color: AbraColors.white),
+        waitDuration: const Duration(milliseconds: 400),
+      ),
+      popupMenuTheme: const PopupMenuThemeData(
+        color: AbraColors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: AbraRadius.medium),
+      ),
+      datePickerTheme: const DatePickerThemeData(
+        backgroundColor: AbraColors.white,
+        surfaceTintColor: Colors.transparent,
+        headerBackgroundColor: AbraColors.navy,
+        headerForegroundColor: AbraColors.white,
+      ),
+      scrollbarTheme: const ScrollbarThemeData(
+        thumbColor: WidgetStatePropertyAll<Color>(Color(0x6612304A)),
+        radius: Radius.circular(AbraRadius.pill),
+        thickness: WidgetStatePropertyAll<double>(6),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: AbraColors.white,
@@ -175,22 +203,32 @@ abstract final class AbraTheme {
         surfaceTintColor: Colors.transparent,
         indicatorColor: AbraColors.blueContainer,
         elevation: AbraElevation.medium,
-        labelTextStyle: WidgetStatePropertyAll<TextStyle?>(
-          textTheme.labelMedium,
+        shadowColor: AbraColors.navy,
+        iconTheme: WidgetStateProperty.resolveWith<IconThemeData?>(
+          (states) => IconThemeData(
+            color: states.contains(WidgetState.selected)
+                ? AbraColors.blueDark
+                : AbraColors.textSecondary,
+          ),
+        ),
+        labelTextStyle: WidgetStateProperty.resolveWith<TextStyle?>(
+          (states) => textTheme.labelMedium?.copyWith(
+            color: states.contains(WidgetState.selected)
+                ? AbraColors.blueDark
+                : AbraColors.textSecondary,
+          ),
         ),
       ),
       navigationRailTheme: NavigationRailThemeData(
         backgroundColor: AbraColors.navy,
         indicatorColor: AbraColors.blue,
         selectedIconTheme: const IconThemeData(color: AbraColors.white),
-        unselectedIconTheme: const IconThemeData(
-          color: AbraColors.navyContainer,
-        ),
+        unselectedIconTheme: const IconThemeData(color: AbraColors.onNavyMuted),
         selectedLabelTextStyle: textTheme.labelMedium?.copyWith(
           color: AbraColors.white,
         ),
         unselectedLabelTextStyle: textTheme.labelMedium?.copyWith(
-          color: AbraColors.navyContainer,
+          color: AbraColors.onNavyMuted,
         ),
       ),
       snackBarTheme: SnackBarThemeData(

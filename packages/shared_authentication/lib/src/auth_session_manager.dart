@@ -102,13 +102,32 @@ class AuthSessionManager implements AuthTokenSource {
   Future<SignInResult> signInWithOtp({
     required String phone,
     required String code,
-  }) async => _accept(await _api.verifyOtp(phone: phone, code: code));
+    String audience = 'CUSTOMER',
+  }) async => _accept(
+    await _api.verifyOtp(phone: phone, code: code, audience: audience),
+  );
 
   Future<SignInResult> signInWithPassword({
     required String identifier,
     required String password,
   }) async =>
       _accept(await _api.login(identifier: identifier, password: password));
+
+  Future<SignInResult> signInWithGoogle(
+    String idToken, {
+    required String audience,
+    String? linkPassword,
+  }) async => _accept(
+    await _api.google(idToken, audience: audience, linkPassword: linkPassword),
+  );
+
+  Future<SignInResult> signInWithApple(
+    String idToken, {
+    String audience = 'CUSTOMER',
+    String? linkPassword,
+  }) async => _accept(
+    await _api.apple(idToken, audience: audience, linkPassword: linkPassword),
+  );
 
   Future<AuthenticatedSession> register(RegistrationRequest request) async {
     final session = await _api.register(request);

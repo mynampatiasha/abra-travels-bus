@@ -21,6 +21,10 @@ import 'support/test_admin.dart';
 
 Finder field(String label) => find.widgetWithText(TextField, label);
 Finder formField(String label) => find.widgetWithText(TextFormField, label);
+
+/// The word in a table row, not in a summary card above the table that may use the same word.
+Finder inTable(String text) =>
+    find.descendant(of: find.byType(DataTable), matching: find.text(text));
 Finder navItem(String label) => find.descendant(
   of: find.byType(AdminShell),
   matching: find.widgetWithText(ListTile, label),
@@ -606,6 +610,103 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('row actions stay on screen at laptop width', (tester) async {
+      final app = TestAdmin.signedIn(seeded(Persona.superAdmin));
+      for (final size in const [Size(1366, 768), Size(1024, 768)]) {
+        await app.pump(tester, size: size);
+        for (final location in [
+          AdminRoutes.buses,
+          AdminRoutes.routes,
+          AdminRoutes.locations,
+          AdminRoutes.trips,
+        ]) {
+          await open(tester, location);
+          final actions = find.descendant(
+            of: find.byType(AdminShell),
+            matching: find.byWidgetPredicate(
+              (widget) =>
+                  widget is IconButton &&
+                  const {
+                    'Edit',
+                    'Change status',
+                    'Disable',
+                    'Enable',
+                    'View',
+                  }.contains(widget.tooltip),
+            ),
+          );
+          expect(actions, findsWidgets, reason: location);
+          for (final element in actions.evaluate()) {
+            final box = tester.getRect(find.byWidget(element.widget));
+            expect(
+              box.left >= 0 && box.right <= size.width,
+              isTrue,
+              reason: '$location at ${size.width}: $box',
+            );
+          }
+          expect(tester.takeException(), isNull, reason: location);
+        }
+      }
+    });
+
+    testWidgets('on a phone each record is a block with its actions', (
+      tester,
+    ) async {
+      final app = TestAdmin.signedIn(seeded(Persona.superAdmin));
+      await app.pump(tester, size: const Size(390, 844));
+      await open(tester, AdminRoutes.buses);
+      expect(find.byType(DataTable), findsNothing);
+      expect(find.byTooltip('Edit'), findsWidgets);
+      expect(find.byTooltip('Change status'), findsWidgets);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a reload keeps the open section', (tester) async {
+      // A reload starts the app again at the address of the open section.
+      final app = TestAdmin.signedIn(seeded(Persona.superAdmin));
+      await app.pump(tester);
+      await open(tester, AdminRoutes.cities);
+      expect(locationOf(tester), AdminRoutes.cities);
+
+      final access = containerOf(tester).read(accessProvider);
+      // While the session is checked the section travels with the address…
+      final waiting = AdminRouteGuard.redirect(
+        access: const AccessState(AccessLevel.pending),
+        path: AdminRoutes.cities,
+      );
+      expect(waiting, '/splash?from=%2Fcities');
+      // …and is where the user lands once access is known.
+      expect(
+        AdminRouteGuard.redirect(
+          access: access,
+          path: AdminRoutes.splash,
+          from: Uri.parse(waiting!).queryParameters['from'],
+        ),
+        AdminRoutes.cities,
+      );
+      // Without a remembered section: the first one, as before.
+      expect(
+        AdminRouteGuard.redirect(access: access, path: AdminRoutes.splash),
+        AdminRoutes.trips,
+      );
+    });
+
+    testWidgets('a remembered section the user may not open is ignored', (
+      tester,
+    ) async {
+      final app = TestAdmin.signedIn(seeded(Persona.operatorManager));
+      await app.pump(tester);
+      final access = containerOf(tester).read(accessProvider);
+      expect(
+        AdminRouteGuard.redirect(
+          access: access,
+          path: AdminRoutes.splash,
+          from: AdminRoutes.cities,
+        ),
+        AdminRouteGuard.firstSection(access),
+      );
+    });
+
     test('the guard decides from permissions, never from a role name', () {
       const none = AccessState(AccessLevel.granted);
       expect(AdminRouteGuard.firstSection(none), isNull);
@@ -632,14 +733,30 @@ void main() {
           access: const AccessState(AccessLevel.signedOut),
           path: '/trips',
         ),
-        AdminRoutes.signIn,
+        '/sign-in?from=%2Ftrips',
       );
       expect(
         AdminRouteGuard.redirect(
           access: const AccessState(AccessLevel.pending),
           path: '/trips',
         ),
+        '/splash?from=%2Ftrips',
+      );
+      // Only a section is remembered, never an arbitrary address.
+      expect(
+        AdminRouteGuard.redirect(
+          access: const AccessState(AccessLevel.pending),
+          path: '/somewhere-else',
+        ),
         AdminRoutes.splash,
+      );
+      expect(
+        AdminRouteGuard.redirect(
+          access: none,
+          path: '/splash',
+          from: '/cities',
+        ),
+        AdminRoutes.home,
       );
       expect(
         AdminRoutes.requiredPermission.values.toSet().difference(
@@ -907,7 +1024,7 @@ void main() {
       final app = TestAdmin.signedIn(seeded(Persona.superAdmin));
       await app.pump(tester);
       await open(tester, AdminRoutes.operators);
-      expect(find.text('Pending approval'), findsOneWidget);
+      expect(inTable('Pending approval'), findsOneWidget);
 
       await tapOn(tester, find.byTooltip('Change status').last);
       await settle(tester);
@@ -922,7 +1039,7 @@ void main() {
         app.requestsTo('catalogue/operators/$operatorBId/status').single.body,
         {'status': 'ACTIVE', 'reason': 'Documents verified'},
       );
-      expect(find.text('Pending approval'), findsNothing);
+      expect(inTable('Pending approval'), findsNothing);
     });
 
     testWidgets('an Operator Admin sees only their operator and cannot change '
@@ -1069,7 +1186,7 @@ void main() {
         'status': 'MAINTENANCE',
         'reason': 'Service due',
       });
-      expect(find.text('Maintenance'), findsOneWidget);
+      expect(inTable('Maintenance'), findsOneWidget);
     });
 
     testWidgets('a route is created with its stops by platform staff', (
@@ -1226,6 +1343,12 @@ void main() {
       await settle(tester);
 
       expect(find.text('Publishing requirements'), findsOneWidget);
+      // A draft has nothing on sale yet; it must not read as "0 of 0".
+      expect(
+        find.text('Not on sale yet. Seats open when the trip is published.'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('0 of 0'), findsNothing);
       String stateOf(String requirement) => tester
           .widget<Text>(
             find

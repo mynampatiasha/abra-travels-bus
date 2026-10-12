@@ -6,6 +6,8 @@ import 'package:customer_app/app/providers.dart';
 import 'package:customer_app/bootstrap/app_dependencies.dart';
 import 'package:customer_app/features/authentication/otp_sign_in_controller.dart';
 import 'package:customer_app/features/discovery/controllers/travel_dates.dart';
+import 'package:customer_app/features/home/home_banners_repository.dart';
+import 'package:customer_app/features/onboarding/first_launch.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,6 +17,8 @@ import 'package:shared_core/shared_core.dart';
 import 'package:shared_localization/shared_localization.dart';
 import 'package:shared_models/shared_models.dart';
 import 'package:shared_network/shared_network.dart';
+
+import 'fake_home_banners.dart';
 
 /// The real English resources (app + shared), read up front so widget
 /// tests need no real-time asset loading.
@@ -98,10 +102,20 @@ class TestApp {
   TestApp({
     Future<FakeResponse> Function(RecordedRequest request)? handler,
     Map<String, String> stored = const <String, String>{},
+    bool isFirstLaunch = false,
     List<Locale> deviceLocales = const <Locale>[Locale('en')],
     TranslationSource? translations,
-  }) : adapter = FakeHttpAdapter(handler ?? (_) async => currentUserResponse),
+    HomeBannersRepository? banners,
+    // The device settings of an earlier run, to start the app again as
+    // after a restart.
+    InMemoryPreferencesStore? devicePreferences,
+  }) : banners = banners ?? FakeHomeBannersRepository(),
+       preferences = devicePreferences ?? InMemoryPreferencesStore(),
+       adapter = FakeHttpAdapter(handler ?? (_) async => currentUserResponse),
        secureStore = InMemorySecureStore(stored) {
+    if (!isFirstLaunch) {
+      unawaited(preferences.setBool(WelcomeSeen.preferenceKey, value: true));
+    }
     final config = AppConfig(
       environment: AppEnvironment.test,
       appKind: AppKind.customer,
@@ -136,8 +150,12 @@ class TestApp {
   }
 
   final FakeHttpAdapter adapter;
+
+  /// The banners on Home. None unless a test gives some, so other tests
+  /// see no banner requests.
+  final HomeBannersRepository banners;
   final InMemorySecureStore secureStore;
-  final InMemoryPreferencesStore preferences = InMemoryPreferencesStore();
+  final InMemoryPreferencesStore preferences;
   final MemoryLogger logger = MemoryLogger();
   late final AppDependencies dependencies;
   final GlobalKey<State<StatefulWidget>> _scopeKey = GlobalKey();
@@ -153,6 +171,7 @@ class TestApp {
     key: _scopeKey,
     overrides: [
       appDependenciesProvider.overrideWithValue(dependencies),
+      homeBannersRepositoryProvider.overrideWithValue(banners),
       if (clock != null) signInClockProvider.overrideWithValue(clock),
       if (clock != null) discoveryClockProvider.overrideWithValue(clock),
     ],

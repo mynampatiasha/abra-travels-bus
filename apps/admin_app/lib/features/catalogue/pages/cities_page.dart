@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_localization/shared_localization.dart';
 import 'package:shared_permissions/shared_permissions.dart';
+import 'package:shared_theme/shared_theme.dart';
 
 import '../../../app/providers.dart';
 import '../../../l10n/admin_strings.dart';
 import '../catalogue_repository.dart';
 import '../widgets/catalogue_common.dart';
+import '../widgets/import_dialog.dart';
 import '../widgets/resource_form.dart';
 import '../widgets/resource_page.dart';
 
@@ -34,6 +36,37 @@ class CitiesPage extends ConsumerWidget {
 
     return ResourcePage(
       path: 'cities',
+      exportName: 'cities',
+      stats: const <StatSpec>[
+        StatSpec(
+          AdminStrings.statusActive,
+          <String, String>{'active': 'true'},
+          Icons.check_circle_outline,
+          AbraColors.tealDark,
+        ),
+        StatSpec(
+          AdminStrings.statusInactive,
+          <String, String>{'active': 'false'},
+          Icons.pause_circle_outline,
+          AbraColors.navySecondary,
+        ),
+      ],
+      importSpec: canManage
+          ? ImportSpec(
+              name: 'cities',
+              fields: _fields,
+              sampleRow: const <String>[
+                'Bengaluru',
+                'Karnataka',
+                'IN',
+                'yes',
+                '10',
+                '12.9716',
+                '77.5946',
+              ],
+              save: (values) => repository.post('cities', values),
+            )
+          : null,
       filters: const <FilterSpec>[
         SearchFilter('query', AdminStrings.listSearch),
         ChoiceFilter(
@@ -43,13 +76,26 @@ class CitiesPage extends ConsumerWidget {
         ),
       ],
       columns: <ColumnSpec>[
-        ColumnSpec(AdminStrings.fieldName, (_, r) => textCell(r['name'])),
-        ColumnSpec(AdminStrings.fieldState, (_, r) => textCell(r['state'])),
+        ColumnSpec(
+          AdminStrings.fieldName,
+          (_, r) => textCell(r['name']),
+          text: (r) => plainText(r['name']),
+        ),
+        ColumnSpec(
+          AdminStrings.fieldState,
+          (_, r) => textCell(r['state']),
+          text: (r) => plainText(r['state']),
+        ),
         ColumnSpec(
           AdminStrings.fieldCountryCode,
           (_, r) => textCell(r['countryCode']),
+          text: (r) => plainText(r['countryCode']),
         ),
-        ColumnSpec(AdminStrings.fieldSlug, (_, r) => textCell(r['slug'])),
+        ColumnSpec(
+          AdminStrings.fieldSlug,
+          (_, r) => textCell(r['slug']),
+          text: (r) => plainText(r['slug']),
+        ),
         ColumnSpec(
           AdminStrings.fieldPopular,
           (context, r) => Text(
@@ -59,10 +105,18 @@ class CitiesPage extends ConsumerWidget {
                   : AdminStrings.formNo,
             ),
           ),
+          text: (r) => l10n.text(
+            r['isPopular'] == true ? AdminStrings.formYes : AdminStrings.formNo,
+          ),
         ),
         ColumnSpec(
           AdminStrings.fieldStatus,
           (_, r) => StatusBadge.active(isActive: r['isActive'] == true),
+          text: (r) => l10n.text(
+            r['isActive'] == true
+                ? AdminStrings.statusActive
+                : AdminStrings.statusInactive,
+          ),
         ),
       ],
       onCreate: canManage

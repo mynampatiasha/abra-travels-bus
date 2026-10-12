@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_localization/shared_localization.dart';
-import 'package:shared_theme/shared_theme.dart';
 
+import '../../core/ui/gradient_header.dart';
+import '../../core/ui/state_views.dart';
 import '../../l10n/customer_strings.dart';
 
 /// Stands in for a screen that a later milestone delivers. It exists so
@@ -16,7 +17,7 @@ class FeatureUnavailableScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(AbraLocalizations.of(context).text(titleKey))),
+    appBar: GradientAppBar(title: AbraLocalizations.of(context).text(titleKey)),
     body: FeatureUnavailableBody(titleKey: titleKey),
   );
 }
@@ -31,51 +32,11 @@ class FeatureUnavailableBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AbraLocalizations.of(context);
-    final textTheme = Theme.of(context).textTheme;
-    return AbraPageContainer(
-      maxWidth: AbraSizes.maxFormWidth,
-      child: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(vertical: AbraSpacing.xl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              const ExcludeSemantics(
-                child: Icon(
-                  Icons.construction,
-                  size: AbraSizes.stateIllustration,
-                  color: AbraColors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: AbraSpacing.lg),
-              Semantics(
-                header: true,
-                child: Text(
-                  l10n.text(titleKey),
-                  textAlign: TextAlign.center,
-                  style: textTheme.titleLarge,
-                ),
-              ),
-              const SizedBox(height: AbraSpacing.sm),
-              Text(
-                l10n.text(CustomerStrings.unavailableLabel),
-                textAlign: TextAlign.center,
-                style: textTheme.titleMedium?.copyWith(
-                  color: AbraColors.orangeDark,
-                ),
-              ),
-              const SizedBox(height: AbraSpacing.sm),
-              Text(
-                l10n.text(CustomerStrings.unavailableMessage),
-                textAlign: TextAlign.center,
-                style: textTheme.bodyMedium?.copyWith(
-                  color: AbraColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return MessageStateView(
+      icon: Icons.construction_rounded,
+      badge: l10n.text(CustomerStrings.unavailableLabel),
+      title: l10n.text(titleKey),
+      message: l10n.text(CustomerStrings.unavailableMessage),
     );
   }
 }

@@ -51,6 +51,7 @@ class RoutesPage extends ConsumerWidget {
 
     return ResourcePage(
       path: 'routes',
+      exportName: 'routes',
       filters: <FilterSpec>[
         if (isPlatform)
           const RefFilter(
@@ -66,7 +67,11 @@ class RoutesPage extends ConsumerWidget {
         ),
       ],
       columns: <ColumnSpec>[
-        ColumnSpec(AdminStrings.fieldName, (_, r) => textCell(r['name'])),
+        ColumnSpec(
+          AdminStrings.fieldName,
+          (_, r) => textCell(r['name']),
+          text: (r) => plainText(r['name']),
+        ),
         if (isPlatform)
           ColumnSpec(
             AdminStrings.fieldOperator,
@@ -90,11 +95,13 @@ class RoutesPage extends ConsumerWidget {
           AdminStrings.fieldDuration,
           (_, r) => textCell(r['estimatedDurationMinutes']),
           isNumeric: true,
+          text: (r) => plainText(r['estimatedDurationMinutes']),
         ),
         ColumnSpec(
           AdminStrings.fieldStops,
           (_, r) => textCell((r['stops'] as List<Object?>?)?.length ?? 0),
           isNumeric: true,
+          text: (r) => plainText((r['stops'] as List<Object?>?)?.length ?? 0),
         ),
         ColumnSpec(
           AdminStrings.fieldStatus,
@@ -102,6 +109,7 @@ class RoutesPage extends ConsumerWidget {
             r['status']! as String,
             CatalogueLabels.routeStatuses,
           ),
+          text: (r) => CatalogueLabels.readable('${r['status']}'),
         ),
       ],
       onCreate: access.can(PermissionKeys.routesCreate) && canListCities

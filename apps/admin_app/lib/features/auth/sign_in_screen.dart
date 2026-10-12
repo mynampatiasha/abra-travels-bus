@@ -21,7 +21,7 @@ class StartupScreen extends ConsumerWidget {
     final failure = ref.watch(startupProvider);
     return Scaffold(
       body: failure == null
-          ? const AbraLoadingView()
+          ? const AbraBrandSurface(child: AbraLoadingView(onDark: true))
           : AbraFailureView(
               failure: failure,
               onRetry: ref.read(startupProvider.notifier).restore,
@@ -46,6 +46,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   String? _emailError;
   String? _passwordError;
   bool _useRecovery = false;
+  bool _showPassword = false;
 
   @override
   void dispose() {
@@ -99,149 +100,287 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         ? failureText(l10n, state.failure!)
         : null;
 
+    final form = AutofillGroup(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Semantics(
+            header: true,
+            child: Text(
+              l10n.text(
+                state.needsSecondStep
+                    ? AdminStrings.mfaTitle
+                    : AdminStrings.signInTitle,
+              ),
+              style: textTheme.headlineSmall,
+            ),
+          ),
+          const SizedBox(height: AbraSpacing.sm),
+          Text(
+            l10n.text(
+              !state.needsSecondStep
+                  ? AdminStrings.signInSubtitle
+                  : _useRecovery
+                  ? AdminStrings.mfaRecoverySubtitle
+                  : AdminStrings.mfaSubtitle,
+            ),
+            style: textTheme.bodyMedium?.copyWith(
+              color: AbraColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AbraSpacing.lg),
+          if (sessionEnded && message == null && !state.needsSecondStep)
+            _Message(
+              l10n.text(AdminStrings.sessionEndedNotice),
+              isError: false,
+            ),
+          if (message != null) _Message(message, isError: true),
+          if (!state.needsSecondStep) ...<Widget>[
+            TextField(
+              controller: _email,
+              enabled: !state.isBusy,
+              keyboardType: TextInputType.emailAddress,
+              autofillHints: const <String>[AutofillHints.username],
+              textInputAction: TextInputAction.next,
+              decoration: InputDecoration(
+                labelText: l10n.text(AdminStrings.signInEmail),
+                prefixIcon: const Icon(Icons.mail_outline),
+                errorText: _emailError,
+              ),
+            ),
+            const SizedBox(height: AbraSpacing.lg),
+            TextField(
+              controller: _password,
+              enabled: !state.isBusy,
+              obscureText: !_showPassword,
+              autofillHints: const <String>[AutofillHints.password],
+              decoration: InputDecoration(
+                labelText: l10n.text(AdminStrings.signInPassword),
+                prefixIcon: const Icon(Icons.lock_outline),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _showPassword
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                  ),
+                  tooltip: l10n.text(
+                    _showPassword
+                        ? AdminStrings.signInHidePassword
+                        : AdminStrings.signInShowPassword,
+                  ),
+                  onPressed: () =>
+                      setState(() => _showPassword = !_showPassword),
+                ),
+                errorText: _passwordError,
+              ),
+              onSubmitted: (_) => _submitPassword(),
+            ),
+            const SizedBox(height: AbraSpacing.xl),
+            AbraButton(
+              label: l10n.text(AdminStrings.signInButton),
+              variant: AbraButtonVariant.callToAction,
+              expand: true,
+              isLoading: state.isBusy,
+              onPressed: _submitPassword,
+            ),
+          ] else ...<Widget>[
+            TextField(
+              controller: _code,
+              autofocus: true,
+              enabled: !state.isBusy,
+              keyboardType: _useRecovery
+                  ? TextInputType.text
+                  : TextInputType.number,
+              autofillHints: const <String>[AutofillHints.oneTimeCode],
+              inputFormatters: <TextInputFormatter>[
+                if (!_useRecovery) ...<TextInputFormatter>[
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(6),
+                ] else
+                  LengthLimitingTextInputFormatter(16),
+              ],
+              decoration: InputDecoration(
+                labelText: l10n.text(
+                  _useRecovery
+                      ? AdminStrings.mfaRecoveryCode
+                      : AdminStrings.mfaCode,
+                ),
+              ),
+              onSubmitted: (_) => _submitCode(),
+            ),
+            const SizedBox(height: AbraSpacing.xl),
+            AbraButton(
+              label: l10n.text(AdminStrings.mfaVerify),
+              variant: AbraButtonVariant.callToAction,
+              expand: true,
+              isLoading: state.isBusy,
+              onPressed: _submitCode,
+            ),
+            const SizedBox(height: AbraSpacing.sm),
+            AbraButton(
+              label: l10n.text(
+                _useRecovery
+                    ? AdminStrings.mfaUseApp
+                    : AdminStrings.mfaUseRecovery,
+              ),
+              variant: AbraButtonVariant.text,
+              expand: true,
+              onPressed: state.isBusy
+                  ? null
+                  : () => setState(() {
+                      _useRecovery = !_useRecovery;
+                      _code.clear();
+                    }),
+            ),
+            AbraButton(
+              label: l10n.text(AdminStrings.mfaBack),
+              variant: AbraButtonVariant.text,
+              expand: true,
+              onPressed: state.isBusy ? null : _controller.backToPassword,
+            ),
+          ],
+        ],
+      ),
+    );
+
     return Scaffold(
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AbraSpacing.xl),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: AbraSizes.maxFormWidth),
-            child: AbraCard(
-              padding: const EdgeInsetsDirectional.all(AbraSpacing.xl),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  Text(
-                    l10n.text(AdminStrings.appName),
-                    style: textTheme.titleMedium?.copyWith(
-                      color: AbraColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: AbraSpacing.sm),
-                  Semantics(
-                    header: true,
-                    child: Text(
-                      l10n.text(
-                        state.needsSecondStep
-                            ? AdminStrings.mfaTitle
-                            : AdminStrings.signInTitle,
-                      ),
-                      style: textTheme.headlineSmall,
-                    ),
-                  ),
-                  const SizedBox(height: AbraSpacing.sm),
-                  Text(
-                    l10n.text(
-                      !state.needsSecondStep
-                          ? AdminStrings.signInSubtitle
-                          : _useRecovery
-                          ? AdminStrings.mfaRecoverySubtitle
-                          : AdminStrings.mfaSubtitle,
-                    ),
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: AbraColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: AbraSpacing.lg),
-                  if (sessionEnded && message == null && !state.needsSecondStep)
-                    _Message(
-                      l10n.text(AdminStrings.sessionEndedNotice),
-                      isError: false,
-                    ),
-                  if (message != null) _Message(message, isError: true),
-                  if (!state.needsSecondStep) ...<Widget>[
-                    TextField(
-                      controller: _email,
-                      enabled: !state.isBusy,
-                      keyboardType: TextInputType.emailAddress,
-                      autofillHints: const <String>[AutofillHints.username],
-                      textInputAction: TextInputAction.next,
-                      decoration: InputDecoration(
-                        labelText: l10n.text(AdminStrings.signInEmail),
-                        errorText: _emailError,
+      backgroundColor: AbraColors.white,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWide = constraints.maxWidth >= 960;
+          final formPanel = Center(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.all(
+                isWide ? AbraSpacing.xxxl : AbraSpacing.xl,
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: AbraEntrance(child: form),
+              ),
+            ),
+          );
+          if (isWide) {
+            return Row(
+              children: <Widget>[
+                const Expanded(flex: 5, child: _BrandPanel(isCompact: false)),
+                Expanded(flex: 4, child: SafeArea(child: formPanel)),
+              ],
+            );
+          }
+          return Column(
+            children: <Widget>[
+              const _BrandPanel(isCompact: true),
+              Expanded(child: SafeArea(top: false, child: formPanel)),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// The branded side of the sign-in screen: what this app is, on the brand
+/// gradient. A short banner on narrow screens.
+class _BrandPanel extends StatelessWidget {
+  const _BrandPanel({required this.isCompact});
+
+  final bool isCompact;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AbraLocalizations.of(context);
+    final textTheme = Theme.of(context).textTheme;
+    final mark = AbraBrandMark(
+      name: l10n.text(AdminStrings.brandName),
+      caption: l10n.text(AdminStrings.brandCaption),
+    );
+    if (isCompact) {
+      return AbraBrandSurface(
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.all(AbraSpacing.xl),
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: mark,
+            ),
+          ),
+        ),
+      );
+    }
+    Widget point(String key, IconData icon) => Padding(
+      padding: const EdgeInsets.only(top: AbraSpacing.lg),
+      child: Row(
+        children: <Widget>[
+          ExcludeSemantics(
+            child: DecoratedBox(
+              decoration: const BoxDecoration(
+                color: Color(0x24FFFFFF),
+                borderRadius: AbraRadius.medium,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(AbraSpacing.sm),
+                child: Icon(icon, color: AbraColors.white, size: 20),
+              ),
+            ),
+          ),
+          const SizedBox(width: AbraSpacing.md),
+          Expanded(
+            child: Text(
+              l10n.text(key),
+              style: textTheme.bodyLarge?.copyWith(color: AbraColors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+    return AbraBrandSurface(
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AbraSpacing.xxxl),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              mark,
+              const Spacer(),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 460),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      l10n.text(AdminStrings.signInBrandHeadline),
+                      style: textTheme.displaySmall?.copyWith(
+                        color: AbraColors.white,
+                        height: 1.15,
                       ),
                     ),
                     const SizedBox(height: AbraSpacing.lg),
-                    TextField(
-                      controller: _password,
-                      enabled: !state.isBusy,
-                      obscureText: true,
-                      autofillHints: const <String>[AutofillHints.password],
-                      decoration: InputDecoration(
-                        labelText: l10n.text(AdminStrings.signInPassword),
-                        errorText: _passwordError,
+                    Text(
+                      l10n.text(AdminStrings.signInBrandBody),
+                      style: textTheme.bodyLarge?.copyWith(
+                        color: AbraColors.onNavyMuted,
                       ),
-                      onSubmitted: (_) => _submitPassword(),
                     ),
-                    const SizedBox(height: AbraSpacing.xl),
-                    AbraButton(
-                      label: l10n.text(AdminStrings.signInButton),
-                      variant: AbraButtonVariant.primary,
-                      expand: true,
-                      isLoading: state.isBusy,
-                      onPressed: _submitPassword,
+                    const SizedBox(height: AbraSpacing.md),
+                    point(
+                      AdminStrings.signInBrandPointCatalogue,
+                      Icons.event_note_outlined,
                     ),
-                  ] else ...<Widget>[
-                    TextField(
-                      controller: _code,
-                      autofocus: true,
-                      enabled: !state.isBusy,
-                      keyboardType: _useRecovery
-                          ? TextInputType.text
-                          : TextInputType.number,
-                      autofillHints: const <String>[AutofillHints.oneTimeCode],
-                      inputFormatters: <TextInputFormatter>[
-                        if (!_useRecovery) ...<TextInputFormatter>[
-                          FilteringTextInputFormatter.digitsOnly,
-                          LengthLimitingTextInputFormatter(6),
-                        ] else
-                          LengthLimitingTextInputFormatter(16),
-                      ],
-                      decoration: InputDecoration(
-                        labelText: l10n.text(
-                          _useRecovery
-                              ? AdminStrings.mfaRecoveryCode
-                              : AdminStrings.mfaCode,
-                        ),
-                      ),
-                      onSubmitted: (_) => _submitCode(),
+                    point(
+                      AdminStrings.signInBrandPointAccess,
+                      Icons.verified_user_outlined,
                     ),
-                    const SizedBox(height: AbraSpacing.xl),
-                    AbraButton(
-                      label: l10n.text(AdminStrings.mfaVerify),
-                      variant: AbraButtonVariant.primary,
-                      expand: true,
-                      isLoading: state.isBusy,
-                      onPressed: _submitCode,
-                    ),
-                    const SizedBox(height: AbraSpacing.sm),
-                    AbraButton(
-                      label: l10n.text(
-                        _useRecovery
-                            ? AdminStrings.mfaUseApp
-                            : AdminStrings.mfaUseRecovery,
-                      ),
-                      variant: AbraButtonVariant.text,
-                      expand: true,
-                      onPressed: state.isBusy
-                          ? null
-                          : () => setState(() {
-                              _useRecovery = !_useRecovery;
-                              _code.clear();
-                            }),
-                    ),
-                    AbraButton(
-                      label: l10n.text(AdminStrings.mfaBack),
-                      variant: AbraButtonVariant.text,
-                      expand: true,
-                      onPressed: state.isBusy
-                          ? null
-                          : _controller.backToPassword,
+                    point(
+                      AdminStrings.signInBrandPointAudit,
+                      Icons.history_outlined,
                     ),
                   ],
-                ],
+                ),
               ),
-            ),
+              const Spacer(flex: 2),
+            ],
           ),
         ),
       ),

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' show SemanticsFlag;
 
 import 'package:customer_app/features/authentication/login_screen.dart';
 import 'package:customer_app/features/discovery/controllers/search_form_controller.dart';
@@ -787,7 +788,9 @@ void main() {
       ).read(customerRouterProvider).go(results(today));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
-      expect(find.byType(AbraLoadingView), findsOneWidget);
+      // The shape of the list, announced as loading; never a blank page.
+      expect(find.byType(AbraSkeletonGroup), findsOneWidget);
+      expect(find.bySemanticsLabel('Loading…'), findsOneWidget);
       expect(find.byType(TripCard), findsNothing);
 
       answer.complete(
@@ -1252,7 +1255,6 @@ void main() {
         'Bus number KA01AB1234',
         '3h 30m',
         'Via Mandya',
-        '20 seats left',
         'Amenities',
         'Wi-Fi',
         'Charging point',
@@ -1260,7 +1262,10 @@ void main() {
       ]) {
         expect(find.text(text), findsOneWidget, reason: text);
       }
-      expect(find.textContaining('650'), findsOneWidget);
+      // In the summary card and again in the bar with "Select seats".
+      expect(find.text('20 seats left'), findsNWidgets(2));
+      expect(find.textContaining('650'), findsNWidgets(2));
+      expect(find.widgetWithText(AbraButton, 'Select seats'), findsOneWidget);
 
       Future<void> see(List<String> texts) async {
         for (final text in texts) {
@@ -1285,20 +1290,33 @@ void main() {
       await see(['Dropping points', 'Town Hall', 'Town Hall, Main Road']);
     });
 
-    testWidgets('booking is stated as unavailable, not offered as a button', (
-      tester,
-    ) async {
+    testWidgets('boarding and dropping points can be chosen; the first and '
+        'last are chosen to begin with', (tester) async {
+      final semantics = tester.ensureSemantics();
       await start(tester);
       backend.trip = (_) => FakeResponse.ok(
         tripJson('66f0c0ffee0000000000abcd', today, detail: true),
       );
       await open(tester, '/trip/66f0c0ffee0000000000abcd');
+
+      bool isSelected(String name) => tester
+          .getSemantics(find.text(name).first)
+          .getSemanticsData()
+          .hasFlag(SemanticsFlag.isSelected);
       await tester.scrollUntilVisible(
-        find.textContaining('not available in the app yet'),
-        300,
+        find.text('Second Stage'),
+        120,
         scrollable: find.byType(Scrollable).last,
       );
-      expect(find.byType(AbraButton), findsNothing);
+      expect(isSelected('Central Bus Stand'), isTrue);
+      expect(isSelected('Second Stage'), isFalse);
+      await tester.ensureVisible(find.text('Second Stage'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Second Stage'));
+      await tester.pumpAndSettle();
+      expect(isSelected('Second Stage'), isTrue);
+      expect(isSelected('Central Bus Stand'), isFalse);
+      semantics.dispose();
     });
 
     testWidgets('a guest can open a trip from a link; back leads to home', (
@@ -1344,10 +1362,18 @@ void main() {
       tester,
     ) async {
       await start(tester);
-      await open(tester, '/trip/66f0c0ffee0000000000abcd/seats');
-      expect(locationOf(tester).path, '/login');
-      await open(tester, '/seats');
-      expect(locationOf(tester).path, '/login');
+      for (final location in [
+        '/trip/66f0c0ffee0000000000abcd/points',
+        '/seats',
+      ]) {
+        await open(tester, location);
+        // The location stays; the sign-in sheet opens over the guest card.
+        expect(locationOf(tester).path, location);
+        expect(find.text('Log in or sign up'), findsOneWidget);
+        await tester.tap(find.byTooltip('Close'));
+        await settle(tester);
+        expect(find.text('Log in to continue'), findsOneWidget);
+      }
     });
   });
 
