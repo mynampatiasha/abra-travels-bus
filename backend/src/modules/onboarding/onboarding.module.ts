@@ -20,6 +20,8 @@ import { OperatorsModule } from '../operators/operators.module';
 import { RbacModule } from '../rbac/rbac.module';
 import { UsersModule } from '../users/users.module';
 import { InvitationsController } from './controllers/invitations.controller';
+import { InvitationsManageController } from './invitations_admin_manage';
+import { InvitationsManageService } from './invitations_admin_manage.service';
 import { SubmissionsController } from './controllers/submissions.controller';
 import { InvitationRepository } from './repositories/invitation.repository';
 import { SubmissionRepository } from './repositories/submission.repository';
@@ -61,7 +63,12 @@ import { SubmissionsService } from './services/submissions.service';
     FilesModule,
     EmailModule,
   ],
-  controllers: [InvitationsController, SubmissionsController, ClientKycController],
+  controllers: [
+    InvitationsController,
+    InvitationsManageController,
+    SubmissionsController,
+    ClientKycController,
+  ],
   providers: [
     ClientKycService,
     InvitationRepository,
@@ -71,6 +78,7 @@ import { SubmissionsService } from './services/submissions.service';
     SubmissionsService,
     SubmissionReviewService,
     InvitationsService,
+    InvitationsManageService,
   ],
 })
 export class OnboardingModule {}

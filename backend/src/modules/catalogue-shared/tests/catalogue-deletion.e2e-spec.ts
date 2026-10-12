@@ -168,6 +168,31 @@ describe('Catalogue deletion e2e', () => {
     await call(superAdmin).delete(`/catalogue/cities/${city.id}`).expect(200);
   });
 
+  it('opens one bus type and one document type, and not a deleted or unknown one', async () => {
+    const busType = await call(admin).get(`/catalogue/bus-types/${network.busType.id}`).expect(200);
+    expect(dataOf<{ id: string; key: string }>(busType)).toMatchObject({ id: network.busType.id });
+
+    const documentType = dataOf<Identified>(
+      await call(admin).post('/catalogue/document-types', {
+        key: `READONE_${runId}`.toUpperCase().replace(/[^A-Z0-9_]/g, '').slice(0, 39),
+        name: 'Read one document',
+        appliesTo: 'OPERATOR',
+      }),
+    );
+    const read = await call(admin).get(`/catalogue/document-types/${documentType.id}`).expect(200);
+    expect(dataOf<{ name: string }>(read).name).toBe('Read one document');
+
+    await call(admin).delete(`/catalogue/document-types/${documentType.id}`).expect(200);
+    await call(admin).get(`/catalogue/document-types/${documentType.id}`).expect(404);
+    await call(admin)
+      .get(`/catalogue/bus-types/${new Types.ObjectId().toHexString()}`)
+      .expect(404);
+    expect((await call(operator).get(`/catalogue/bus-types/${network.busType.id}`)).status).toBe(
+      403,
+    );
+    await client(context).get(`${API}/catalogue/bus-types/${network.busType.id}`).expect(401);
+  });
+
   it('answers 404 for an id that does not exist', async () => {
     await call(admin).delete(`/catalogue/cities/${new Types.ObjectId().toHexString()}`).expect(404);
   });

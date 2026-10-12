@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { dateRangeShape, objectIdString, pagingShape } from '../../common/pipes/list-query';
 import { createZodDto } from '../../common/pipes/zod-dto.factory';
 import { detectMimeType } from '../files/storage/file-signature';
+import { softDeletePlugin } from '../../database/soft-delete.plugin';
 import { definePermissions, PLATFORM_ONLY } from '../rbac/permissions/permission-definition';
 
 export const BANNER_MODEL = 'Banner';
@@ -20,10 +21,11 @@ export const BANNER_LANGUAGES = ['ALL', 'en', 'hi', 'te', 'kn', 'ta', 'ml', 'mr'
 export type BannerLanguage = (typeof BANNER_LANGUAGES)[number];
 
 /**
- * Not stored: worked out from `isActive` and the dates at the moment of reading, so a banner
- * goes live and expires on time without a background job.
+ * Worked out from `archivedAt`, `isActive` and the dates at the moment of reading, so a banner
+ * goes live and expires on time without a background job. ARCHIVED is put away on purpose
+ * (`archivedAt`): it is never shown and leaves the working list until it is un-archived.
  */
-export const BANNER_STATUSES = ['LIVE', 'SCHEDULED', 'EXPIRED', 'INACTIVE'] as const;
+export const BANNER_STATUSES = ['LIVE', 'SCHEDULED', 'EXPIRED', 'INACTIVE', 'ARCHIVED'] as const;
 export type BannerStatus = (typeof BANNER_STATUSES)[number];
 
 /** `mobile` is the main image, used everywhere; `desktop` is an optional wider one. */
@@ -85,6 +87,8 @@ export interface Banner {
   endsAt: Date | null;
   sortOrder: number;
   isActive: boolean;
+  /** Set when the banner was archived; null otherwise. */
+  archivedAt?: Date | null;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -113,19 +117,22 @@ export const bannerSchema = new Schema<Banner>(
     endsAt: { type: Date, default: null },
     sortOrder: { type: Number, required: true, min: 0, max: 100_000, default: 0 },
     isActive: { type: Boolean, required: true, default: true },
+    archivedAt: { type: Date, default: null },
   },
   { collection: 'banners', timestamps: true, versionKey: false },
 );
 
+bannerSchema.plugin(softDeletePlugin);
 bannerSchema.index({ placement: 1, isActive: 1, sortOrder: 1 });
 bannerSchema.index({ startsAt: 1, endsAt: 1 });
 bannerSchema.index({ createdAt: -1 });
 
 /** The status of a banner at `now`. */
 export function bannerStatusOf(
-  banner: Pick<Banner, 'isActive' | 'startsAt' | 'endsAt'>,
+  banner: Pick<Banner, 'isActive' | 'startsAt' | 'endsAt' | 'archivedAt'>,
   now: Date = new Date(),
 ): BannerStatus {
+  if (banner.archivedAt) return 'ARCHIVED';
   if (!banner.isActive) return 'INACTIVE';
   if (banner.startsAt && banner.startsAt > now) return 'SCHEDULED';
   if (banner.endsAt && banner.endsAt < now) return 'EXPIRED';
@@ -357,15 +364,18 @@ export function storedKeysOf(banner: StoredBanner): string[] {
 export function statusCondition(status: BannerStatus, now: Date): QueryFilter<Banner> {
   const started = { $or: [{ startsAt: null }, { startsAt: { $lte: now } }] };
   switch (status) {
+    case 'ARCHIVED':
+      return { archivedAt: { $ne: null } };
     case 'INACTIVE':
-      return { isActive: false };
+      return { isActive: false, archivedAt: null };
     case 'SCHEDULED':
-      return { isActive: true, startsAt: { $gt: now } };
+      return { isActive: true, archivedAt: null, startsAt: { $gt: now } };
     case 'EXPIRED':
-      return { isActive: true, endsAt: { $lt: now }, ...started };
+      return { isActive: true, archivedAt: null, endsAt: { $lt: now }, ...started };
     case 'LIVE':
       return {
         isActive: true,
+        archivedAt: null,
         $and: [started, { $or: [{ endsAt: null }, { endsAt: { $gte: now } }] }],
       };
   }

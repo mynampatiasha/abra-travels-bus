@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { type ClientSession, type Model, type QueryFilter, type Types } from 'mongoose';
+import { escapeRegExp } from '../../../common/pipes/list-query';
 import {
   ONBOARDING_INVITATION_MODEL,
   type InvitationStatus,
@@ -39,12 +40,23 @@ export class InvitationRepository {
     filter: {
       status?: InvitationStatus | undefined;
       createdAt?: { $gte?: Date; $lt?: Date } | undefined;
+      /** Narrows pending invitations to valid (`$gte now`) or expired (`$lt now`) ones. */
+      expiresAt?: { $gte?: Date; $lt?: Date } | undefined;
+      search?: string | undefined;
     },
     page: { skip: number; limit: number },
   ): Promise<{ items: StoredInvitation[]; total: number }> {
     const match: QueryFilter<OnboardingInvitation> = {
       ...(filter.status ? { status: filter.status } : {}),
       ...(filter.createdAt ? { createdAt: filter.createdAt } : {}),
+      ...(filter.expiresAt ? { expiresAt: filter.expiresAt } : {}),
+      ...(filter.search
+        ? {
+            $or: ['companyName', 'ownerName', 'email'].map((field) => ({
+              [field]: new RegExp(escapeRegExp(filter.search as string), 'i'),
+            })),
+          }
+        : {}),
     };
     const [items, total] = await Promise.all([
       this.model

@@ -36,6 +36,7 @@ export const AUDIT_ACTIONS = [
   'catalogue.restored',
   'catalogue.exported',
   'catalogue.imported',
+  'onboarding.invitation-updated',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

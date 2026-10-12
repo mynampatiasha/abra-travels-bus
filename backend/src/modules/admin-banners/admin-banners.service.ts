@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { type Readable } from 'node:stream';
 import { Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { type ClientSession, type Model, type QueryFilter, Types } from 'mongoose';
+import { type Model, type QueryFilter, Types } from 'mongoose';
 import { ApiException } from '../../common/errors/api-exception';
 import { type ClientRequestInfo } from '../../common/http/client-request-info';
 import { PaginatedResult } from '../../common/interceptors/response-envelope.interceptor';
@@ -28,7 +28,6 @@ import {
   IMAGE_EXTENSIONS,
   IMAGE_FIELDS,
   statusCondition,
-  storedKeysOf,
   type StoredBanner,
   type UpdateBannerDto,
 } from './admin-banners.model';
@@ -304,31 +303,6 @@ export class AdminBannersService {
     );
     await this.removeQuietly(storedKey);
     return saved;
-  }
-
-  async remove(
-    actor: AuthenticatedUserActor,
-    id: string,
-    client: ClientRequestInfo,
-  ): Promise<void> {
-    const before = await this.require(id);
-    await this.changes.run({
-      actor,
-      client,
-      action: 'banner.deleted',
-      entityType: 'banner',
-      before: { ...bannerViewOf(before) },
-      apply: async (session: ClientSession) => {
-        const deleted = await this.banners
-          .findOneAndDelete({ _id: before._id }, { session })
-          .lean<StoredBanner>()
-          .exec();
-        if (!deleted) throw new ApiException('RESOURCE_NOT_FOUND', 'Banner not found');
-        return deleted;
-      },
-      describe: () => ({}),
-    });
-    for (const key of storedKeysOf(before)) await this.removeQuietly(key);
   }
 
   /** Live banners of a placement in the customer's language (or for every language). */

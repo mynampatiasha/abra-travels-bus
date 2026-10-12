@@ -40,6 +40,7 @@ export const DELETION_ROUTES: readonly DeletionRoute[] = [
   { kind: 'documentType', base: 'catalogue/document-types', permission: 'documents.delete' },
   { kind: 'operator', base: 'catalogue/operators', permission: 'operators.delete' },
   { kind: 'invitation', base: 'onboarding/invitations', permission: 'operators.delete' },
+  { kind: 'banner', base: 'admin/banners', permission: 'banners.delete' },
 ];
 
 function deletionController({ kind, base, permission }: DeletionRoute): Type<unknown> {

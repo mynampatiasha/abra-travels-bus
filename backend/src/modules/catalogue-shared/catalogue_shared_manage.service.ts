@@ -1,72 +1,25 @@
 import { Injectable } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
-import { type Connection, type Model, Schema, Types } from 'mongoose';
+import { type Connection, type Model, Types } from 'mongoose';
 import { ApiException } from '../../common/errors/api-exception';
 import { rejectDuplicates } from '../../common/errors/duplicate-key';
 import { type ClientRequestInfo } from '../../common/http/client-request-info';
 import { type AuthenticatedUserActor } from '../../common/request-context/request-actor';
+import { WITH_DELETED } from '../../database/soft-delete.plugin';
 import { AuditedChangeRunner } from '../rbac/services/audited-change.service';
 
 /*
  * The one soft-delete mechanism of every catalogue record (Phase 1, step 1):
- *   - `softDeletePlugin` adds `deletedAt` / `deletedBy` to a schema and hides deleted records from
- *     every query, so no repository has to remember a filter;
+ *   - `softDeletePlugin` (database/soft-delete.plugin.ts) adds `deletedAt` / `deletedBy` to a
+ *     schema and hides deleted records from every query, so no repository has to remember a filter;
  *   - `CatalogueDeletionService` deletes and restores a record, refuses a delete while other
  *     records still use it (with a sentence that names them), and writes the audit entry in the
  *     same transaction as the change.
  *
- * This file imports no schema (models are looked up by name), because the schemas import the
- * plugin from here and an import cycle would break at start-up.
+ * This file imports no schema (models are looked up by name). The plugin itself lives in
+ * `database/soft-delete.plugin.ts`, which has no imports of the application, because the schemas
+ * (which the permission catalogue imports) use it and an import cycle would break at start-up.
  */
-
-/** Pass `.setOptions({ withDeleted: true })` to a query to see deleted records too. */
-export const WITH_DELETED = 'withDeleted';
-
-const QUERY_OPERATIONS = [
-  'find',
-  'findOne',
-  'findOneAndUpdate',
-  'findOneAndReplace',
-  'findOneAndDelete',
-  'countDocuments',
-  'updateOne',
-  'updateMany',
-  'deleteOne',
-  'deleteMany',
-  'distinct',
-] as const;
-
-interface FilterableQuery {
-  getOptions(): Record<string, unknown>;
-  where(conditions: Record<string, unknown>): unknown;
-}
-
-/**
- * Soft delete for a schema. A record without `deletedAt` (everything stored before this plugin)
- * counts as not deleted, so no migration is needed.
- */
-export function softDeletePlugin(schema: Schema): void {
-  schema.add({
-    deletedAt: { type: Date, default: null },
-    deletedBy: { type: Schema.Types.ObjectId, default: null },
-  });
-  schema.pre(QUERY_OPERATIONS as unknown as 'find', function (this: unknown) {
-    const query = this as FilterableQuery;
-    if (query.getOptions()[WITH_DELETED] === true) return;
-    query.where({ deletedAt: null });
-  });
-  schema.pre('aggregate', function (this: unknown) {
-    const aggregate = this as {
-      options?: Record<string, unknown>;
-      pipeline(): Record<string, unknown>[];
-    };
-    if (aggregate.options?.[WITH_DELETED] === true) return;
-    const pipeline = aggregate.pipeline();
-    // $geoNear must stay the first stage
-    const at = pipeline[0] && '$geoNear' in pipeline[0] ? 1 : 0;
-    pipeline.splice(at, 0, { $match: { deletedAt: null } });
-  });
-}
 
 /** What still points at a record. */
 export interface UsageRule {
@@ -151,6 +104,12 @@ export const CATALOGUE_KINDS = {
       rule('user account', 'user accounts', 'User', (id) => ({ operatorId: id })),
     ],
     operatorIdOf: (record) => record._id as Types.ObjectId,
+  },
+  banner: {
+    label: 'banner',
+    entityType: 'banner',
+    model: 'Banner',
+    usage: [],
   },
   invitation: {
     label: 'invitation',

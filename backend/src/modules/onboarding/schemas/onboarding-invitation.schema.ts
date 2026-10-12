@@ -1,5 +1,5 @@
 import { Schema, type Types } from 'mongoose';
-import { softDeletePlugin } from '../../catalogue-shared/catalogue_shared_manage.service';
+import { softDeletePlugin } from '../../../database/soft-delete.plugin';
 
 export const ONBOARDING_INVITATION_MODEL = 'OnboardingInvitation';
 

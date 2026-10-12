@@ -1,6 +1,6 @@
 import { Schema, type Types } from 'mongoose';
 import { type GeoPoint } from '../../cities/schemas/city.schema';
-import { softDeletePlugin } from '../../catalogue-shared/catalogue_shared_manage.service';
+import { softDeletePlugin } from '../../../database/soft-delete.plugin';
 
 export const LOCATION_MODEL = 'Location';
 

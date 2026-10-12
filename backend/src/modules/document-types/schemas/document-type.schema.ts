@@ -1,5 +1,5 @@
 import { Schema } from 'mongoose';
-import { softDeletePlugin } from '../../catalogue-shared/catalogue_shared_manage.service';
+import { softDeletePlugin } from '../../../database/soft-delete.plugin';
 
 export const DOCUMENT_TYPE_MODEL = 'DocumentType';
 
