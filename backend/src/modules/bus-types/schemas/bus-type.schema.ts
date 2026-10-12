@@ -1,4 +1,5 @@
 import { Schema } from 'mongoose';
+import { softDeletePlugin } from '../../catalogue-shared/catalogue_shared_manage.service';
 
 export const BUS_TYPE_MODEL = 'BusType';
 
@@ -29,4 +30,5 @@ export const busTypeSchema = new Schema<BusType>(
   { collection: 'bus_types', timestamps: true, versionKey: false },
 );
 
+busTypeSchema.plugin(softDeletePlugin);
 busTypeSchema.index({ key: 1 }, { unique: true });

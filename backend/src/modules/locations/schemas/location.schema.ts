@@ -1,5 +1,6 @@
 import { Schema, type Types } from 'mongoose';
 import { type GeoPoint } from '../../cities/schemas/city.schema';
+import { softDeletePlugin } from '../../catalogue-shared/catalogue_shared_manage.service';
 
 export const LOCATION_MODEL = 'Location';
 
@@ -42,6 +43,7 @@ export const locationSchema = new Schema<Location>(
   { collection: 'locations', timestamps: true, versionKey: false },
 );
 
+locationSchema.plugin(softDeletePlugin);
 locationSchema.index({ cityId: 1, isActive: 1 });
 locationSchema.index({ operatorId: 1 }, { sparse: true });
 locationSchema.index({ location: '2dsphere' }, { sparse: true });

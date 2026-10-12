@@ -1,4 +1,5 @@
 import { Schema } from 'mongoose';
+import { softDeletePlugin } from '../../catalogue-shared/catalogue_shared_manage.service';
 
 export const OPERATOR_MODEL = 'Operator';
 
@@ -29,4 +30,5 @@ export const operatorSchema = new Schema<Operator>(
   { collection: 'operators', timestamps: true, versionKey: false },
 );
 
+operatorSchema.plugin(softDeletePlugin);
 operatorSchema.index({ status: 1 });

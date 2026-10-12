@@ -24,6 +24,8 @@ export const API_ERROR_STATUS = {
   SEAT_LOCK_EXPIRED: 409,
   INVALID_STATE_TRANSITION: 409,
   ALREADY_REGISTERED: 409,
+  /** A record other records still point to cannot be deleted; the message names what uses it. */
+  RESOURCE_IN_USE: 409,
   PAYLOAD_TOO_LARGE: 413,
   UNSUPPORTED_MEDIA_TYPE: 415,
   IDEMPOTENCY_KEY_REUSED: 422,
