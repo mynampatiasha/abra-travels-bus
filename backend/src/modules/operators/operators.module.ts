@@ -14,7 +14,8 @@ import { OperatorsService } from './services/operators.service';
  * staff arrive with operator onboarding.
  */
 @Module({
-  imports: [CatalogueSharedModule, 
+  imports: [
+    CatalogueSharedModule,
     MongooseModule.forFeature([{ name: OPERATOR_MODEL, schema: operatorSchema }]),
     RbacModule,
   ],

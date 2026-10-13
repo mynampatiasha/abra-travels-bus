@@ -1,4 +1,3 @@
-/* eslint-disable max-lines -- Place requests: types, review and notifications stay in one feature service (three-file rule). */
 import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { type ClientSession, type Connection, type Model, type QueryFilter, Types } from 'mongoose';

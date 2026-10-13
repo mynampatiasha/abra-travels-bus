@@ -1049,11 +1049,64 @@ void main() {
       await app.pump(tester);
       await open(tester, AdminRoutes.operators);
 
-      expect(find.text('Alpha Lines'), findsOneWidget);
+      expect(find.text('Alpha'), findsOneWidget);
       expect(find.text('Beta Travels'), findsNothing);
-      expect(find.widgetWithText(AbraButton, 'Add'), findsNothing);
+      expect(find.widgetWithText(AbraButton, 'Invite operator'), findsNothing);
       expect(find.byTooltip('Change status'), findsNothing);
-      expect(find.byTooltip('Edit'), findsOneWidget);
+      expect(find.byTooltip('View'), findsOneWidget);
+    });
+
+    testWidgets('the detail page shows the tabs and staff suspend with a '
+        'reason', (tester) async {
+      final app = TestAdmin.signedIn(seeded(Persona.superAdmin));
+      app.backend.of('operators').first.addAll({
+        'owner': {'name': 'Asha Rao', 'email': 'asha@alpha.test'},
+        'numbers': {'buses': 3, 'trips': 5, 'bookings': 0, 'salesPaise': 0},
+        'impact': {'confirmedBookings': 4, 'upcomingTrips': 2},
+      });
+      await app.pump(tester);
+      await open(tester, AdminRoutes.operatorOf(operatorAId));
+
+      for (final tab in [
+        'Overview',
+        'Buses',
+        'Commission and payout',
+        'Bookings',
+        'Activity',
+      ]) {
+        expect(find.text(tab), findsWidgets, reason: tab);
+      }
+      expect(find.text('Asha Rao'), findsWidgets);
+      expect(find.text('Suspend'), findsOneWidget);
+      expect(find.text('Message owner'), findsOneWidget);
+      expect(find.text('Reactivate'), findsNothing);
+
+      await tapOn(tester, find.text('Suspend'));
+      await settle(tester);
+      expect(
+        find.textContaining('4 existing confirmed bookings'),
+        findsOneWidget,
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Reason (shown to the owner)'),
+        'Forged documents',
+      );
+      await tapOn(tester, find.widgetWithText(FilledButton, 'Suspend'));
+      await settle(tester);
+
+      final sent = app.requestsTo('admin/operators/$operatorAId/suspend');
+      expect(sent, hasLength(1));
+      expect(sent.single.body, containsPair('reason', 'Forged documents'));
+    });
+
+    testWidgets('a person without approval rights gets no suspend or message '
+        'buttons', (tester) async {
+      final app = TestAdmin.signedIn(seeded(Persona.operatorAdmin));
+      await app.pump(tester);
+      await open(tester, AdminRoutes.operatorOf(operatorAId));
+
+      expect(find.text('Suspend'), findsNothing);
+      expect(find.text('Message owner'), findsNothing);
     });
   });
 

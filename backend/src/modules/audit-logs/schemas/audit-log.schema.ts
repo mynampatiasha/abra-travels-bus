@@ -46,6 +46,9 @@ export const AUDIT_ACTIONS = [
   'place-request.created',
   'place-request.approved',
   'place-request.rejected',
+  'operator.suspended',
+  'operator.reactivated',
+  'operator.messaged',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

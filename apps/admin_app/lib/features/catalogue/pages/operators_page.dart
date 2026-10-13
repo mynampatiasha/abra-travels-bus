@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_localization/shared_localization.dart';
 import 'package:shared_permissions/shared_permissions.dart';
 import 'package:shared_theme/shared_theme.dart';
+import 'package:shared_ui/shared_ui.dart';
 
 import '../../../app/providers.dart';
+import '../../../core/format.dart';
 import '../../../l10n/admin_strings.dart';
+import '../../../routing/admin_routes.dart';
 import '../../invitations/invitations_page.dart';
+import '../../reviews/reviews_page.dart';
 import '../catalogue_repository.dart';
 import '../widgets/catalogue_common.dart';
 import '../widgets/record_actions.dart';
@@ -33,9 +38,10 @@ class OperatorsPage extends ConsumerWidget {
     final repository = ref.read(catalogueRepositoryProvider);
 
     return ResourcePage(
-      path: 'operators',
+      path: 'admin/operators',
+      createLabelKey: AdminStrings.opInvite,
       exportPath: access.can(PermissionKeys.operatorsExport)
-          ? 'operators'
+          ? 'admin/operators'
           : null,
       stats: const <StatSpec>[
         StatSpec(
@@ -58,6 +64,7 @@ class OperatorsPage extends ConsumerWidget {
         ),
       ],
       filters: const <FilterSpec>[
+        SearchFilter('query', AdminStrings.opSearch),
         ChoiceFilter(
           'status',
           AdminStrings.fieldStatus,
@@ -66,14 +73,29 @@ class OperatorsPage extends ConsumerWidget {
       ],
       columns: <ColumnSpec>[
         ColumnSpec(
-          AdminStrings.fieldCompanyName,
-          (_, r) => textCell(r['companyName']),
-          text: (r) => plainText(r['companyName']),
-        ),
-        ColumnSpec(
-          AdminStrings.fieldDisplayName,
-          (_, r) => textCell(r['displayName']),
-          text: (r) => plainText(r['displayName']),
+          AdminStrings.opNameColumn,
+          (context, r) => InkWell(
+            onTap: () => context.go(AdminRoutes.operatorOf('${r['id']}')),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  operatorNameOf(r),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  '${(r['owner'] as Map<Object?, Object?>?)?['name'] ?? ''}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AbraColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          text: operatorNameOf,
         ),
         ColumnSpec(
           AdminStrings.fieldStatus,
@@ -83,38 +105,57 @@ class OperatorsPage extends ConsumerWidget {
           ),
           text: (r) => CatalogueLabels.readable('${r['status']}'),
         ),
+        ColumnSpec(
+          AdminStrings.opKycColumn,
+          (context, r) {
+            final kyc = r['kycStatus'] as String?;
+            return kyc == null
+                ? const Text('—')
+                : AbraStatusBadge(
+                    label: AbraLocalizations.of(context).text(
+                      submissionStatuses[kyc] ?? AdminStrings.revStatusDraft,
+                    ),
+                    tone: submissionTone(kyc),
+                  );
+          },
+          text: (r) => CatalogueLabels.readable('${r['kycStatus'] ?? ''}'),
+        ),
+        ColumnSpec(
+          AdminStrings.opdBuses,
+          (_, r) => Text('${r['buses'] ?? 0}'),
+          isNumeric: true,
+          text: (r) => plainText(r['buses']),
+        ),
+        ColumnSpec(
+          AdminStrings.opdTrips,
+          (_, r) => Text('${r['trips'] ?? 0}'),
+          isNumeric: true,
+          text: (r) => plainText(r['trips']),
+        ),
+        ColumnSpec(
+          AdminStrings.opJoinedColumn,
+          (_, r) => Text(dateOf(r['joinedAt'])),
+          text: (r) => dateOf(r['joinedAt']),
+        ),
       ],
       onCreate: access.can(PermissionKeys.operatorsCreate)
           ? (context) => InvitationsPage.inviteOwner(context, repository)
           : null,
       rowActions: (record) {
-        final next =
-            CatalogueLabels.operatorTransitions[record['status']] ??
-            const <String>[];
+        // Suspending and reactivating are done on the operator's own page; here only a
+        // company waiting for approval is approved or rejected
+        final next = record['status'] == 'PENDING_APPROVAL'
+            ? (CatalogueLabels.operatorTransitions['PENDING_APPROVAL'] ??
+                  const <String>[])
+            : const <String>[];
         return <RowAction>[
-          viewAction(
-            repository: repository,
-            path: 'operators',
-            titleOf: operatorNameOf,
-            linesOf: (l10n, r) => <DetailLine>[
-              DetailLine(
-                AdminStrings.fieldCompanyName,
-                '${r['companyName'] ?? ''}',
-              ),
-              DetailLine(
-                AdminStrings.fieldDisplayName,
-                '${r['displayName'] ?? ''}',
-              ),
-              DetailLine(
-                AdminStrings.fieldStatus,
-                optionLabel(
-                  l10n,
-                  CatalogueLabels.operatorStatuses,
-                  r['status'],
-                ),
-              ),
-            ],
-          ),
+          RowAction(AdminStrings.actionView, Icons.visibility_outlined, (
+            context,
+            record,
+          ) async {
+            context.go(AdminRoutes.operatorOf('${record['id']}'));
+            return false;
+          }),
           if (canEdit)
             RowAction(
               AdminStrings.actionEdit,

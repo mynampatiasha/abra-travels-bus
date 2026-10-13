@@ -20,6 +20,7 @@ import '../features/customers/admin_customers.dart';
 import '../features/invitations/invitations_page.dart';
 import '../features/kyc/admin_kyc_configuration.dart';
 import '../features/notifications/admin_notification_screen.dart';
+import '../features/operators/operators_admin_manage_screen.dart';
 import '../features/places/places_admin_manage_screen.dart';
 import '../features/reviews/review_detail_page.dart';
 import '../features/reviews/reviews_page.dart';
@@ -97,6 +98,13 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
                 child: _PermissionGate(path: entry.key, child: entry.value),
               ),
             ),
+          GoRoute(
+            path: '${AdminRoutes.operators}/:id',
+            builder: (context, state) => _PermissionGate(
+              path: AdminRoutes.operators,
+              child: OperatorDetailPage(id: state.pathParameters['id']!),
+            ),
+          ),
           GoRoute(
             path: '${AdminRoutes.reviews}/:id',
             builder: (context, state) => _PermissionGate(

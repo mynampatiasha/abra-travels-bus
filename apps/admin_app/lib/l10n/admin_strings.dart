@@ -619,6 +619,63 @@ abstract final class AdminStrings {
   static const agoMinutes = 'agoMinutes';
   static const agoHours = 'agoHours';
   static const agoDays = 'agoDays';
+  static const opdBack = 'opdBack';
+  static const opdTabOverview = 'opdTabOverview';
+  static const opdTabBuses = 'opdTabBuses';
+  static const opdTabPayout = 'opdTabPayout';
+  static const opdTabBookings = 'opdTabBookings';
+  static const opdTabActivity = 'opdTabActivity';
+  static const opdSuspend = 'opdSuspend';
+  static const opdReactivate = 'opdReactivate';
+  static const opdMessage = 'opdMessage';
+  static const opdCompany = 'opdCompany';
+  static const opdNumbers = 'opdNumbers';
+  static const opdOwner = 'opdOwner';
+  static const opdEmail = 'opdEmail';
+  static const opdPhone = 'opdPhone';
+  static const opdJoined = 'opdJoined';
+  static const opdCompanyName = 'opdCompanyName';
+  static const opdBuses = 'opdBuses';
+  static const opdTrips = 'opdTrips';
+  static const opdBookings = 'opdBookings';
+  static const opdSales = 'opdSales';
+  static const opdKycNone = 'opdKycNone';
+  static const opdKyc = 'opdKyc';
+  static const opdSuspendTitle = 'opdSuspendTitle';
+  static const opdSuspendBody = 'opdSuspendBody';
+  static const opdSuspendReason = 'opdSuspendReason';
+  static const opdSuspendProof = 'opdSuspendProof';
+  static const opdSuspended = 'opdSuspended';
+  static const opdReactivated = 'opdReactivated';
+  static const opdReactivateTitle = 'opdReactivateTitle';
+  static const opdReactivateBody = 'opdReactivateBody';
+  static const opdMessageTitle = 'opdMessageTitle';
+  static const opdMessageField = 'opdMessageField';
+  static const opdMessageSend = 'opdMessageSend';
+  static const opdMessageSent = 'opdMessageSent';
+  static const opdSuspensionTitle = 'opdSuspensionTitle';
+  static const opdSuspensionReason = 'opdSuspensionReason';
+  static const opdSuspensionProof = 'opdSuspensionProof';
+  static const opdSuspensionSince = 'opdSuspensionSince';
+  static const opdSuspensionEnded = 'opdSuspensionEnded';
+  static const opdBusesEmpty = 'opdBusesEmpty';
+  static const opdBusReg = 'opdBusReg';
+  static const opdBusName = 'opdBusName';
+  static const opdBusSeats = 'opdBusSeats';
+  static const opdBusStatus = 'opdBusStatus';
+  static const opdCommissionTitle = 'opdCommissionTitle';
+  static const opdCommissionEmpty = 'opdCommissionEmpty';
+  static const opdPayoutTitle = 'opdPayoutTitle';
+  static const opdPayoutEmpty = 'opdPayoutEmpty';
+  static const opdBookingsEmpty = 'opdBookingsEmpty';
+  static const opdActivityEmpty = 'opdActivityEmpty';
+  static const opdActivityBy = 'opdActivityBy';
+  static const opdLoadFailed = 'opdLoadFailed';
+  static const opNameColumn = 'opNameColumn';
+  static const opKycColumn = 'opKycColumn';
+  static const opJoinedColumn = 'opJoinedColumn';
+  static const opSearch = 'opSearch';
+  static const opInvite = 'opInvite';
   static const Set<String> all = <String>{
     appName,
     signInTitle,
@@ -1321,5 +1378,62 @@ abstract final class AdminStrings {
     agoMinutes,
     agoHours,
     agoDays,
+    opdBack,
+    opdTabOverview,
+    opdTabBuses,
+    opdTabPayout,
+    opdTabBookings,
+    opdTabActivity,
+    opdSuspend,
+    opdReactivate,
+    opdMessage,
+    opdCompany,
+    opdNumbers,
+    opdOwner,
+    opdEmail,
+    opdPhone,
+    opdJoined,
+    opdCompanyName,
+    opdBuses,
+    opdTrips,
+    opdBookings,
+    opdSales,
+    opdKycNone,
+    opdKyc,
+    opdSuspendTitle,
+    opdSuspendBody,
+    opdSuspendReason,
+    opdSuspendProof,
+    opdSuspended,
+    opdReactivated,
+    opdReactivateTitle,
+    opdReactivateBody,
+    opdMessageTitle,
+    opdMessageField,
+    opdMessageSend,
+    opdMessageSent,
+    opdSuspensionTitle,
+    opdSuspensionReason,
+    opdSuspensionProof,
+    opdSuspensionSince,
+    opdSuspensionEnded,
+    opdBusesEmpty,
+    opdBusReg,
+    opdBusName,
+    opdBusSeats,
+    opdBusStatus,
+    opdCommissionTitle,
+    opdCommissionEmpty,
+    opdPayoutTitle,
+    opdPayoutEmpty,
+    opdBookingsEmpty,
+    opdActivityEmpty,
+    opdActivityBy,
+    opdLoadFailed,
+    opNameColumn,
+    opKycColumn,
+    opJoinedColumn,
+    opSearch,
+    opInvite,
   };
 }

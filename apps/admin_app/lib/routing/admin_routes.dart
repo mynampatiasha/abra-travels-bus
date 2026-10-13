@@ -17,10 +17,18 @@ abstract final class AdminRoutes {
   /// One onboarding file of the review queue.
   static String reviewOf(String id) => '$reviews/$id';
 
-  /// The section a path belongs to: a review file belongs to Reviews.
-  static String sectionOf(String path) =>
-      path.startsWith('$reviews/') ? reviews : path;
   static const operators = '/operators';
+
+  /// One operator (its detail page).
+  static String operatorOf(String id) => '$operators/$id';
+
+  /// The section a path belongs to: a review file belongs to Reviews, an
+  /// operator's page to Operators.
+  static String sectionOf(String path) => path.startsWith('$reviews/')
+      ? reviews
+      : path.startsWith('$operators/')
+      ? operators
+      : path;
   static const locations = '/locations';
   static const buses = '/buses';
   static const routes = '/routes';
