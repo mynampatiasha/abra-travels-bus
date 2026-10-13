@@ -653,5 +653,15 @@
   "impsDone": "{created} rows imported. {skipped} left out.",
   "impsNothingReady": "No row can be imported. Fix the problems and choose the file again.",
   "impsClose": "Close",
-  "listExportReady": "The file is ready."
+  "listExportReady": "The file is ready.",
+  "amenitiesTitle": "Amenities",
+  "amenityAdd": "Add amenity",
+  "amenityAddTitle": "Add amenity",
+  "amenityName": "Amenity name",
+  "amenityAddConfirm": "Add",
+  "amenityToggle": "Toggle {name}",
+  "amenityOn": "{name}: on",
+  "amenityOff": "{name}: off",
+  "amenitiesEmpty": "No amenities yet.",
+  "amenitiesHint": "What operators can tick when they add a bus. Switching one off keeps it on the buses that have it."
 }

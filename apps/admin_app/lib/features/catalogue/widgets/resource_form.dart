@@ -121,10 +121,21 @@ class RefSpec extends FieldSpec {
 
 /// Any number of a fixed set of values.
 class MultiChoiceSpec extends FieldSpec {
-  const MultiChoiceSpec(super.key, super.labelKey, this.options, this.labelOf);
+  const MultiChoiceSpec(
+    super.key,
+    super.labelKey,
+    this.options,
+    this.labelOf, {
+    this.choicesPath,
+  });
 
   final List<String> options;
   final String Function(String value) labelOf;
+
+  /// When set, the choices come from the server (`GET catalogue/<choicesPath>`,
+  /// a list of `{key, name}`) instead of [options]: what is switched on now.
+  /// A value the record already has stays offered, even if switched off since.
+  final String? choicesPath;
 }
 
 /// A list of rows, each with the same fields (stops of a route, points of a
@@ -514,15 +525,31 @@ class _ResourceFormState extends ConsumerState<_ResourceFormDialog> {
         );
       case MultiChoiceSpec():
         final selected = values[field.key]! as Set<String>;
+        final path = field.choicesPath;
+        final fromServer = path == null
+            ? null
+            : ref.watch(choicesProvider(path)).asData?.value;
+        final names = <String, String>{
+          for (final choice in fromServer ?? const <JsonMap>[])
+            '${choice['key']}': '${choice['name']}',
+        };
+        final offered = fromServer == null
+            ? field.options
+            : <String>[
+                ...names.keys,
+                // what the record has already, switched off since
+                for (final value in selected)
+                  if (!names.containsKey(value)) value,
+              ];
         return InputDecorator(
           key: key,
           decoration: InputDecoration(labelText: label),
           child: Wrap(
             spacing: AbraSpacing.sm,
             children: <Widget>[
-              for (final option in field.options)
+              for (final option in offered)
                 FilterChip(
-                  label: Text(field.labelOf(option)),
+                  label: Text(names[option] ?? field.labelOf(option)),
                   selected: selected.contains(option),
                   onSelected: _isSaving
                       ? null

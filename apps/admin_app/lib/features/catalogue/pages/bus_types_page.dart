@@ -7,6 +7,7 @@ import 'package:shared_theme/shared_theme.dart';
 import '../../../app/providers.dart';
 import '../../../l10n/admin_strings.dart';
 import '../catalogue_repository.dart';
+import '../widgets/amenities_card.dart';
 import '../widgets/catalogue_common.dart';
 import '../widgets/import_dialog.dart';
 import '../widgets/record_actions.dart';
@@ -38,6 +39,7 @@ class BusTypesPage extends ConsumerWidget {
 
     return ResourcePage(
       path: 'bus-types',
+      footer: AmenitiesCard(canManage: canManage),
       exportPath: access.can(PermissionKeys.catalogueExport)
           ? 'bus-types'
           : null,

@@ -105,6 +105,10 @@ class CatalogueRepository {
   Future<JsonMap> get(String path) async =>
       (await _client.get(_fullPath(path))).decodeObject((json) => json);
 
+  /// A list that is not paged (`[{...}, ...]`), such as the amenities a bus can have.
+  Future<List<JsonMap>> getList(String path) async =>
+      (await _client.get(_fullPath(path))).decodeList((json) => json);
+
   Future<JsonMap> post(String path, [JsonMap body = const {}]) async =>
       (await _client.post(
         _fullPath(path),
@@ -158,6 +162,13 @@ class CatalogueRepository {
 final resourceListProvider = FutureProvider.autoDispose
     .family<PageOf, ResourceQuery>(
       (ref, query) => ref.watch(catalogueRepositoryProvider).list(query),
+    );
+
+/// The choices of a field that lists what is on offer by `key` and `name`
+/// (`catalogue/<path>`), for example the amenities a bus can have.
+final choicesProvider = FutureProvider.autoDispose
+    .family<List<JsonMap>, String>(
+      (ref, path) => ref.watch(catalogueRepositoryProvider).getList(path),
     );
 
 /// The records offered in a selector (the first hundred the user may see,

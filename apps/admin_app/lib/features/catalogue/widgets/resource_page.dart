@@ -113,8 +113,13 @@ class ResourcePage extends ConsumerStatefulWidget {
     this.createLabelKey = AdminStrings.listCreate,
     this.exportPath,
     this.serverImport,
+    this.footer,
     super.key,
   });
+
+  /// Something shown under the table, inside the same card (the Amenities of
+  /// the bus types page).
+  final Widget? footer;
 
   /// The list as the server exports it (`GET <exportPath>/export`, as CSV or
   /// Excel, with the filters now chosen). Wins over [exportName], which makes
@@ -693,6 +698,10 @@ class _ResourcePageState extends ConsumerState<ResourcePage> {
                     ],
                   ),
                 ),
+              ],
+              if (widget.footer != null) ...<Widget>[
+                const Divider(height: 1),
+                widget.footer!,
               ],
             ],
           ),

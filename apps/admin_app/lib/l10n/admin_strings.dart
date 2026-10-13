@@ -572,6 +572,16 @@ abstract final class AdminStrings {
   static const impsNothingReady = 'impsNothingReady';
   static const impsClose = 'impsClose';
   static const listExportReady = 'listExportReady';
+  static const amenitiesTitle = 'amenitiesTitle';
+  static const amenityAdd = 'amenityAdd';
+  static const amenityAddTitle = 'amenityAddTitle';
+  static const amenityName = 'amenityName';
+  static const amenityAddConfirm = 'amenityAddConfirm';
+  static const amenityToggle = 'amenityToggle';
+  static const amenityOn = 'amenityOn';
+  static const amenityOff = 'amenityOff';
+  static const amenitiesEmpty = 'amenitiesEmpty';
+  static const amenitiesHint = 'amenitiesHint';
   static const Set<String> all = <String>{
     appName,
     signInTitle,
@@ -1227,5 +1237,15 @@ abstract final class AdminStrings {
     impsNothingReady,
     impsClose,
     listExportReady,
+    amenitiesTitle,
+    amenityAdd,
+    amenityAddTitle,
+    amenityName,
+    amenityAddConfirm,
+    amenityToggle,
+    amenityOn,
+    amenityOff,
+    amenitiesEmpty,
+    amenitiesHint,
   };
 }
