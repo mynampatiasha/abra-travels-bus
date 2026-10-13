@@ -582,6 +582,43 @@ abstract final class AdminStrings {
   static const amenityOff = 'amenityOff';
   static const amenitiesEmpty = 'amenitiesEmpty';
   static const amenitiesHint = 'amenitiesHint';
+  static const navPlaces = 'navPlaces';
+  static const hintPlaces = 'hintPlaces';
+  static const placesTabPlaces = 'placesTabPlaces';
+  static const placesTabCities = 'placesTabCities';
+  static const placesTabRequests = 'placesTabRequests';
+  static const placesAdd = 'placesAdd';
+  static const placesEdit = 'placesEdit';
+  static const placesFieldName = 'placesFieldName';
+  static const placesFieldInstructions = 'placesFieldInstructions';
+  static const placesColPlace = 'placesColPlace';
+  static const placesColUsedFor = 'placesColUsedFor';
+  static const placesColAddedBy = 'placesColAddedBy';
+  static const placesColTrips = 'placesColTrips';
+  static const placesUsedBoarding = 'placesUsedBoarding';
+  static const placesUsedDropping = 'placesUsedDropping';
+  static const placesUsedBoth = 'placesUsedBoth';
+  static const placesBadgeBoarding = 'placesBadgeBoarding';
+  static const placesBadgeDropping = 'placesBadgeDropping';
+  static const placesBadgeBoth = 'placesBadgeBoth';
+  static const placesSourceAdmin = 'placesSourceAdmin';
+  static const placesSourceImport = 'placesSourceImport';
+  static const placesSourceRequest = 'placesSourceRequest';
+  static const placesSourceOperator = 'placesSourceOperator';
+  static const preqColPlace = 'preqColPlace';
+  static const preqColRequested = 'preqColRequested';
+  static const preqPending = 'preqPending';
+  static const preqApproved = 'preqApproved';
+  static const preqRejected = 'preqRejected';
+  static const preqApprove = 'preqApprove';
+  static const preqApprovedDone = 'preqApprovedDone';
+  static const preqReject = 'preqReject';
+  static const preqRejectTitle = 'preqRejectTitle';
+  static const preqReason = 'preqReason';
+  static const agoNow = 'agoNow';
+  static const agoMinutes = 'agoMinutes';
+  static const agoHours = 'agoHours';
+  static const agoDays = 'agoDays';
   static const Set<String> all = <String>{
     appName,
     signInTitle,
@@ -1247,5 +1284,42 @@ abstract final class AdminStrings {
     amenityOff,
     amenitiesEmpty,
     amenitiesHint,
+    navPlaces,
+    hintPlaces,
+    placesTabPlaces,
+    placesTabCities,
+    placesTabRequests,
+    placesAdd,
+    placesEdit,
+    placesFieldName,
+    placesFieldInstructions,
+    placesColPlace,
+    placesColUsedFor,
+    placesColAddedBy,
+    placesColTrips,
+    placesUsedBoarding,
+    placesUsedDropping,
+    placesUsedBoth,
+    placesBadgeBoarding,
+    placesBadgeDropping,
+    placesBadgeBoth,
+    placesSourceAdmin,
+    placesSourceImport,
+    placesSourceRequest,
+    placesSourceOperator,
+    preqColPlace,
+    preqColRequested,
+    preqPending,
+    preqApproved,
+    preqRejected,
+    preqApprove,
+    preqApprovedDone,
+    preqReject,
+    preqRejectTitle,
+    preqReason,
+    agoNow,
+    agoMinutes,
+    agoHours,
+    agoDays,
   };
 }

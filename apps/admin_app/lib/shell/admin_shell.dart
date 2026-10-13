@@ -56,6 +56,12 @@ class AdminSection {
       AdminStrings.hintOperators,
       Icons.business_outlined,
     ),
+    AdminRoutes.places: AdminSection(
+      AdminRoutes.places,
+      AdminStrings.navPlaces,
+      AdminStrings.hintPlaces,
+      Icons.place_outlined,
+    ),
     AdminRoutes.cities: AdminSection(
       AdminRoutes.cities,
       AdminStrings.navCities,
@@ -116,11 +122,23 @@ class AdminSection {
   /// than under "Catalogue".
   static const Set<String> contentPaths = <String>{AdminRoutes.banners};
 
+  /// Cities and Locations are tabs of "Cities and places"; they are listed
+  /// on their own only for someone who cannot open that page.
+  static const Set<String> _insidePlaces = <String>{
+    AdminRoutes.cities,
+    AdminRoutes.locations,
+  };
+
   /// The sections [access] may open, in display order.
-  static List<AdminSection> visibleTo(AccessState access) => <AdminSection>[
-    for (final path in AdminRoutes.sections)
-      if (AdminRouteGuard.canOpen(access, path)) byPath[path]!,
-  ];
+  static List<AdminSection> visibleTo(AccessState access) {
+    final hasPlaces = AdminRouteGuard.canOpen(access, AdminRoutes.places);
+    return <AdminSection>[
+      for (final path in AdminRoutes.sections)
+        if (AdminRouteGuard.canOpen(access, path) &&
+            !(hasPlaces && _insidePlaces.contains(path)))
+          byPath[path]!,
+    ];
+  }
 }
 
 /// Frame of the management app: a navy side navigation with the sections
@@ -152,6 +170,9 @@ class AdminShell extends ConsumerWidget {
     final route = item.route;
     if (route != null && route.startsWith('/onboarding/')) {
       context.go(AdminRoutes.reviewOf(route.substring('/onboarding/'.length)));
+    } else if (route != null && route.startsWith(AdminRoutes.places)) {
+      // A place request: the Operator requests tab
+      context.go(route);
     }
   }
 

@@ -27,6 +27,10 @@ abstract final class AdminRoutes {
   static const trips = '/trips';
   static const banners = '/banners';
 
+  /// Cities and places (demo page `places`): Places, Cities and Operator
+  /// requests in one page. `/cities` and `/locations` still open on their own.
+  static const places = '/places';
+
   /// Query parameter that carries the section to return to after the
   /// session check or sign-in.
   static const fromParameter = 'from';
@@ -49,6 +53,7 @@ abstract final class AdminRoutes {
     routes: PermissionKeys.routesRead,
     trips: PermissionKeys.tripsRead,
     banners: PermissionKeys.bannersRead,
+    places: PermissionKeys.catalogueRead,
   };
 
   /// Sections in the order they are listed.
@@ -61,6 +66,7 @@ abstract final class AdminRoutes {
     invitations,
     reviews,
     customers,
+    places,
     cities,
     busTypes,
     documentTypes,

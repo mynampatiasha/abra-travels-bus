@@ -52,6 +52,9 @@ class PortalShell extends ConsumerWidget {
     if (route != null && route.startsWith(PortalRoutes.onboardingPrefix)) {
       ref.invalidate(clientKycProvider);
       context.go(item.data['subjectType'] == 'BUS' ? route : '/kyc');
+    } else if (route == PortalRoutes.places) {
+      // A decision on a place request
+      context.go(route!);
     }
   }
 

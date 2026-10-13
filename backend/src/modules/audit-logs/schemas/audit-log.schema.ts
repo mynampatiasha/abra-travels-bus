@@ -37,6 +37,9 @@ export const AUDIT_ACTIONS = [
   'catalogue.exported',
   'catalogue.imported',
   'onboarding.invitation-updated',
+  'place-request.created',
+  'place-request.approved',
+  'place-request.rejected',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

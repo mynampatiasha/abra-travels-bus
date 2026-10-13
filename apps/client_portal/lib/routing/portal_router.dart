@@ -11,6 +11,7 @@ import '../features/dashboard/dashboard_page.dart';
 import '../features/notifications/client_notification_screen.dart';
 import '../features/onboarding/client_kyc_based_screen.dart';
 import '../features/onboarding/onboarding_page.dart';
+import '../features/places/places_client_manage_screen.dart';
 import '../shell/portal_shell.dart';
 import 'portal_route_guard.dart';
 import 'portal_routes.dart';
@@ -64,6 +65,18 @@ final portalRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: PortalRoutes.dashboard,
             builder: (context, state) => const DashboardPage(),
+          ),
+          GoRoute(
+            path: PortalRoutes.places,
+            builder: (context, state) => Consumer(
+              builder: (context, ref, _) =>
+                  PortalRouteGuard.canOpen(
+                    ref.watch(accessProvider),
+                    PortalRoutes.places,
+                  )
+                  ? const PlacesClientManageScreen()
+                  : const AbraStateView(kind: AbraStateKind.forbidden),
+            ),
           ),
           GoRoute(
             path: '${PortalRoutes.onboardingPrefix}:id',

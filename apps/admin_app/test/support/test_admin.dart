@@ -658,6 +658,13 @@ class FakeBackend {
         }),
       );
     }
+    if (resource == 'place-requests' && parts[1] == 'pending-count') {
+      return FakeResponse.ok(<String, Object?>{
+        'pending': of(
+          resource,
+        ).where((item) => item['status'] == 'PENDING').length,
+      });
+    }
     final record = _visible(
       resource,
     ).where((item) => item['id'] == parts[1]).firstOrNull;
@@ -690,6 +697,11 @@ class FakeBackend {
       case 'cancel':
         record['status'] = 'CANCELLED';
         record['cancellationReason'] = body['reason'];
+      case 'approve':
+        record['status'] = 'APPROVED';
+      case 'reject':
+        record['status'] = 'REJECTED';
+        record['reason'] = body['reason'];
     }
     return FakeResponse.ok(record);
   }

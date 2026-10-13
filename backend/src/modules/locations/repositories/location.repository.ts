@@ -48,6 +48,41 @@ export class LocationRepository extends ScopedRepository<Location> {
     return { items, total };
   }
 
+  /**
+   * How many trips use each place as a boarding or dropping point (the demo's "Trips using it").
+   * Places no trip uses are missing from the map.
+   */
+  async tripCounts(ids: readonly Types.ObjectId[]): Promise<Map<string, number>> {
+    if (ids.length === 0) return new Map();
+    const rows = await this.model.db
+      .model('Trip')
+      .aggregate<{ _id: Types.ObjectId; count: number }>([
+        {
+          $match: {
+            $or: [
+              { 'boardingPoints.locationId': { $in: [...ids] } },
+              { 'droppingPoints.locationId': { $in: [...ids] } },
+            ],
+          },
+        },
+        {
+          $project: {
+            places: {
+              $setUnion: [
+                { $ifNull: ['$boardingPoints.locationId', []] },
+                { $ifNull: ['$droppingPoints.locationId', []] },
+              ],
+            },
+          },
+        },
+        { $unwind: '$places' },
+        { $match: { places: { $in: [...ids] } } },
+        { $group: { _id: '$places', count: { $sum: 1 } } },
+      ])
+      .exec();
+    return new Map(rows.map((row) => [row._id.toHexString(), row.count]));
+  }
+
   async findVisibleById(id: string): Promise<StoredLocation | null> {
     return this.model
       .findOne(await this.visibleFilter({ _id: id }))

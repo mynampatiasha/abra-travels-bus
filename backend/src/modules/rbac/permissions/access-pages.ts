@@ -93,7 +93,7 @@ export const ACCESS_PAGES: readonly AccessPage[] = [
   operator('dreports', 'Driver reports', 'drivers'),
   operator('drules', 'Driver rules', 'drivers'),
   operator('routes', 'Routes and stops', 'routes'),
-  operator('places', 'Places', 'catalogue'),
+  operator('places', 'Places', 'catalogue', 'routes'),
   operator('fares', 'Fares', 'fares'),
   operator('schedules', 'Schedules', 'trips'),
   operator('trips', 'Trips', 'trips'),

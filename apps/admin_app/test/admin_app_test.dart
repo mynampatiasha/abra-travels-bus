@@ -525,6 +525,7 @@ void main() {
           'Routes',
           'Locations',
           'Operators',
+          'Cities and places',
           'Cities',
           'Bus types',
         ])
@@ -533,13 +534,13 @@ void main() {
     }
 
     testWidgets('Super Admin and Admin see every section', (tester) async {
+      // Cities and Locations are tabs of "Cities and places" for them
       const all = [
         'Trips',
         'Buses',
         'Routes',
-        'Locations',
         'Operators',
-        'Cities',
+        'Cities and places',
         'Bus types',
       ];
       expect(await sectionsFor(tester, Persona.superAdmin), all);
@@ -589,11 +590,11 @@ void main() {
     testWidgets('choosing a section opens it', (tester) async {
       final app = TestAdmin.signedIn(seeded(Persona.superAdmin));
       await app.pump(tester);
-      await tapOn(tester, navItem('Cities'));
+      await tapOn(tester, navItem('Cities and places'));
       await settle(tester);
-      expect(locationOf(tester), AdminRoutes.cities);
-      expect(find.widgetWithText(AppBar, 'Cities'), findsOneWidget);
-      expect(app.requestsTo('catalogue/cities'), isNotEmpty);
+      expect(locationOf(tester), AdminRoutes.places);
+      expect(find.widgetWithText(AppBar, 'Cities and places'), findsOneWidget);
+      expect(app.requestsTo('catalogue/locations'), isNotEmpty);
     });
 
     testWidgets('on a narrow screen the sections are in a drawer', (
@@ -601,12 +602,12 @@ void main() {
     ) async {
       final app = TestAdmin.signedIn(seeded(Persona.superAdmin));
       await app.pump(tester, size: const Size(700, 900));
-      expect(navItem('Cities'), findsNothing);
+      expect(navItem('Cities and places'), findsNothing);
       await tapOn(tester, find.byTooltip('Open navigation menu'));
       await settle(tester);
-      await tapOn(tester, find.widgetWithText(ListTile, 'Cities'));
+      await tapOn(tester, find.widgetWithText(ListTile, 'Cities and places'));
       await settle(tester);
-      expect(locationOf(tester), AdminRoutes.cities);
+      expect(locationOf(tester), AdminRoutes.places);
       expect(tester.takeException(), isNull);
     });
 

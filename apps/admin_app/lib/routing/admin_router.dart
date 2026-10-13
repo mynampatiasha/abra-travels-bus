@@ -20,6 +20,7 @@ import '../features/customers/admin_customers.dart';
 import '../features/invitations/invitations_page.dart';
 import '../features/kyc/admin_kyc_configuration.dart';
 import '../features/notifications/admin_notification_screen.dart';
+import '../features/places/places_admin_manage_screen.dart';
 import '../features/reviews/review_detail_page.dart';
 import '../features/reviews/reviews_page.dart';
 import '../features/settings/settings_page.dart';
@@ -48,6 +49,7 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
     AdminRoutes.routes: RoutesPage(),
     AdminRoutes.trips: TripsPage(),
     AdminRoutes.banners: AdminBannersPage(),
+    AdminRoutes.places: PlacesAdminManageScreen(),
   };
 
   final router = GoRouter(
