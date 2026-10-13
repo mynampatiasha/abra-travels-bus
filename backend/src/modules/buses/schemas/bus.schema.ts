@@ -2,7 +2,10 @@ import { Schema, type Types } from 'mongoose';
 
 export const BUS_MODEL = 'Bus';
 
-/** What a bus offers on board. Apps translate the keys; search can filter by them. */
+/**
+ * The amenities buses could have before the list became managed (`amenities` module, which starts
+ * with these). Kept for the tests and for reference: a bus now refers to any key staff have added.
+ */
 export const BUS_AMENITIES = [
   'WIFI',
   'CHARGING_POINT',
@@ -18,7 +21,8 @@ export const BUS_AMENITIES = [
   'EMERGENCY_EXIT',
   'FIRST_AID',
 ] as const;
-export type BusAmenity = (typeof BUS_AMENITIES)[number];
+/** The key of an amenity (`CHARGING_POINT`). Staff add amenities; see the `amenities` module. */
+export type BusAmenity = string;
 
 /**
  * PENDING_APPROVAL: added by a bus owner and not yet approved by platform staff (client
@@ -64,7 +68,7 @@ export const busSchema = new Schema<Bus>(
     },
     name: { type: String, required: true, trim: true, maxlength: 80 },
     busTypeId: { type: Schema.Types.ObjectId, required: true },
-    amenities: { type: [String], enum: BUS_AMENITIES, default: [] },
+    amenities: { type: [String], match: /^[A-Z][A-Z0-9_]{1,39}$/, default: [] },
     seatCapacity: { type: Number, min: 1, max: 100, validate: Number.isInteger },
     activeSeatLayoutVersionId: { type: Schema.Types.ObjectId },
     status: { type: String, enum: BUS_STATUSES, required: true, default: 'ACTIVE' },

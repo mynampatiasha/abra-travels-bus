@@ -137,6 +137,7 @@ export function client(context: AuthTestContext, ip: string = uniqueIp()) {
     ip,
     post: (path: string) => agent.post(path).set('X-Forwarded-For', ip),
     put: (path: string) => agent.put(path).set('X-Forwarded-For', ip),
+    patch: (path: string) => agent.patch(path).set('X-Forwarded-For', ip),
     get: (path: string) => agent.get(path).set('X-Forwarded-For', ip),
     delete: (path: string) => agent.delete(path).set('X-Forwarded-For', ip),
   };

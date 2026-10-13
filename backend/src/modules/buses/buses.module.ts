@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { AmenitiesModule } from '../amenities/amenities_admin_manage';
 import { BusTypesModule } from '../bus-types/bus-types.module';
 import { OperatorsModule } from '../operators/operators.module';
 import { RbacModule } from '../rbac/rbac.module';
@@ -17,6 +18,7 @@ import { BusesService } from './services/buses.service';
     MongooseModule.forFeature([{ name: BUS_MODEL, schema: busSchema }]),
     RbacModule,
     BusTypesModule,
+    AmenitiesModule,
     OperatorsModule,
   ],
   controllers: [BusesController],

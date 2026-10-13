@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { AmenitiesService } from '../../amenities/amenities_admin_manage.service';
 import { Types } from 'mongoose';
 import { ApiException } from '../../../common/errors/api-exception';
 import { rejectDuplicates } from '../../../common/errors/duplicate-key';
@@ -53,6 +54,7 @@ export class BusesService {
     private readonly buses: BusRepository,
     private readonly busTypes: BusTypeRepository,
     private readonly operators: OperatorRepository,
+    private readonly amenities: AmenitiesService,
     private readonly changes: AuditedChangeRunner,
   ) {}
 
@@ -85,6 +87,7 @@ export class BusesService {
     // Scoped read: an operator outside the caller's scope does not exist for them
     await this.operators.getById(operatorId.toHexString());
     const busTypeId = await this.activeBusType(input.busTypeId);
+    await this.amenities.assertUsable(input.amenities);
     const created = await rejectDuplicates(
       'A bus with this registration number already exists.',
       () =>
@@ -126,7 +129,11 @@ export class BusesService {
     const before = await this.buses.getById(id);
     const set: Partial<Bus> = {};
     if (input.name !== undefined) set.name = input.name;
-    if (input.amenities !== undefined) set.amenities = input.amenities;
+    if (input.amenities !== undefined) {
+      // Amenities the bus has already stay allowed, even when switched off since
+      await this.amenities.assertUsable(input.amenities, before.amenities);
+      set.amenities = input.amenities;
+    }
     if (input.seatCapacity !== undefined) set.seatCapacity = input.seatCapacity;
     if (input.busTypeId !== undefined) set.busTypeId = await this.activeBusType(input.busTypeId);
     if (Object.keys(set).length === 0) {
