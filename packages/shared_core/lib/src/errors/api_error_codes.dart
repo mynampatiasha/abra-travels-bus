@@ -15,6 +15,7 @@ abstract final class ApiErrorCodes {
   static const mfaEnrollmentRequired = 'MFA_ENROLLMENT_REQUIRED';
   static const resourceNotFound = 'RESOURCE_NOT_FOUND';
   static const alreadyRegistered = 'ALREADY_REGISTERED';
+  static const resourceInUse = 'RESOURCE_IN_USE';
   static const invalidStateTransition = 'INVALID_STATE_TRANSITION';
   static const accountLocked = 'ACCOUNT_LOCKED';
   static const rateLimited = 'RATE_LIMITED';

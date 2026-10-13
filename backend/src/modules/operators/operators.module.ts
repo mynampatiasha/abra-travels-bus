@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { CatalogueSharedModule } from '../catalogue-shared/catalogue_shared_manage';
+import { OperatorsExportController } from './operators_admin_manage';
 import { MongooseModule } from '@nestjs/mongoose';
 import { RbacModule } from '../rbac/rbac.module';
 import { OperatorsController } from './controllers/operators.controller';
@@ -12,11 +14,11 @@ import { OperatorsService } from './services/operators.service';
  * staff arrive with operator onboarding.
  */
 @Module({
-  imports: [
+  imports: [CatalogueSharedModule, 
     MongooseModule.forFeature([{ name: OPERATOR_MODEL, schema: operatorSchema }]),
     RbacModule,
   ],
-  controllers: [OperatorsController],
+  controllers: [OperatorsExportController, OperatorsController],
   providers: [OperatorRepository, OperatorsService],
   exports: [OperatorRepository, MongooseModule],
 })

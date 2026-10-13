@@ -9,6 +9,8 @@ import { BusesModule } from './buses/buses.module';
 import { BusTypesModule } from './bus-types/bus-types.module';
 import { DocumentTypesModule } from './document-types/document-types.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
+import { AmenitiesModule } from './amenities/amenities_admin_manage';
+import { CatalogueSharedModule } from './catalogue-shared/catalogue_shared_manage';
 import { SeatLayoutsModule } from './seat-layouts/seat-layouts.module';
 import { CitiesModule } from './cities/cities.module';
 import { LocationsModule } from './locations/locations.module';
@@ -122,4 +124,6 @@ export const DOMAIN_MODULES = [
   FeatureFlagsModule,
   ReportsModule,
   AnalyticsModule,
+  CatalogueSharedModule,
+  AmenitiesModule,
 ];

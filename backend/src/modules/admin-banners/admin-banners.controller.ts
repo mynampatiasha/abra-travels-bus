@@ -51,12 +51,12 @@ export class AdminBannersController {
   constructor(private readonly banners: AdminBannersService) {}
 
   @Get()
-  @RequirePermission('banners.manage')
+  @RequirePermission('banners.read')
   @ApiOperation({
     summary: 'List banners',
     description:
-      'Requires banners.manage. Filters: `search` (title or subtitle), `status` ' +
-      '(LIVE, SCHEDULED, EXPIRED, INACTIVE — worked out from the dates now), `placement`, ' +
+      'Requires banners.read. Filters: `search` (title or subtitle), `status` ' +
+      '(LIVE, SCHEDULED, EXPIRED, INACTIVE, ARCHIVED — worked out from the dates now), `placement`, ' +
       '`language`, `from`/`to` (days created). Ordered by placement, sort order, newest. ' +
       'Paginated.',
   })
@@ -65,8 +65,8 @@ export class AdminBannersController {
   }
 
   @Get(':id')
-  @RequirePermission('banners.manage')
-  @ApiOperation({ summary: 'Show a banner', description: 'Requires banners.manage.' })
+  @RequirePermission('banners.read')
+  @ApiOperation({ summary: 'Show a banner', description: 'Requires banners.read.' })
   get(@Param() params: BannerIdParamDto): Promise<BannerView> {
     return this.banners.get(params.id);
   }
@@ -150,7 +150,7 @@ export class AdminBannersController {
     description:
       'Requires banners.manage. `variant=mobile` (default, the main image) or `desktop` ' +
       '(optional wider image for tablets and desktops). Multipart field `file`: JPG, PNG or ' +
-      'WebP (checked from the bytes), at most 3 MB. Replaces the previous image of that ' +
+      'WebP (checked from the bytes), at most 1 MB. Replaces the previous image of that ' +
       'variant and its external image address. Audited.',
   })
   @ApiResponse({ status: 413, description: 'PAYLOAD_TOO_LARGE' })
@@ -187,21 +187,6 @@ export class AdminBannersController {
   ): Promise<BannerView> {
     return this.banners.removeImage(actor, params.id, query.variant, clientRequestInfo(request));
   }
-
-  @Delete(':id')
-  @RequirePermission('banners.delete')
-  @ApiOperation({
-    summary: 'Delete a banner',
-    description: 'Requires banners.delete. Permanent; the stored images are removed too. Audited.',
-  })
-  async remove(
-    @CurrentActor() actor: AuthenticatedUserActor,
-    @Param() params: BannerIdParamDto,
-    @Req() request: Request,
-  ): Promise<{ deleted: true }> {
-    await this.banners.remove(actor, params.id, clientRequestInfo(request));
-    return { deleted: true };
-  }
 }
 
 @ApiTags('discovery')
@@ -229,7 +214,7 @@ export class PublicBannersController {
     @Query() query: PublicBannerQueryDto,
     @Headers('accept-language') acceptLanguage?: string,
   ): Promise<PublicBannerView[]> {
-    return this.banners.live(query.placement, preferredLanguage(acceptLanguage));
+    return this.banners.live(query.placement, preferredLanguage(acceptLanguage), query.viewer);
   }
 
   @Get(':id/image')

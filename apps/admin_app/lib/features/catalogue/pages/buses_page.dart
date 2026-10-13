@@ -34,6 +34,7 @@ class BusesPage extends ConsumerWidget {
       AdminStrings.fieldAmenities,
       CatalogueLabels.amenities,
       CatalogueLabels.readable,
+      choicesPath: 'amenities',
     ),
   ];
 

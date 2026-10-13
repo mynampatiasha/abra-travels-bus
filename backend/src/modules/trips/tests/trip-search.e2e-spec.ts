@@ -301,7 +301,7 @@ describe('Discovery e2e: trip search', () => {
       ['a date that does not exist', { date: '2027-02-30' }],
       ['a date in another format', { date: '05-10-2026' }],
       ['an unknown sort', { sort: 'CHEAPEST' }],
-      ['an unknown amenity', { amenities: 'JACUZZI' }],
+      ['an amenity that is not a key', { amenities: 'jacuzzi!' }],
       ['an unknown departure window', { departureWindows: 'DAWN' }],
       ['a minimum fare above the maximum', { minFare: 500, maxFare: 100 }],
       ['a negative fare', { minFare: -1 }],

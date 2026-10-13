@@ -94,6 +94,12 @@ class ApiClient {
     idempotencyKey: idempotencyKey,
   );
 
+  Future<ApiSuccess> patch(
+    String path, {
+    Object? body,
+    bool authenticated = true,
+  }) => _send('PATCH', path, body: body, authenticated: authenticated);
+
   Future<ApiSuccess> delete(
     String path, {
     Object? body,

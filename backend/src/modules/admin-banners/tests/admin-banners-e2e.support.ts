@@ -1,3 +1,4 @@
+import request from 'supertest';
 import {
   type AuthTestContext,
   bearer,
@@ -60,6 +61,12 @@ export function api(context: AuthTestContext, tokens: Tokens) {
     put: (path: string, body: object) =>
       caller
         .put(path)
+        .set(...bearer(tokens))
+        .send(body),
+    patch: (path: string, body: object) =>
+      request(context.server)
+        .patch(path)
+        .set('X-Forwarded-For', caller.ip)
         .set(...bearer(tokens))
         .send(body),
     delete: (path: string) => caller.delete(path).set(...bearer(tokens)),

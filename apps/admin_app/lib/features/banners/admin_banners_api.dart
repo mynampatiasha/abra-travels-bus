@@ -13,8 +13,8 @@ import '../../l10n/admin_strings.dart';
 /// management page go through the catalogue repository with this path.
 const bannersPath = 'admin/banners';
 
-/// Largest image the backend accepts.
-const bannerImageMaxBytes = 3 * 1024 * 1024;
+/// Largest image the backend accepts (1 MB, as in the demo).
+const bannerImageMaxBytes = 1024 * 1024;
 
 /// Image types the backend accepts, by file extension.
 const bannerImageTypes = <String, String>{
@@ -29,19 +29,19 @@ const bannerImageTypes = <String, String>{
 /// [desktop] image.
 enum BannerImageVariant {
   mobile(
-    width: 1200,
-    height: 525,
-    ratioText: '16:7',
+    width: 800,
+    height: 600,
+    ratioText: '4:3',
     urlKey: 'imageUrl',
-    labelKey: AdminStrings.bannerImageMobile,
+    labelKey: AdminStrings.bnPicturePhone,
     hintKey: AdminStrings.bannerImageMobileHint,
   ),
   desktop(
     width: 1920,
-    height: 480,
-    ratioText: '4:1',
+    height: 600,
+    ratioText: '16:5',
     urlKey: 'desktopImageUrl',
-    labelKey: AdminStrings.bannerImageDesktop,
+    labelKey: AdminStrings.bnPictureDesktop,
     hintKey: AdminStrings.bannerImageDesktopHint,
   );
 
@@ -75,11 +75,34 @@ enum BannerImageVariant {
 
 /// Label keys of the fixed values of a banner.
 abstract final class BannerLabels {
+  /// The words of the demo: a banner that is on is Published, one that is
+  /// off is a Draft.
   static const statuses = <String, String>{
-    'LIVE': AdminStrings.bannerStatusLive,
-    'SCHEDULED': AdminStrings.bannerStatusScheduled,
-    'EXPIRED': AdminStrings.bannerStatusExpired,
-    'INACTIVE': AdminStrings.statusInactive,
+    'INACTIVE': AdminStrings.bnStatusDraft,
+    'SCHEDULED': AdminStrings.bnStatusScheduled,
+    'LIVE': AdminStrings.bnStatusPublished,
+    'EXPIRED': AdminStrings.bnStatusExpired,
+    'ARCHIVED': AdminStrings.bnStatusArchived,
+  };
+
+  static const audiences = <String, String>{
+    'ALL': AdminStrings.bnAudAll,
+    'NEW_USERS': AdminStrings.bnAudNew,
+    'SIGNED_IN': AdminStrings.bnAudSigned,
+  };
+
+  static const colourStyles = <String, String>{
+    'NAVY_BLUE': AdminStrings.bnColourNavyBlue,
+    'BLUE_SKY': AdminStrings.bnColourBlueSky,
+    'GREEN_NAVY': AdminStrings.bnColourGreenNavy,
+  };
+
+  /// What the "Opens" selector offers (the demo's four).
+  static const opens = <String, String>{
+    'OFFER': AdminStrings.bnOptOffer,
+    'ROUTE_SEARCH': AdminStrings.bnOptRoute,
+    'OPERATOR': AdminStrings.bnOptOperator,
+    'URL': AdminStrings.bnOptLink,
   };
 
   static const placements = <String, String>{
@@ -177,6 +200,38 @@ String bannerScheduleOf(AbraLocalizations l10n, JsonMap banner) {
     });
   }
   return l10n.text(AdminStrings.bannerScheduleAlways);
+}
+
+/// "12 Oct 2026 to 31 Oct 2026" (the demo's Runs column); "From 12 Oct 2026",
+/// "Until 31 Oct 2026" or "Always" when a day is missing.
+String bannerRunsOf(AbraLocalizations l10n, JsonMap banner) {
+  final months = l10n.text(AdminStrings.bannerMonths).split(' ');
+  String day(DateTime time) {
+    final month = months.length == 12
+        ? months[time.month - 1]
+        : time.month.toString().padLeft(2, '0');
+    return '${time.day} $month ${time.year}';
+  }
+
+  final starts = _localTimeOf(banner['startsAt']);
+  final ends = _localTimeOf(banner['endsAt']);
+  if (starts != null && ends != null) {
+    return l10n.text(AdminStrings.bnRunsRange, <String, Object?>{
+      'from': day(starts),
+      'to': day(ends),
+    });
+  }
+  if (starts != null) {
+    return l10n.text(AdminStrings.bnRunsFrom, <String, Object?>{
+      'date': day(starts),
+    });
+  }
+  if (ends != null) {
+    return l10n.text(AdminStrings.bnRunsUntil, <String, Object?>{
+      'date': day(ends),
+    });
+  }
+  return l10n.text(AdminStrings.bnRunsAlways);
 }
 
 /// The form or import values as the API takes them: the start and end days
@@ -295,6 +350,38 @@ class BannersApi {
   )).decodeObject((json) => json);
 
   Future<void> delete(String id) => _client.delete('$bannersPath/$id');
+
+  /// Publishes (true) or unpublishes (false); the dates decide whether a
+  /// published banner is live or scheduled.
+  Future<JsonMap> setPublished(String id, {required bool published}) async =>
+      (await _client.post(
+        '$bannersPath/$id/active',
+        body: <String, Object?>{'active': published},
+      )).decodeObject((json) => json);
+
+  /// A draft copy of the banner, with its own copy of the images.
+  Future<JsonMap> duplicate(String id) async => (await _client.post(
+    '$bannersPath/$id/duplicate',
+    body: const <String, Object?>{},
+  )).decodeObject((json) => json);
+
+  Future<JsonMap> archive(String id) async => (await _client.post(
+    '$bannersPath/$id/archive',
+    body: const <String, Object?>{},
+  )).decodeObject((json) => json);
+
+  Future<JsonMap> unarchive(String id) async => (await _client.post(
+    '$bannersPath/$id/unarchive',
+    body: const <String, Object?>{},
+  )).decodeObject((json) => json);
+
+  /// Moves a banner one place earlier (`up`) or later (`down`).
+  Future<void> move(String id, {required bool up}) async {
+    await _client.patch(
+      '$bannersPath/order',
+      body: <String, Object?>{'id': id, 'direction': up ? 'up' : 'down'},
+    );
+  }
 
   /// Uploads one of the banner's images and returns the banner with its new
   /// address.

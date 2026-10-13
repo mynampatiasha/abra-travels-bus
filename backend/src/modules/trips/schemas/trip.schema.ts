@@ -1,7 +1,7 @@
 import { Schema, type Types } from 'mongoose';
 import { type GeoPoint } from '../../cities/schemas/city.schema';
 import { BERTH_TYPES, type BerthType } from '../../bus-types/schemas/bus-type.schema';
-import { BUS_AMENITIES, type BusAmenity } from '../../buses/schemas/bus.schema';
+import { type BusAmenity } from '../../buses/schemas/bus.schema';
 
 export const TRIP_MODEL = 'Trip';
 
@@ -153,7 +153,7 @@ export const tripSchema = new Schema<Trip>(
           busTypeName: { type: String, required: true, maxlength: 60 },
           isAc: { type: Boolean, required: true },
           berthType: { type: String, enum: BERTH_TYPES, required: true },
-          amenities: { type: [String], enum: BUS_AMENITIES, default: [] },
+          amenities: { type: [String], default: [] },
         },
         { _id: false },
       ),

@@ -16,6 +16,7 @@ import '../../../l10n/admin_strings.dart';
 import '../../../routing/admin_routes.dart';
 import '../catalogue_repository.dart';
 import 'import_dialog.dart';
+import 'server_import_dialog.dart';
 
 /// A column of a management table.
 class ColumnSpec {
@@ -109,8 +110,29 @@ class ResourcePage extends ConsumerStatefulWidget {
     this.stats = const <StatSpec>[],
     this.exportName,
     this.importSpec,
+    this.createLabelKey = AdminStrings.listCreate,
+    this.exportPath,
+    this.serverImport,
+    this.footer,
     super.key,
   });
+
+  /// Something shown under the table, inside the same card (the Amenities of
+  /// the bus types page).
+  final Widget? footer;
+
+  /// The list as the server exports it (`GET <exportPath>/export`, as CSV or
+  /// Excel, with the filters now chosen). Wins over [exportName], which makes
+  /// a CSV on this device from the rows on screen.
+  final String? exportPath;
+
+  /// How to import from a file the server checks and saves; wins over
+  /// [importSpec].
+  final ServerImport? serverImport;
+
+  /// The message key of the create button ("Add" unless a page uses the demo's
+  /// own word, such as "New banner").
+  final String createLabelKey;
 
   /// Summary cards above the toolbar.
   final List<StatSpec> stats;
@@ -296,6 +318,40 @@ class _ResourcePageState extends ConsumerState<ResourcePage> {
   }
 
   /// Everything the current filters show (not just this page), as a CSV download.
+  /// The server's own export of the list: the same filters, as CSV or Excel.
+  Future<void> _serverExport(String format) async {
+    final l10n = AbraLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      SnackBar(content: Text(l10n.text(AdminStrings.listExporting))),
+    );
+    try {
+      final path = widget.exportPath!;
+      final bytes = await ref
+          .read(catalogueRepositoryProvider)
+          .download('$path/export', <String, String>{
+            for (final entry in _filters.entries)
+              if (entry.value.isNotEmpty) entry.key: entry.value,
+            'format': format,
+          });
+      final stamp = DateTime.now().toIso8601String().substring(0, 10);
+      downloadBytesFile(
+        '${path.split('/').last}-$stamp.$format',
+        bytes,
+        mimeType: format == 'csv'
+            ? 'text/csv'
+            : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.text(AdminStrings.listExportReady))),
+      );
+    } on Object catch (error) {
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(SnackBar(content: Text(failureText(l10n, error))));
+    }
+  }
+
   Future<void> _export() async {
     final l10n = AbraLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
@@ -493,7 +549,20 @@ class _ResourcePageState extends ConsumerState<ResourcePage> {
                           tooltip: l10n.text(AdminStrings.listRefresh),
                           onPressed: _reload,
                         ),
-                        if (widget.importSpec != null) ...<Widget>[
+                        if (widget.serverImport != null) ...<Widget>[
+                          AbraButton(
+                            label: l10n.text(AdminStrings.listImport),
+                            icon: Icons.file_upload_outlined,
+                            variant: AbraButtonVariant.secondary,
+                            onPressed: () async {
+                              final saved = await showServerImportDialog(
+                                context,
+                                widget.serverImport!,
+                              );
+                              if (saved && mounted) _reload();
+                            },
+                          ),
+                        ] else if (widget.importSpec != null) ...<Widget>[
                           AbraButton(
                             label: l10n.text(AdminStrings.listImport),
                             icon: Icons.file_upload_outlined,
@@ -507,7 +576,34 @@ class _ResourcePageState extends ConsumerState<ResourcePage> {
                             },
                           ),
                         ],
-                        if (widget.exportName != null) ...<Widget>[
+                        if (widget.exportPath != null) ...<Widget>[
+                          PopupMenuButton<String>(
+                            tooltip: '',
+                            onSelected: _serverExport,
+                            itemBuilder: (context) => <PopupMenuEntry<String>>[
+                              PopupMenuItem<String>(
+                                value: 'csv',
+                                child: Text(
+                                  l10n.text(AdminStrings.listExportCsv),
+                                ),
+                              ),
+                              PopupMenuItem<String>(
+                                value: 'xlsx',
+                                child: Text(
+                                  l10n.text(AdminStrings.listExportExcel),
+                                ),
+                              ),
+                            ],
+                            child: IgnorePointer(
+                              child: AbraButton(
+                                label: l10n.text(AdminStrings.listExport),
+                                icon: Icons.file_download_outlined,
+                                variant: AbraButtonVariant.secondary,
+                                onPressed: () {},
+                              ),
+                            ),
+                          ),
+                        ] else if (widget.exportName != null) ...<Widget>[
                           AbraButton(
                             label: l10n.text(AdminStrings.listExport),
                             icon: Icons.file_download_outlined,
@@ -517,7 +613,7 @@ class _ResourcePageState extends ConsumerState<ResourcePage> {
                         ],
                         if (create != null) ...<Widget>[
                           AbraButton(
-                            label: l10n.text(AdminStrings.listCreate),
+                            label: l10n.text(widget.createLabelKey),
                             icon: Icons.add,
                             variant: AbraButtonVariant.primary,
                             onPressed: create,
@@ -602,6 +698,10 @@ class _ResourcePageState extends ConsumerState<ResourcePage> {
                     ],
                   ),
                 ),
+              ],
+              if (widget.footer != null) ...<Widget>[
+                const Divider(height: 1),
+                widget.footer!,
               ],
             ],
           ),

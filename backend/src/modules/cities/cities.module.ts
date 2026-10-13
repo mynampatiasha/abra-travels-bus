@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { CatalogueSharedModule } from '../catalogue-shared/catalogue_shared_manage';
+import { CitiesExportController, CitiesImportController } from './cities_admin_manage';
 import { MongooseModule } from '@nestjs/mongoose';
 import { RbacModule } from '../rbac/rbac.module';
 import { CitiesAdminController } from './controllers/cities-admin.controller';
@@ -14,8 +16,8 @@ import { CitiesService } from './services/cities.service';
  * (documentation/catalogue-management.md).
  */
 @Module({
-  imports: [MongooseModule.forFeature([{ name: CITY_MODEL, schema: citySchema }]), RbacModule],
-  controllers: [CitiesController, CitiesAdminController],
+  imports: [CatalogueSharedModule, MongooseModule.forFeature([{ name: CITY_MODEL, schema: citySchema }]), RbacModule],
+  controllers: [CitiesExportController, CitiesImportController, CitiesController, CitiesAdminController],
   providers: [CityRepository, CitiesService, CitiesAdminService],
   exports: [CitiesService, CityRepository, MongooseModule],
 })

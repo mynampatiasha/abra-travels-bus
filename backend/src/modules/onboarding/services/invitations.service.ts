@@ -163,8 +163,15 @@ export class InvitationsService {
   }
 
   async list(query: InvitationListQueryDto): Promise<PaginatedResult<InvitationView>> {
+    const now = new Date();
     const { items, total } = await this.invitations.list(
-      { status: query.status, createdAt: dayRange(query) },
+      {
+        status: query.status === 'EXPIRED' ? 'PENDING' : query.status,
+        ...(query.status === 'EXPIRED' ? { expiresAt: { $lt: now } } : {}),
+        ...(query.status === 'PENDING' ? { expiresAt: { $gte: now } } : {}),
+        createdAt: dayRange(query),
+        search: query.search,
+      },
       { skip: skipOf(query), limit: query.pageSize },
     );
     return new PaginatedResult(
@@ -353,21 +360,25 @@ export class InvitationsService {
   }
 
   private viewOf(invitation: StoredInvitation): InvitationView {
-    return {
-      id: invitation._id.toHexString(),
-      operatorId: invitation.operatorId.toHexString(),
-      companyName: invitation.companyName,
-      ownerName: invitation.ownerName,
-      email: invitation.email,
-      phone: invitation.phone ?? null,
-      status: invitation.status,
-      expired: invitation.status === 'PENDING' && invitation.expiresAt < new Date(),
-      expiresAt: invitation.expiresAt.toISOString(),
-      emailStatus: invitation.emailStatus,
-      emailProblem: null,
-      createdAt: invitation.createdAt?.toISOString() ?? null,
-    };
+    return invitationViewOf(invitation);
   }
+}
+
+export function invitationViewOf(invitation: StoredInvitation): InvitationView {
+  return {
+    id: invitation._id.toHexString(),
+    operatorId: invitation.operatorId.toHexString(),
+    companyName: invitation.companyName,
+    ownerName: invitation.ownerName,
+    email: invitation.email,
+    phone: invitation.phone || null,
+    status: invitation.status,
+    expired: invitation.status === 'PENDING' && invitation.expiresAt < new Date(),
+    expiresAt: invitation.expiresAt.toISOString(),
+    emailStatus: invitation.emailStatus,
+    emailProblem: null,
+    createdAt: invitation.createdAt?.toISOString() ?? null,
+  };
 }
 
 function newToken(): string {

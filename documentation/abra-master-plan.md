@@ -21,7 +21,7 @@ Abra Travels is a bus booking platform: travellers book seats, bus owners (opera
 | Apps not started | Driver app, public website (Next.js), partner app |
 | UI rule (mandatory) | **The real screens must look and behave exactly like the demo**: same layout, same labels and wording, same order of buttons, same colours and gradient, same dialogs and fields, same empty, error and loading states, same table and list views, same horizontal and vertical layouts. The demo is the design, not a sketch. |
 | Design rule | Navy and blue palette with the brand gradient, from `documentation/design-system.md`. UI and functionality ship together. Every new screen gets a visual check. |
-| Current phase | **Phase 0 built and checked, waiting for your yes; Phase 1 in progress on a separate branch** (updated 13 October 2026). Phase 0: access matrix, messages log, integration settings, assistant, live updates, feature flags with maintenance and the demo seed are built and tested; the 27-step checklist passes. Phase 1: steps 0 to 4 are done on branch `phase1-catalogue-kyc` (not merged). Full detail and what is not proven: Part 9. |
+| Current phase | **Phase 0 committed on `main`; Phase 1 steps 0 to 4 merged into `main`; Phase 1 continues on its branch from step 5** (updated 13 October 2026). Phase 0: access matrix, messages log, integration settings, assistant, live updates, feature flags with maintenance and the demo seed are built and tested; the 27-step checklist passes on a local database and still has to be run on Atlas. Phase 1: delete and Undo, export and import, banners as in the demo, invitation edit, amenities (see Part 4, Phase 1). Phase 0 gaps still to build: audit log page, proof files, event router. Full detail and what is not proven: Part 9. |
 
 ### 0.2 How the demos map to the real build
 
@@ -262,6 +262,60 @@ Each phase builds backend and screens together for the features inside it, so ev
 | **KYC review and company onboarding** (`kyc`) | Admin: kyc<br>Client: kyc, company | Done (onboarding) | submissions | 4 new / 2 existing | Submissions, per-document review, approve and reject exist. Add history, export, bus-level KYC from the client portal. |
 | **Operators** (`operators`) | Admin: operators | Partly built (operators) | operators | 6 new / 2 existing | List, read, update, status exist. Add suspend and reactivate with reason and proof, message to owner, bank verification. |
 | **Banners** (`banners`) | Admin: banners<br>Customer: home banner<br>Website: home | Done (admin-banners) | banners | 5 new / 5 existing | Done. Add click and impression counts and the archive job. |
+
+#### Phase 1: build order (approved 12 October 2026)
+
+0. Checkpoint commit (done) and this document corrected. 1. Per-module delete and export permission keys, then the shared mechanism (soft delete, restore, audit hook, shared list query, "in use" check). 2. Small items: banner duplicate, archive and reorder; read-one routes; invitation edit and expiry. 3. Server-side export for every list, then import with template and dry run. 4. Amenities. 5. Place requests (backend, admin tabs, client Places page). 6. Operator detail page with tabs, suspend with proof, message owner. 7. Payout mode and bank verification. 8. Company profile and bank details (client portal). 9. Bus KYC (client portal) and KYC history. 10. KYC questionnaire compared with the demo's three tabs (can run early, in parallel). One step at a time; you test after each.
+
+**Status on 13 October 2026.** Phase 1 is built on the branch `phase1-catalogue-kyc` (its own working folder, `D:/New_project/abra-wt-p1`). Steps 0 to 4 are merged into `main`; later steps are merged by the coordinator the same way.
+
+| Step | What | Status | Commits |
+|---|---|---|---|
+| 0 | Checkpoint commit and this document corrected | Done 12 Oct | on `main` |
+| 1 | Delete and export permission keys; one shared soft delete with restore, audit and "in use" refusal | Done 12 Oct | 276be54, 501667f |
+| 2 | Banner duplicate, archive and reorder; read-one routes; invitation edit and the Expired status | Done 13 Oct | b982a60 |
+| 2b | Admin screens for step 2; banner fields as in the demo (colour style, shown to, operator link, higher order first) | Done 13 Oct | 2001676, edbd087 |
+| 3 | Server-side export of eight lists (CSV and Excel); import with template and dry run for cities and places | Done 13 Oct | 39e7ee4, fe15857 |
+| 4 | Amenities as a managed list; Amenities card on the Bus types page | Done 13 Oct | 6f75cb4, 222913e |
+| 5 | Place requests (backend, admin tab, client page) | Not started |  |
+| 6 | Operator detail with tabs; suspend with reason and proof; message owner | Not started |  |
+| 7 | Payout mode and bank details with verification | Not started |  |
+| 8 | Company profile and bank details (client portal) | Not started |  |
+| 9 | Bus KYC (client portal) and KYC history | Not started |  |
+| 10 | KYC questionnaire compared with the demo's three tabs, and its export | Not started |  |
+
+**What works now**
+
+- **Delete and Undo** on cities, places, bus types, required documents, operators, invitations and banners. A record that other records use is refused with a sentence that names what uses it ("This city is used by 3 routes and 5 trips, so it cannot be deleted. Disable it instead."). Undo is the restore route. Needs the module's delete key (Edit+Delete level). Audited.
+- **View** (read-only window) on cities, places, bus types, required documents, operators and invitations.
+- **Banners** as in the demo: columns Banner, Status (Draft, Scheduled, Published, Expired, Archived), Runs, Shown to, Opens, Order with arrows; the form with colour style, Opens (offer, route search, operator, web link), offer code, shown to (everyone, new users, signed-in users), dates, order, pictures and a home-screen preview; Save draft and Publish; Unpublish, Duplicate, Archive (with Undo and a way back), Delete (with Undo).
+- **Invitations**: open one, edit a pending one (a new email makes the old link stop working; the closing date can be moved up to 30 days ahead), Expired filter and card, search, delete a withdrawn one.
+- **Export** (CSV or Excel, the list's own filters, at most 20,000 rows, audited) for cities, places, bus types, required documents, operators, invitations, KYC reviews and banners.
+- **Import** for cities and places: template download (the headings match the export), a check of the whole file that lists the problem of every row, then a save of the rows that are right (at most 500 rows and 1 MB). The old on-device CSV import remains for bus types, required documents and banners until they get the same.
+- **Amenities** are a list staff manage (add, switch on or off; never deleted). A bus can be given only amenities that are switched on; a bus keeps an amenity that was switched off later. The 13 amenities that were fixed before are the starting list.
+
+**Decisions taken while building (13 October 2026)**
+
+- Soft delete is one mechanism for all catalogue records (`deletedAt`, `deletedBy`; `backend/src/database/soft-delete.plugin.ts`). A deleted record is hidden from every query. Known limit: the unique key or slug of a deleted city, bus type or document type stays taken; restore it instead of adding it again.
+- Delete and restore both need the module's delete key. Export is a View-level action in the access matrix (the demo shows Export to everyone who can open the page); delete is Edit+Delete only.
+- Only a withdrawn invitation can be deleted. A pending or accepted one is refused.
+- Banner order: a higher number shows first (as in the demo; this reversed the old lower-first rule). Banner pictures: desktop 1920 x 600, phone 800 x 600, at most 1 MB. The customer app asks for `GET /banners?viewer=GUEST|NEW_USER|RETURNING` so audiences reach the right people; it must also draw `colourStyle`.
+- An import saves the rows that are right and leaves out the others, saying why for each row; a file is never refused as a whole because of one bad row (only for missing columns, size or row count).
+- Export and import controllers are registered before a module's other controllers, because those have `GET <list>/:id` routes.
+- Tests that need the database run on the local Docker MongoDB in a throw-away database whose name ends in `_test`, not on Atlas.
+- Step 5 (reported 13 October 2026, not merged yet): on the Operator requests tab, View uses `GET /admin/place-requests/:id`, not `/catalogue/locations/:id` as Appendix D.9 shows. Place requests are never deleted; they are kept for the record.
+
+**Where the real screens still differ from the demo**
+
+- Banners: no Analytics tab yet (impressions and clicks are not counted); the offer code is a text field until the offers module exists (Phase 3); the route, operator and web-link inputs are extra, because the demo form has no place to enter them; Expired and "Put back as draft" are extra statuses and buttons.
+- Cities and places: the lists lack the demo's Search, City, Used-for and Status filters, the Operator requests tab and the "Trips using it" column (step 5 and later).
+- Operators: no detail page with tabs, and no Buses, Trips or Rating columns (step 6).
+- Required documents and KYC questionnaire: export of the questionnaire, delete of questions and the three-tab comparison wait for step 10.
+- Screens were checked with automated tests and the analyzer, not yet looked at in a browser against the demo.
+
+**Shared files changed by Phase 1** (appended only; kept when merging): the permission catalogue (`catalogue.delete`, `catalogue.export`, `documents.delete`, `documents.export`, `operators.delete`, `operators.export`, `banners.read`, `banners.export`), the access pages (`export` counts as a View action), the audit actions (`catalogue.deleted`, `catalogue.restored`, `catalogue.exported`, `catalogue.imported`, `onboarding.invitation-updated`), the error codes (`RESOURCE_IN_USE`), the domain module list (`CatalogueSharedModule`, `AmenitiesModule`), the Dart permission keys and error codes, `ApiClient.patch`, and the backend package list (`exceljs`).
+
+Boundaries for the Phase 1 session: do not run prettier or eslint --fix across `rbac` or `users`; the audit action list is shared, so only add actions; stay out of `whatsapp`, `notifications`, `system-settings` and `chatbot` (the Phase 0 session works there).
 
 #### Phase 1: your test checklist
 
@@ -604,9 +658,9 @@ Each phase builds backend and screens together for the features inside it, so ev
 
 ## Part 9. Progress log
 
-Kept up to date as work is done. Last updated 13 October 2026. Unit tests: 730 (729 pass; one queue test fails now and then). End-to-end tests: every new suite passes; the 15 older failures are fixed. Phase 0 checklist: 27 of 27.
+Kept up to date as work is done. Last updated 13 October 2026. After merging Phase 1 steps 0 to 4 into main (13 October 2026): unit tests 751 (750 pass; one queue test fails now and then); end-to-end 295 of 295 in 27 files (rbac, document types, catalogue-shared, banners, onboarding, amenities, system settings, messages, assistant, live updates, feature flags, password sign-in; the Redis-restart test left out); Dart permission parity passes. Phase 0 checklist: 27 of 27 on a local database; not yet run on Atlas.
 
-### 9.1 Phase 0 (main folder, not committed yet)
+### 9.1 Phase 0 (committed on main, eea85ec)
 
 | Phase | What | Status | How it was checked | Where |
 |---|---|---|---|---|
@@ -623,7 +677,7 @@ Kept up to date as work is done. Last updated 13 October 2026. Unit tests: 730 (
 | 0 | 15 end-to-end tests that were failing before any of this work | Fixed | Cause: test operators had no active company record, which the login guard now requires. Test helper fixed; one test now checks the real data-scope protection | rbac/tests/rbac-e2e.harness.ts, authorization-isolation.e2e-spec.ts |
 | 0 | Phase 0 checklist (27 steps) run end to end over HTTP | All 27 pass | On a temporary local database with a throw-away admin, then deleted (step J, the sample data, is skipped on Atlas). Rerun on Atlas with your password | backend/scripts/phase0-checklist.mjs |
 
-### 9.2 Phase 1 (other session, branch `phase1-catalogue-kyc`, worktree `D:/New_project/abra-wt-p1`, not merged)
+### 9.2 Phase 1 (other session, branch `phase1-catalogue-kyc`, worktree `D:/New_project/abra-wt-p1`; steps 0 to 4 merged into main)
 
 | Phase | What | Status | How it was checked | Where |
 |---|---|---|---|---|
@@ -641,7 +695,6 @@ Still to do in Phase 1:
 - Step 9: bus KYC from the client portal, KYC history
 - Step 10: compare the KYC questionnaire with the demo; export of the questionnaire
 - Import with a dry run for bus types, document types and banners (they still use the old on-device CSV import)
-- Merge the Phase 1 branch (worktree abra-wt-p1) with the Phase 0 work in the main folder
 
 ### 9.3 What is not done or not proven
 
@@ -652,7 +705,7 @@ Still to do in Phase 1:
 | Event router and notification demo | The plan's Phase 0 goal "a notification travels from the backend to a phone and to the admin bell" is not shown yet: the notification and socket machinery exists and is tested, but no business event feeds it until bookings, trips and refunds exist. |
 | Audit log page | The read endpoint exists. Filters, the detail view and export from the demo are still to build (Phase 7). |
 | Proof files | The storage decision (existing files service, local in development, a bucket before staging) is recommended but not yet built into the proof boxes. |
-| Apple sign-in | Not built. |
+| Apple sign-in | The route exists (`POST /auth/apple`); not tried with a real Apple account. |
 | Flutter apps | No app calls any of the Phase 0 endpoints yet. The admin app is being wired to Phase 1 on its own branch. |
 | Assistant details | Answers arrive whole, not word by word. Feature tools (bookings, trips) are added with those features. Behaviour with the real Groq model, including attempts to break its rules, is untested. |
 
@@ -663,20 +716,23 @@ Still to do in Phase 1:
 | Docker Desktop is unreliable on this PC | It stopped twice and once crashed during the Redis-restart test. Database tests need it. Start it first and wait for "running". |
 | Two tests are timing-sensitive | A Super Admin bootstrap test that starts several runs at once (passes about 2 of 3 times alone) and a queue test (passes about 3 of 4). Neither is in code changed in Phase 0. |
 | Redis-restart test | It stops and starts the Redis container itself and can bring Docker down. Run it alone, or leave it out of a full run. |
-| Branch merge | Both branches changed the same shared files (permission list, audit action list, module list, eslint config). Keep both sides; the cross-session notes list each line. The Dart permission parity test needs messages.read, messages.resend and maintenance.bypass. |
+| Branch merge | Phase 1 steps 0 to 4 were merged into main on 13 October 2026; the shared files kept both sides. Later Phase 1 steps are merged the same way. The Dart permission parity test needs messages.read, messages.resend and maintenance.bypass. |
 | customer_app analyze | Shows 3 informational lines on the untouched main branch. |
 | Atlas password | The database password was shown in a screenshot and in chat. It still needs resetting; then update backend/.env.development. |
 
 ### 9.5 What happens next
 
-1. You run the Phase 0 checklist (Part 4) or tell Claude to run it against Atlas with your password.
+1. You run the Phase 0 checklist (Part 4) against Atlas, or tell Claude to run it with your password.
 2. No sample data is loaded into Atlas (your decision): the first real data is created through the apps while you test.
-3. You say "Phase 0 is good". Then the two branches are merged and Phase 1 continues with step 5.
-4. You reset the Atlas password and supply the keys listed in Part 7 when each phase needs them.
+3. You say "Phase 0 is good" and give the Phase 1 session the go for step 5.
+4. The Phase 0 gaps are built one at a time after your yes: audit log page (filters, detail, export), proof files, the event router.
+5. You reset the Atlas password and supply the keys listed in Part 7 when each phase needs them.
 
 ## Appendix A. Collections (the database)
 
 The demo store has 62 keys. This table maps each to a real MongoDB collection. Collection names are plural snake case. Every collection also gets `_id`, `createdAt`, `updatedAt`, `createdBy`, and `deletedAt` where soft delete applies. Operator-owned collections carry `operatorId` and every query for an operator user is filtered by it on the server. Money fields are integers in paise. "Demo fields" are the fields of the first record in the demo store, with their types.
+
+> **Note:** **Phase 1 change (13 Oct 2026):** cities, places (`locations`), bus types, required documents, operators, invitations and banners now carry `deletedAt` and `deletedBy` (soft delete; a deleted record is hidden from every query and can be restored). A record without the field counts as not deleted, so nothing had to be migrated.
 
 | Demo key | Collection | Backend today | Phase | Owner module | Purpose | Relations | Indexes |
 |---|---|---|---|---|---|---|---|
@@ -690,7 +746,7 @@ The demo store has 62 keys. This table maps each to a real MongoDB collection. C
 | places | `places (locations)` | exists | 1 | locations | Boarding and dropping places with address, landmark, latitude, longitude, phone and instructions. | cities, routes | cityId, type, active |
 | placeReqs | `place_requests` | new | 1 | locations | An operator asks Abra to add a place; approve or reject with a reason. | operators, places | status |
 | busTypes | `bus_types` | exists | 1 | bus-types | AC Sleeper, Seater and so on, with a permanent key. | buses | key unique |
-| amenities | `amenities` | new | 1 | bus-types | Charging point, blanket, water and so on. | buses | name unique |
+| amenities | `amenities` | built in Phase 1 (13 Oct 2026) | 1 | amenities | Charging point, blanket, water and so on; staff add and switch them on or off. Fields: key (permanent, unique), name, isActive, sortOrder. Never deleted. | buses (by key) | key unique |
 | docTypes | `document_types` | exists | 1 | document-types | Required KYC documents for operator or bus: file types, size, count, expiry, instructions, order. | kyc_submissions | applies, active |
 | questions | `kyc_questions` | new | 1 | onboarding | KYC questionnaire items with answer type and options. | kyc_submissions | applies, order |
 | rules | `kyc_document_rules` | new | 1 | onboarding | Conditions that make a document required (for example GST when turnover is above a limit). | document_types, questions | active |
@@ -716,7 +772,7 @@ The demo store has 62 keys. This table maps each to a real MongoDB collection. C
 | faqs | `faqs` | new | 4 | content | Help centre questions. | - | status |
 | pages | `cms_pages` | new | 4 | content | Terms, privacy, about and other pages with versions. | - | slug unique |
 | contact | `contact_info (in system_settings)` | new | 4 | content | Support phone, WhatsApp, email, hours, emergency number. | - | singleton |
-| banners | `banners` | exists | 1 | admin-banners | Home banners with window, placement, audience, priority, impressions, clicks. | offers | status, placement |
+| banners | `banners` | exists; extended in Phase 1 | 1 | admin-banners | Home banners with window, placement, audience (everyone, new users, signed-in users), colour style, link kind (offer, route search, operator, web link), order (higher shows first), archivedAt, soft delete. Impressions and clicks come later. | offers | status, placement |
 | announce | `announcements` | new | 7 | content | Broadcasts to customers, operators or drivers. | - | status |
 | popular | `popular_routes` | new | 7 | popular-routes | Ordered routes shown on home and the website with search and booking counts. | routes | order |
 | sos | `sos_alerts` | new | 5 | women-safety | SOS raised by a customer or a driver: trip, bus, driver, operator, location, contacts alerted, status log, assignee, proof on resolve. | trips, customers | status, tripId, at |
@@ -3896,6 +3952,35 @@ Read from the controllers in `backend/src`: 26 controllers, 113 routes. Everythi
 | trips | GET /trips/search<br>GET /trips/search/filters<br>GET /trips/:tripId<br>GET /catalogue/trips<br>GET /catalogue/trips/:id<br>POST /catalogue/trips<br>PUT /catalogue/trips/:id<br>POST /catalogue/trips/:id/publish<br>POST /catalogue/trips/:id/cancel |
 | users | GET /users |
 
+### I.1 Controllers in `<feature>_manage` style files (not in the table above)
+
+Checked 12 October 2026 against `backend/src`. These routes exist and count as "Exists".
+
+| File | Routes |
+|---|---|
+| rbac/access_matrix_admin_manage.ts | GET /access-matrix<br>PUT /access-matrix/roles/:roleKey/pages/:pageId<br>PUT /access-matrix/roles/:roleKey<br>POST /access-matrix/roles<br>PATCH /access-matrix/roles/:roleKey<br>DELETE /access-matrix/roles/:roleKey |
+| authentication/google_sign_in.ts | POST /auth/google<br>POST /auth/apple<br>POST /auth/client/otp/verify<br>GET /client/kyc/login-methods<br>POST /client/kyc/login-methods/phone<br>POST /client/kyc/login-methods/social |
+| onboarding/client_kyc.ts | GET /client/kyc<br>PUT /client/kyc |
+| system-settings/admin_kyc_configuration.ts | GET /settings/kyc-configuration<br>PUT /settings/kyc-configuration<br>POST /settings/kyc-configuration/validate-import<br>POST /settings/kyc-configuration/preview |
+
+Corrections found on the same check: Apple sign-in already has a route; the KYC questionnaire is one configuration document at `/settings/kyc-configuration`, not the `/admin/kyc/...` routes named in D.12 (to be rewritten in Phase 1 step 10).
+
+### I.4 Routes added in Phase 1 (13 October 2026)
+
+All need a bearer token and the permission shown. Merged into `main` on 13 October 2026.
+
+| Area | Routes | Permission |
+|---|---|---|
+| Delete and Undo | `DELETE` and `POST .../restore` on `/catalogue/cities/:id`, `/catalogue/locations/:id`, `/catalogue/bus-types/:id`, `/catalogue/document-types/:id`, `/catalogue/operators/:id`, `/onboarding/invitations/:id`, `/admin/banners/:id` | `catalogue.delete`, `documents.delete`, `operators.delete`, `banners.delete` |
+| Read one | `GET /catalogue/bus-types/:id`, `GET /catalogue/document-types/:id`, `GET /onboarding/invitations/:id` | `catalogue.read`, `documents.read`, `operators.create` |
+| Invitations | `PATCH /onboarding/invitations/:id`; the list takes `status=EXPIRED` or `PENDING` (still valid) and `search` | `operators.create` |
+| Banners | `POST /admin/banners/:id/duplicate`, `/archive`, `/unarchive`; `PATCH /admin/banners/order`; `GET /banners?viewer=` (public) | `banners.manage`; the two reads need `banners.read` |
+| Export | `GET .../export?format=csv\|xlsx` on `/catalogue/cities`, `/catalogue/locations`, `/catalogue/bus-types`, `/catalogue/document-types`, `/catalogue/operators`, `/onboarding/invitations`, `/onboarding/submissions`, `/admin/banners` (same filters as the list) | `catalogue.export`, `documents.export`, `operators.export`, `banners.export` |
+| Import | `GET /catalogue/cities/import-template`, `POST /catalogue/cities/import?dryRun=true\|false`; the same two on `/catalogue/locations` | `catalogue.manage` |
+| Amenities | `GET`, `POST /admin/amenities`; `PATCH /admin/amenities/:id/active`; `GET /catalogue/amenities` (the ones switched on, for bus forms) | `catalogue.read`, `catalogue.manage`, `buses.read` |
+
+The KYC questionnaire routes stay as in I.1 (`/settings/kyc-configuration`); its export is part of step 10. Phase 0 routes (access matrix, `/admin/messages`, `/settings/integrations`, `/assistant/chat`, `/features`, `/admin/feature-flags`, `/maintenance/status`, `/admin/maintenance`) are listed in Part 9 and in the Phase 0 checklist.
+
 ### I.2 Modules with no controller yet
 
 `analytics`, `api-clients`, `bookings`, `boarding-points`, `chatbot`, `check-in`, `commissions`, `content`, `coupons`, `customers`, `drivers`, `fares`, `feature-flags`, `inventory`, `live-tracking`, `maintenance`, `notification-templates`, `offers`, `operator-staff`, `partner-webhooks`, `partners`, `passengers`, `payments`, `popular-routes`, `reconciliation`, `refunds`, `reports`, `schedules`, `seat-layouts`, `settlements`, `support`, `tickets`, `translations`, `trip-operations`, `whatsapp`, `women-safety`. These folders exist as empty placeholders; they get their three-file packages in the phases above.
@@ -3923,23 +4008,23 @@ Status was last updated 13 October 2026 (Part 9 has the detail). One row per fea
 | Phase 0 | Notifications and event router | apps/customer_app/lib/features/notifications/notifications_customer_screen.dart | backend/src/modules/notifications/notifications_customer.ts | backend/src/modules/notifications/notifications_customer.service.ts | Not started |
 | Phase 0 | Notifications and event router | apps/driver_app/lib/features/notifications/notifications_driver_screen.dart | backend/src/modules/notifications/notifications_driver.ts | backend/src/modules/notifications/notifications_driver.service.ts | Not started |
 | Phase 0 | File storage and proof attachments | (backend only) | backend/src/modules/files/files_core.ts | backend/src/modules/files/files_core.service.ts | Not started |
-| Phase 0 | WhatsApp and email messages | apps/admin_app/lib/features/messages/messages_admin_manage_screen.dart | backend/src/modules/whatsapp/messages_admin_manage.ts | backend/src/modules/whatsapp/messages_admin_manage.service.ts | Backend built (Phase 0) |
-| Phase 0 | WhatsApp and email messages | apps/customer_app/lib/features/messages/messages_customer_screen.dart | backend/src/modules/whatsapp/messages_customer.ts | backend/src/modules/whatsapp/messages_customer.service.ts | Backend built (Phase 0) |
-| Phase 0 | Integrations, feature flags and maintenance | apps/admin_app/lib/features/settings/settings_admin_manage_screen.dart | backend/src/modules/system-settings/settings_admin_manage.ts | backend/src/modules/system-settings/settings_admin_manage.service.ts | Backend built (Phase 0): integrations, feature flags, maintenance |
-| Phase 0 | AI assistant (Groq) | apps/admin_app/lib/features/assistant/assistant_admin_manage_screen.dart | backend/src/modules/chatbot/assistant_admin_manage.ts | backend/src/modules/chatbot/assistant_admin_manage.service.ts | Backend built (Phase 0): one endpoint for every app |
+| Phase 0 | WhatsApp and email messages | apps/admin_app/lib/features/messages/messages_admin_manage_screen.dart | backend/src/modules/whatsapp/messages_admin_manage.ts | backend/src/modules/whatsapp/messages_admin_manage.service.ts | Backend built (Phase 0). Files in use: `modules/messages/messages_admin_manage*` |
+| Phase 0 | WhatsApp and email messages | apps/customer_app/lib/features/messages/messages_customer_screen.dart | backend/src/modules/whatsapp/messages_customer.ts | backend/src/modules/whatsapp/messages_customer.service.ts | Backend built (Phase 0). Files in use: `modules/messages/messages_customer*` |
+| Phase 0 | Integrations, feature flags and maintenance | apps/admin_app/lib/features/settings/settings_admin_manage_screen.dart | backend/src/modules/system-settings/settings_admin_manage.ts | backend/src/modules/system-settings/settings_admin_manage.service.ts | Backend built (Phase 0): integrations, feature flags, maintenance. Files in use: `system-settings/integrations_admin_manage*`, `feature-flags/flags_admin_manage*` |
+| Phase 0 | AI assistant (Groq) | apps/admin_app/lib/features/assistant/assistant_admin_manage_screen.dart | backend/src/modules/chatbot/assistant_admin_manage.ts | backend/src/modules/chatbot/assistant_admin_manage.service.ts | Backend built (Phase 0): one endpoint for every app (`chatbot/assistant_chat*`) |
 | Phase 0 | AI assistant (Groq) | apps/customer_app/lib/features/assistant/assistant_customer_screen.dart | backend/src/modules/chatbot/assistant_customer.ts | backend/src/modules/chatbot/assistant_customer.service.ts | Backend built (Phase 0): same endpoint |
 | Phase 0 | AI assistant (Groq) | apps/driver_app/lib/features/assistant/assistant_driver_screen.dart | backend/src/modules/chatbot/assistant_driver.ts | backend/src/modules/chatbot/assistant_driver.service.ts | Backend built (Phase 0): same endpoint |
-| Phase 0 | Seed data and live updates | (backend only) | backend/src/modules/database/seed_core.ts | backend/src/modules/database/seed_core.service.ts | Built (Phase 0): npm run seed:demo; live channel built |
-| Phase 1 | Cities and places | apps/admin_app/lib/features/places/places_admin_manage_screen.dart | backend/src/modules/cities/places_admin_manage.ts | backend/src/modules/cities/places_admin_manage.service.ts | Backend built on Phase 1 branch (delete, export, import) |
-| Phase 1 | Cities and places | apps/client_portal/lib/features/places/places_client_manage_screen.dart | backend/src/modules/cities/places_client_manage.ts | backend/src/modules/cities/places_client_manage.service.ts | Not started |
+| Phase 0 | Seed data and live updates | (backend only) | backend/src/modules/database/seed_core.ts | backend/src/modules/database/seed_core.service.ts | Built (Phase 0): npm run seed:demo (local databases only); live channel built (`realtime/live_updates_channel*`) |
+| Phase 1 | Cities and places | apps/admin_app/lib/features/places/places_admin_manage_screen.dart | backend/src/modules/cities/places_admin_manage.ts | backend/src/modules/cities/places_admin_manage.service.ts | In progress (13 Oct 2026): view, delete and Undo, export, import done; tabs, filters and operator requests not yet. Files in use: `modules/cities/cities_admin_manage*`, `modules/locations/places_admin_manage*`, screens in `features/catalogue/pages/` |
+| Phase 1 | Cities and places | apps/client_portal/lib/features/places/places_client_manage_screen.dart | backend/src/modules/cities/places_client_manage.ts | backend/src/modules/cities/places_client_manage.service.ts | Not started (step 5) |
 | Phase 1 | Cities and places | apps/customer_app/lib/features/places/places_customer_screen.dart | backend/src/modules/cities/places_customer.ts | backend/src/modules/cities/places_customer.service.ts | Not started |
-| Phase 1 | Bus types and amenities | apps/admin_app/lib/features/bus_types/bus_types_admin_manage_screen.dart | backend/src/modules/bus-types/bus_types_admin_manage.ts | backend/src/modules/bus-types/bus_types_admin_manage.service.ts | Backend built on Phase 1 branch (amenities, delete, export) |
-| Phase 1 | Required documents and KYC questionnaire | apps/admin_app/lib/features/kyc_config/kyc_config_admin_manage_screen.dart | backend/src/modules/document-types/kyc_config_admin_manage.ts | backend/src/modules/document-types/kyc_config_admin_manage.service.ts | Backend built on Phase 1 branch (read-one, delete, export) |
-| Phase 1 | Operator invitations | apps/admin_app/lib/features/invitations/invitations_admin_manage_screen.dart | backend/src/modules/onboarding/invitations_admin_manage.ts | backend/src/modules/onboarding/invitations_admin_manage.service.ts | Backend built on Phase 1 branch (edit, expiry, delete, export) |
-| Phase 1 | KYC review and company onboarding | apps/admin_app/lib/features/kyc/kyc_admin_manage_screen.dart | backend/src/modules/onboarding/kyc_admin_manage.ts | backend/src/modules/onboarding/kyc_admin_manage.service.ts | Backend built on Phase 1 branch (export) |
-| Phase 1 | KYC review and company onboarding | apps/client_portal/lib/features/kyc/kyc_client_manage_screen.dart | backend/src/modules/onboarding/kyc_client_manage.ts | backend/src/modules/onboarding/kyc_client_manage.service.ts | Not started |
-| Phase 1 | Operators | apps/admin_app/lib/features/operators/operators_admin_manage_screen.dart | backend/src/modules/operators/operators_admin_manage.ts | backend/src/modules/operators/operators_admin_manage.service.ts | Backend built on Phase 1 branch (delete, export) |
-| Phase 1 | Banners | apps/admin_app/lib/features/banners/banners_admin_manage_screen.dart | backend/src/modules/admin-banners/banners_admin_manage.ts | backend/src/modules/admin-banners/banners_admin_manage.service.ts | Backend built on Phase 1 branch (duplicate, archive, reorder, export) |
+| Phase 1 | Bus types and amenities | apps/admin_app/lib/features/bus_types/bus_types_admin_manage_screen.dart | backend/src/modules/bus-types/bus_types_admin_manage.ts | backend/src/modules/bus-types/bus_types_admin_manage.service.ts | Done 13 Oct 2026: view, delete and Undo, export, amenities. Files in use: `modules/bus-types/bus_types_admin_manage*`, `modules/amenities/amenities_admin_manage*`, screen widget `amenities_card.dart` |
+| Phase 1 | Required documents and KYC questionnaire | apps/admin_app/lib/features/kyc_config/kyc_config_admin_manage_screen.dart | backend/src/modules/document-types/kyc_config_admin_manage.ts | backend/src/modules/document-types/kyc_config_admin_manage.service.ts | In progress (13 Oct 2026): view, delete and Undo, export of documents done; the questionnaire waits for step 10 |
+| Phase 1 | Operator invitations | apps/admin_app/lib/features/invitations/invitations_admin_manage_screen.dart | backend/src/modules/onboarding/invitations_admin_manage.ts | backend/src/modules/onboarding/invitations_admin_manage.service.ts | Done 13 Oct 2026: view, edit, Expired, search, delete and Undo, export. Files in use: `modules/onboarding/invitations_admin_manage*`, screen `features/invitations/invitations_page.dart` |
+| Phase 1 | KYC review and company onboarding | apps/admin_app/lib/features/kyc/kyc_admin_manage_screen.dart | backend/src/modules/onboarding/kyc_admin_manage.ts | backend/src/modules/onboarding/kyc_admin_manage.service.ts | In progress (13 Oct 2026): export done; history in step 9. File in use: `modules/onboarding/kyc_admin_manage.ts` |
+| Phase 1 | KYC review and company onboarding | apps/client_portal/lib/features/kyc/kyc_client_manage_screen.dart | backend/src/modules/onboarding/kyc_client_manage.ts | backend/src/modules/onboarding/kyc_client_manage.service.ts | Not started (steps 8 and 9) |
+| Phase 1 | Operators | apps/admin_app/lib/features/operators/operators_admin_manage_screen.dart | backend/src/modules/operators/operators_admin_manage.ts | backend/src/modules/operators/operators_admin_manage.service.ts | In progress (13 Oct 2026): view, delete and Undo, export done; detail page, suspend with proof and payout in steps 6 and 7. File in use: `modules/operators/operators_admin_manage.ts` |
+| Phase 1 | Banners | apps/admin_app/lib/features/banners/banners_admin_manage_screen.dart | backend/src/modules/admin-banners/banners_admin_manage.ts | backend/src/modules/admin-banners/banners_admin_manage.service.ts | Done 13 Oct 2026 except the Analytics tab: demo columns and form, Save draft and Publish, duplicate, archive, order, delete and Undo, export. Files in use: `modules/admin-banners/banners_admin_manage*`, screen `features/banners/admin_banners_manage.dart` |
 | Phase 1 | Banners | apps/customer_app/lib/features/banners/banners_customer_screen.dart | backend/src/modules/admin-banners/banners_customer.ts | backend/src/modules/admin-banners/banners_customer.service.ts | Not started |
 | Phase 1 | Banners | apps/public_website/app/banners/banners_public_page.tsx | backend/src/modules/admin-banners/banners_public.ts | backend/src/modules/admin-banners/banners_public.service.ts | Not started |
 | Phase 2 | Buses and seat layouts | apps/admin_app/lib/features/buses/buses_admin_manage_screen.dart | backend/src/modules/buses/buses_admin_manage.ts | backend/src/modules/buses/buses_admin_manage.service.ts | Not started |

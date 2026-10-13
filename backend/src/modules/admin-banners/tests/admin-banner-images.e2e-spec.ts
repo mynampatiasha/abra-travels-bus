@@ -139,7 +139,7 @@ describe('Banner images e2e', () => {
     });
   });
 
-  it('deleting a banner removes both stored images', async () => {
+  it('deleting a banner keeps its images, so Undo brings the banner back whole', async () => {
     const banner = await create({ title: 'Delete both' });
     await superAdmin.upload(`${ADMIN}/${banner.id}/image`, PNG, 'm.png').expect(201);
     await superAdmin
@@ -152,7 +152,11 @@ describe('Banner images e2e', () => {
     expect(keys.every((key) => typeof key === 'string')).toBe(true);
     await superAdmin.delete(`${ADMIN}/${banner.id}`).expect(200);
     const storage = context.app.get<FileStorage>(FILE_STORAGE);
-    for (const key of keys) await expect(storage.open(key)).rejects.toThrow();
+    for (const key of keys) await expect(storage.open(key)).resolves.toBeDefined();
+    await superAdmin.post(`${ADMIN}/${banner.id}/restore`).expect(201);
+    const restored = dataOf<BannerBody>(await superAdmin.get(`${ADMIN}/${banner.id}`).expect(200));
+    expect(restored.imageUrl).toMatch(/^banners\//);
+    expect(restored.desktopImageUrl).toMatch(/variant=desktop/);
   });
 
   it('prefers an external image address until an image is uploaded', async () => {
@@ -168,14 +172,14 @@ describe('Banner images e2e', () => {
     expect(uploaded.imageUrl).toMatch(/^banners\//);
   });
 
-  it('refuses text files and files over 3 MB', async () => {
+  it('refuses text files and files over 1 MB', async () => {
     const banner = await create({ title: 'Refuses files' });
     await expectCode(
       superAdmin.upload(`${ADMIN}/${banner.id}/image`, Buffer.from('hello world'), 'a.png'),
       415,
       'UNSUPPORTED_MEDIA_TYPE',
     );
-    const tooLarge = Buffer.concat([PNG, Buffer.alloc(3 * 1024 * 1024)]);
+    const tooLarge = Buffer.concat([PNG, Buffer.alloc(1024 * 1024)]);
     await expectCode(
       superAdmin.upload(`${ADMIN}/${banner.id}/image`, tooLarge, 'big.png'),
       413,

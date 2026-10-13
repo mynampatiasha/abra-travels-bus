@@ -25,6 +25,7 @@ describe('Banners e2e', () => {
   let context: AuthTestContext;
   let superAdmin: Api;
   let manager: Api;
+  let viewer: Api;
   let deleter: Api;
   let support: Api;
 
@@ -48,7 +49,8 @@ describe('Banners e2e', () => {
     context = await createAuthTestApp();
     await context.connection.collection('banners').deleteMany({});
     superAdmin = api(context, (await seedAndSignIn(context, { roleKeys: ['SUPER_ADMIN'] })).tokens);
-    manager = await staffWith(['banners.manage']);
+    manager = await staffWith(['banners.read', 'banners.manage']);
+    viewer = await staffWith(['banners.read']);
     deleter = await staffWith(['banners.delete']);
     support = api(context, (await seedAndSignIn(context, { roleKeys: ['SUPPORT'] })).tokens);
   }, 180_000);
@@ -89,9 +91,27 @@ describe('Banners e2e', () => {
       await expectCode(manager.delete(`${ADMIN}/${created.id}`), 403, 'PERMISSION_DENIED');
       await deleter.delete(`${ADMIN}/${created.id}`).expect(200);
       await expectCode(superAdmin.get(`${ADMIN}/${created.id}`), 404, 'RESOURCE_NOT_FOUND');
+      // the delete is soft: Undo brings it back
+      await expectCode(manager.post(`${ADMIN}/${created.id}/restore`), 403, 'PERMISSION_DENIED');
+      await deleter.post(`${ADMIN}/${created.id}/restore`).expect(201);
+      await superAdmin.get(`${ADMIN}/${created.id}`).expect(200);
     });
 
-    it('without banners.manage the list is refused', async () => {
+    it('banners.read alone can look but not change', async () => {
+      const created = await create({ title: 'Look only' });
+      await viewer.get(ADMIN).expect(200);
+      await viewer.get(`${ADMIN}/${created.id}`).expect(200);
+      await expectCode(viewer.post(ADMIN, { title: 'No' }), 403, 'PERMISSION_DENIED');
+      await expectCode(
+        viewer.put(`${ADMIN}/${created.id}`, { title: 'No' }),
+        403,
+        'PERMISSION_DENIED',
+      );
+      await expectCode(viewer.post(`${ADMIN}/${created.id}/duplicate`), 403, 'PERMISSION_DENIED');
+      await expectCode(viewer.post(`${ADMIN}/${created.id}/archive`), 403, 'PERMISSION_DENIED');
+    });
+
+    it('without banners.read the list is refused', async () => {
       await expectCode(support.get(ADMIN), 403, 'PERMISSION_DENIED');
       await expectCode(deleter.get(ADMIN), 403, 'PERMISSION_DENIED');
     });
@@ -241,10 +261,11 @@ describe('Banners e2e', () => {
       const response = await client(context).get(PUBLIC).expect(200);
       expect(response.headers['cache-control']).toBe('public, max-age=60');
       const items = dataOf<PublicBannerBody[]>(response);
-      expect(items.map((item) => item.id)).toEqual([first.id, second.id, windowed.id]);
+      expect(items.map((item) => item.id)).toEqual([windowed.id, second.id, first.id]); // higher order shows first
       expect(Object.keys(items[0] ?? {}).sort()).toEqual(
         [
           'buttonText',
+          'colourStyle',
           'desktopImageUrl',
           'id',
           'imageUrl',

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_localization/shared_localization.dart';
 import 'package:shared_models/shared_models.dart';
+import 'package:shared_permissions/shared_permissions.dart';
 import 'package:shared_theme/shared_theme.dart';
 import 'package:shared_ui/shared_ui.dart';
 
+import '../../app/providers.dart';
 import '../../core/format.dart';
 import '../../l10n/admin_strings.dart';
 import '../../routing/admin_routes.dart';
@@ -36,15 +39,18 @@ String _subjectText(AbraLocalizations l10n, JsonMap record) => l10n.text(
 /// The review queue: company and bus documents sent by bus owners, oldest
 /// waiting first. Opening one leads to the screen where its documents are
 /// checked.
-class ReviewsPage extends StatelessWidget {
+class ReviewsPage extends ConsumerWidget {
   const ReviewsPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AbraLocalizations.of(context);
+    final canExport = ref
+        .watch(accessProvider)
+        .can(PermissionKeys.documentsExport);
     return ResourcePage(
       path: 'onboarding/submissions',
-      exportName: 'reviews',
+      exportPath: canExport ? 'onboarding/submissions' : null,
       stats: const <StatSpec>[
         StatSpec(
           AdminStrings.revStatusPending,

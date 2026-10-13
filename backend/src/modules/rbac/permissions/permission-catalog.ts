@@ -131,6 +131,17 @@ export const CATALOGUE_PERMISSIONS = definePermissions('catalogue', {
     description: 'Create, edit, enable and disable cities and bus types.',
     grantableTo: PLATFORM_ONLY,
   },
+  delete: {
+    name: 'Delete catalogue records',
+    description: 'Delete cities, places, bus types and amenities, and restore what was deleted.',
+    grantableTo: PLATFORM_ONLY,
+    sensitive: true,
+  },
+  export: {
+    name: 'Export catalogue lists',
+    description: 'Download the catalogue lists (places, cities, bus types) as CSV or Excel.',
+    grantableTo: PLATFORM_ONLY,
+  },
 });
 
 export const DOCUMENT_PERMISSIONS = definePermissions('documents', {
@@ -160,6 +171,17 @@ export const DOCUMENT_PERMISSIONS = definePermissions('documents', {
     name: 'View uploaded documents',
     description: 'Open and download uploaded document files, within the data scope.',
     grantableTo: PLATFORM_AND_OPERATOR,
+  },
+  delete: {
+    name: 'Delete document types and KYC questions',
+    description: 'Delete document types, KYC questions and rules, and restore what was deleted.',
+    grantableTo: PLATFORM_ONLY,
+    sensitive: true,
+  },
+  export: {
+    name: 'Export onboarding lists',
+    description: 'Download the document types, KYC questionnaire and KYC submission lists.',
+    grantableTo: PLATFORM_ONLY,
   },
 });
 
@@ -270,6 +292,17 @@ export const OPERATOR_PERMISSIONS = definePermissions('operators', {
     description: 'Approve, reject, suspend and reactivate operators.',
     grantableTo: PLATFORM_ONLY,
     sensitive: true,
+  },
+  delete: {
+    name: 'Delete operators and invitations',
+    description: 'Delete operators and operator invitations, and restore what was deleted.',
+    grantableTo: PLATFORM_ONLY,
+    sensitive: true,
+  },
+  export: {
+    name: 'Export operator lists',
+    description: 'Download the operator and invitation lists.',
+    grantableTo: PLATFORM_ONLY,
   },
 });
 

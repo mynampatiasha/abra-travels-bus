@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { type Readable } from 'node:stream';
 import { Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { type ClientSession, type Model, type QueryFilter, Types } from 'mongoose';
+import { type Model, type QueryFilter, Types } from 'mongoose';
 import { ApiException } from '../../common/errors/api-exception';
 import { type ClientRequestInfo } from '../../common/http/client-request-info';
 import { PaginatedResult } from '../../common/interceptors/response-envelope.interceptor';
@@ -11,8 +11,10 @@ import { type AuthenticatedUserActor } from '../../common/request-context/reques
 import { FILE_STORAGE, type FileStorage } from '../files/storage/file-storage';
 import { AuditedChangeRunner } from '../rbac/services/audited-change.service';
 import {
+  AUDIENCES_SEEN_BY,
   type Banner,
   BANNER_MODEL,
+  type BannerViewer,
   BANNER_LANGUAGES,
   type BannerImageVariant,
   type BannerLanguage,
@@ -28,13 +30,12 @@ import {
   IMAGE_EXTENSIONS,
   IMAGE_FIELDS,
   statusCondition,
-  storedKeysOf,
   type StoredBanner,
   type UpdateBannerDto,
 } from './admin-banners.model';
 
 /** Largest image accepted (also the multipart limit of the upload endpoint). */
-export const BANNER_IMAGE_MAX_BYTES = 3 * 1024 * 1024;
+export const BANNER_IMAGE_MAX_BYTES = 1024 * 1024;
 
 /** Most banners the customer app is given for one placement. */
 const PUBLIC_LIMIT = 10;
@@ -49,6 +50,8 @@ export function bannerViewOf(banner: StoredBanner, now: Date = new Date()): Bann
     linkValue: banner.linkValue,
     placement: banner.placement,
     language: banner.language,
+    colourStyle: banner.colourStyle,
+    audience: banner.audience,
     startsAt: banner.startsAt?.toISOString() ?? null,
     endsAt: banner.endsAt?.toISOString() ?? null,
     sortOrder: banner.sortOrder,
@@ -71,6 +74,7 @@ function publicBannerViewOf(banner: StoredBanner): PublicBannerView {
     buttonText: banner.buttonText,
     linkType: banner.linkType,
     linkValue: banner.linkValue,
+    colourStyle: banner.colourStyle,
     imageUrl: bannerImageUrlOf(banner),
     desktopImageUrl: bannerImageUrlOf(banner, 'desktop'),
   };
@@ -84,6 +88,8 @@ const EDITABLE_FIELDS = [
   'linkValue',
   'placement',
   'language',
+  'colourStyle',
+  'audience',
   'externalImageUrl',
   'externalDesktopImageUrl',
   'startsAt',
@@ -127,7 +133,7 @@ export class AdminBannersService {
     const [items, total] = await Promise.all([
       this.banners
         .find(match)
-        .sort({ placement: 1, sortOrder: 1, createdAt: -1, _id: -1 })
+        .sort({ placement: 1, sortOrder: -1, createdAt: -1, _id: -1 })
         .skip(skipOf(query))
         .limit(query.pageSize)
         .lean<StoredBanner[]>()
@@ -243,7 +249,7 @@ export class AdminBannersService {
     }
     if (file.size === 0) throw new ApiException('VALIDATION_FAILED', 'The file is empty.');
     if (file.size > BANNER_IMAGE_MAX_BYTES) {
-      throw new ApiException('PAYLOAD_TOO_LARGE', 'Banner images can be at most 3 MB.');
+      throw new ApiException('PAYLOAD_TOO_LARGE', 'Banner images can be at most 1 MB.');
     }
     const mimeType = detectImageType(file.buffer);
     if (!mimeType) {
@@ -306,35 +312,11 @@ export class AdminBannersService {
     return saved;
   }
 
-  async remove(
-    actor: AuthenticatedUserActor,
-    id: string,
-    client: ClientRequestInfo,
-  ): Promise<void> {
-    const before = await this.require(id);
-    await this.changes.run({
-      actor,
-      client,
-      action: 'banner.deleted',
-      entityType: 'banner',
-      before: { ...bannerViewOf(before) },
-      apply: async (session: ClientSession) => {
-        const deleted = await this.banners
-          .findOneAndDelete({ _id: before._id }, { session })
-          .lean<StoredBanner>()
-          .exec();
-        if (!deleted) throw new ApiException('RESOURCE_NOT_FOUND', 'Banner not found');
-        return deleted;
-      },
-      describe: () => ({}),
-    });
-    for (const key of storedKeysOf(before)) await this.removeQuietly(key);
-  }
-
   /** Live banners of a placement in the customer's language (or for every language). */
   async live(
     placement: BannerPlacement,
     language: string | undefined,
+    viewer: BannerViewer = 'GUEST',
   ): Promise<PublicBannerView[]> {
     const languages: BannerLanguage[] = ['ALL'];
     const chosen = BANNER_LANGUAGES.find((known) => known === language);
@@ -343,9 +325,10 @@ export class AdminBannersService {
       .find({
         placement,
         language: { $in: languages },
+        audience: { $in: AUDIENCES_SEEN_BY[viewer] },
         ...statusCondition('LIVE', new Date()),
       })
-      .sort({ sortOrder: 1, createdAt: -1, _id: -1 })
+      .sort({ sortOrder: -1, createdAt: -1, _id: -1 })
       .limit(PUBLIC_LIMIT)
       .lean<StoredBanner[]>()
       .exec();

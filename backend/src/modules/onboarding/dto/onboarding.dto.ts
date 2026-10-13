@@ -23,7 +23,14 @@ export class InviteClientDto extends createZodDto(
 ) {}
 
 export class InvitationListQueryDto extends createZodDto(
-  z.object({ status: z.enum(INVITATION_STATUSES).optional(), ...dateRangeShape, ...pagingShape }),
+  z.object({
+    /** EXPIRED is a pending invitation whose seven days have passed; PENDING is one still valid. */
+    status: z.enum([...INVITATION_STATUSES, 'EXPIRED']).optional(),
+    /** Part of the company, owner or email. */
+    search: z.string().trim().min(1).max(80).optional(),
+    ...dateRangeShape,
+    ...pagingShape,
+  }),
 ) {}
 
 export class InvitationIdParamDto extends createZodDto(z.object({ id: objectIdString })) {}

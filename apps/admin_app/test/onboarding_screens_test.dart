@@ -4,6 +4,7 @@ import 'package:admin_app/routing/admin_routes.dart';
 import 'package:admin_app/shell/admin_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_network/shared_network.dart';
 import 'package:shared_ui/shared_ui.dart';
 
 import 'support/test_admin.dart';
@@ -312,7 +313,7 @@ void main() {
   });
 
   group('export and summary cards', () {
-    testWidgets('Export downloads everything the list shows as a CSV file', (
+    testWidgets('Export downloads the server file with the filters chosen', (
       tester,
     ) async {
       final backend = FakeBackend(Persona.superAdmin)
@@ -336,19 +337,27 @@ void main() {
           'maxFiles': 2,
           'isActive': false,
         });
-      await openAs(tester, backend, AdminRoutes.documentTypes);
+      const csv = 'Document,Key\r\nGST certificate,GST\r\n';
+      backend.overrides['GET catalogue/document-types/export?format=csv'] =
+          (_) => const FakeResponse(200, csv);
+      final app = await openAs(tester, backend, AdminRoutes.documentTypes);
       // the cards count by state
       expect(find.text('Active'), findsWidgets);
 
+      // Export is a menu: CSV or Excel
       await tapOn(tester, button('Export'));
-      expect(browser.lastDownloadName, startsWith('document-types_'));
-      final rows = Csv.parse(browser.lastDownloadText!);
-      expect(rows.first, contains('Name'));
-      expect(rows, hasLength(3));
-      expect(rows[1], contains('GST certificate'));
-      // a name with a comma and quotes survives
-      expect(rows[2], contains('Registration, "RC" book'));
-      expect(rows[2], contains('PDF, PNG photo'));
+      expect(find.text('CSV file'), findsOneWidget);
+      expect(find.text('Excel file'), findsOneWidget);
+      await tapOn(tester, find.text('CSV file'));
+
+      expect(
+        app.requestsTo('catalogue/document-types/export?format=csv', 'GET'),
+        hasLength(1),
+      );
+      expect(browser.lastDownloadName, startsWith('document-types-'));
+      expect(browser.lastDownloadName, endsWith('.csv'));
+      expect(String.fromCharCodes(browser.lastDownloadBytes!), csv);
+      expect(find.text('The file is ready.'), findsOneWidget);
     });
   });
 

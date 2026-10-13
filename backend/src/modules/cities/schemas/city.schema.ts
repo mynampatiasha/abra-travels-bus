@@ -1,4 +1,5 @@
 import { Schema } from 'mongoose';
+import { softDeletePlugin } from '../../../database/soft-delete.plugin';
 
 export const CITY_MODEL = 'City';
 
@@ -58,6 +59,7 @@ export const citySchema = new Schema<City>(
   { collection: 'cities', timestamps: true, versionKey: false },
 );
 
+citySchema.plugin(softDeletePlugin);
 citySchema.index({ slug: 1 }, { unique: true });
 citySchema.index({ isActive: 1, name: 1 });
 citySchema.index({ isActive: 1, isPopular: 1, sortOrder: 1 });

@@ -1,4 +1,5 @@
 import { Schema } from 'mongoose';
+import { softDeletePlugin } from '../../../database/soft-delete.plugin';
 
 export const DOCUMENT_TYPE_MODEL = 'DocumentType';
 
@@ -57,5 +58,6 @@ export const documentTypeSchema = new Schema<DocumentType>(
   { collection: 'document_types', timestamps: true, versionKey: false },
 );
 
+documentTypeSchema.plugin(softDeletePlugin);
 documentTypeSchema.index({ key: 1 }, { unique: true });
 documentTypeSchema.index({ appliesTo: 1, isActive: 1, sortOrder: 1 });

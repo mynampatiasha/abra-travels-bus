@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { createZodDto } from '../../../common/pipes/zod-dto.factory';
-import { BUS_AMENITIES } from '../../buses/schemas/bus.schema';
 
 const objectId = z.string().regex(/^[0-9a-f]{24}$/i, 'must be a 24-character id');
 const travelDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'must be a date written YYYY-MM-DD');
@@ -67,7 +66,9 @@ export class TripSearchQueryDto extends createZodDto(
     ac: z.enum(['true', 'false']).optional(),
     operatorIds: commaSeparated(objectId).optional(),
     /** Trips whose bus has every listed amenity. */
-    amenities: commaSeparated(z.enum(BUS_AMENITIES)).optional(),
+    amenities: commaSeparated(
+      z.string().regex(/^[A-Z][A-Z0-9_]{1,39}$/, 'must be an amenity key'),
+    ).optional(),
     /** Lowest fare in paise, inclusive. */
     minFare: z.coerce.number().int().min(0).max(100_000_00).optional(),
     maxFare: z.coerce.number().int().min(0).max(100_000_00).optional(),

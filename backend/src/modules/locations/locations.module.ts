@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { CatalogueSharedModule } from '../catalogue-shared/catalogue_shared_manage';
+import { PlacesExportController, PlacesImportController } from './places_admin_manage';
 import { MongooseModule } from '@nestjs/mongoose';
 import { CitiesModule } from '../cities/cities.module';
 import { OperatorsModule } from '../operators/operators.module';
@@ -13,13 +15,13 @@ import { LocationsService } from './services/locations.service';
  * places, shared or owned by an operator (documentation/catalogue-management.md).
  */
 @Module({
-  imports: [
+  imports: [CatalogueSharedModule, 
     MongooseModule.forFeature([{ name: LOCATION_MODEL, schema: locationSchema }]),
     RbacModule,
     CitiesModule,
     OperatorsModule,
   ],
-  controllers: [LocationsController],
+  controllers: [PlacesExportController, PlacesImportController, LocationsController],
   providers: [LocationRepository, LocationsService],
   exports: [LocationRepository, MongooseModule],
 })

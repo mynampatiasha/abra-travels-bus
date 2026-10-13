@@ -1,4 +1,5 @@
 import { Schema, type Types } from 'mongoose';
+import { softDeletePlugin } from '../../../database/soft-delete.plugin';
 
 export const ONBOARDING_INVITATION_MODEL = 'OnboardingInvitation';
 
@@ -57,6 +58,7 @@ export const onboardingInvitationSchema = new Schema<OnboardingInvitation>(
   { collection: 'onboarding_invitations', timestamps: true, versionKey: false },
 );
 
+onboardingInvitationSchema.plugin(softDeletePlugin);
 onboardingInvitationSchema.index({ tokenHash: 1 }, { unique: true });
 onboardingInvitationSchema.index({ operatorId: 1 });
 // One open invitation per address, so an owner is not invited twice at the same time

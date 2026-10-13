@@ -1,14 +1,15 @@
 import { z } from 'zod';
 import { changeReason, objectIdString, pagingShape } from '../../../common/pipes/list-query';
 import { createZodDto } from '../../../common/pipes/zod-dto.factory';
-import { BUS_AMENITIES, BUS_STATUSES, MANUAL_BUS_STATUSES } from '../schemas/bus.schema';
+import { BUS_STATUSES, MANUAL_BUS_STATUSES } from '../schemas/bus.schema';
 
 const fields = {
   name: z.string().trim().min(2).max(80),
   busTypeId: objectIdString,
+  /** Keys of amenities that are switched on (`GET /catalogue/amenities`). */
   amenities: z
-    .array(z.enum(BUS_AMENITIES))
-    .max(BUS_AMENITIES.length)
+    .array(z.string().regex(/^[A-Z][A-Z0-9_]{1,39}$/, 'must be an amenity key'))
+    .max(50)
     .refine((list) => new Set(list).size === list.length, 'must not repeat an amenity'),
   /** Seats and berths sold on this bus. */
   seatCapacity: z.number().int().min(1).max(100),

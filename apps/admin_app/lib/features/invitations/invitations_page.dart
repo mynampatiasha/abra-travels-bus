@@ -2,19 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_localization/shared_localization.dart';
 import 'package:shared_models/shared_models.dart';
+import 'package:shared_permissions/shared_permissions.dart';
 import 'package:shared_theme/shared_theme.dart';
 import 'package:shared_ui/shared_ui.dart';
 
+import '../../app/providers.dart';
 import '../../core/format.dart';
 import '../../l10n/admin_strings.dart';
 import '../catalogue/catalogue_repository.dart';
 import '../catalogue/widgets/catalogue_common.dart';
+import '../catalogue/widgets/record_actions.dart';
 import '../catalogue/widgets/resource_form.dart';
 import '../catalogue/widgets/resource_page.dart';
 
 const _statuses = <String, String>{
   'PENDING': AdminStrings.invStatusPending,
   'ACCEPTED': AdminStrings.invStatusAccepted,
+  'EXPIRED': AdminStrings.invStatusExpired,
   'REVOKED': AdminStrings.invStatusRevoked,
 };
 
@@ -29,6 +33,39 @@ AbraStatusTone _tone(String status) => switch (status) {
 /// documents, which appear under Reviews.
 class InvitationsPage extends ConsumerWidget {
   const InvitationsPage({super.key});
+
+  static const _editFields = <FieldSpec>[
+    TextSpec('companyName', AdminStrings.invCompany, isRequired: true),
+    TextSpec('ownerName', AdminStrings.invOwner, isRequired: true),
+    TextSpec('email', AdminStrings.invEmail, isRequired: true),
+    TextSpec('phone', AdminStrings.invPhone, clearable: true),
+    DateSpec('expiresAt', AdminStrings.invFieldExpires),
+  ];
+
+  /// The day of an ISO time from the API, in the admin's time zone.
+  static String _dayOf(Object? iso) {
+    final time = DateTime.tryParse('${iso ?? ''}')?.toLocal();
+    return time == null ? '' : time.toIso8601String().substring(0, 10);
+  }
+
+  /// The edit form's values as the API takes them: the closing day becomes the
+  /// end of that day, and is left out when it was not changed.
+  static JsonMap _editBody(JsonMap values, JsonMap record) {
+    final body = <String, Object?>{...values};
+    final day = '${body.remove('expiresAt') ?? ''}';
+    if (day.isNotEmpty && day != _dayOf(record['expiresAt'])) {
+      final parsed = DateTime.parse(day);
+      body['expiresAt'] = DateTime(
+        parsed.year,
+        parsed.month,
+        parsed.day,
+        23,
+        59,
+        59,
+      ).toUtc().toIso8601String();
+    }
+    return body;
+  }
 
   static const _inviteFields = <FieldSpec>[
     TextSpec('companyName', AdminStrings.invCompany, isRequired: true),
@@ -111,6 +148,9 @@ class InvitationsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AbraLocalizations.of(context);
     final repository = ref.read(catalogueRepositoryProvider);
+    final access = ref.watch(accessProvider);
+    final canEdit = access.can(PermissionKeys.operatorsCreate);
+    final canDelete = access.can(PermissionKeys.operatorsDelete);
     String statusText(JsonMap r) => l10n.text(
       r['expired'] == true
           ? AdminStrings.invStatusExpired
@@ -119,7 +159,9 @@ class InvitationsPage extends ConsumerWidget {
 
     return ResourcePage(
       path: 'onboarding/invitations',
-      exportName: 'invitations',
+      exportPath: access.can(PermissionKeys.operatorsExport)
+          ? 'onboarding/invitations'
+          : null,
       stats: const <StatSpec>[
         StatSpec(
           AdminStrings.invStatusPending,
@@ -134,6 +176,12 @@ class InvitationsPage extends ConsumerWidget {
           AbraColors.tealDark,
         ),
         StatSpec(
+          AdminStrings.invStatusExpired,
+          <String, String>{'status': 'EXPIRED'},
+          Icons.timer_off_outlined,
+          AbraColors.danger,
+        ),
+        StatSpec(
           AdminStrings.invStatusRevoked,
           <String, String>{'status': 'REVOKED'},
           Icons.block,
@@ -141,8 +189,8 @@ class InvitationsPage extends ConsumerWidget {
         ),
       ],
       filters: const <FilterSpec>[
+        SearchFilter('search', AdminStrings.invSearch),
         ChoiceFilter('status', AdminStrings.invColStatus, _statuses),
-        DateRangeFilter('from', AdminStrings.invColCreated, toParam: 'to'),
       ],
       columns: <ColumnSpec>[
         ColumnSpec(
@@ -193,38 +241,89 @@ class InvitationsPage extends ConsumerWidget {
         ),
       ],
       onCreate: (context) => inviteOwner(context, repository),
-      rowActions: (record) => '${record['status']}' != 'PENDING'
-          ? const <RowAction>[]
-          : <RowAction>[
-              RowAction(
-                AdminStrings.invActionResend,
-                Icons.forward_to_inbox_outlined,
-                (context, record) async {
-                  final result = await repository.post(
-                    'onboarding/invitations/${record['id']}/resend',
-                  );
-                  if (context.mounted) await _showOutcome(context, result);
-                  return true;
-                },
-              ),
-              RowAction(AdminStrings.invActionRevoke, Icons.block, (
-                context,
-                record,
-              ) async {
-                final confirmed = await showAbraConfirmDialog(
-                  context,
-                  title: l10n.text(AdminStrings.invRevokeTitle),
-                  message: l10n.text(AdminStrings.invRevokeMessage),
-                  confirmLabel: l10n.text(AdminStrings.invRevokeConfirm),
-                  isDestructive: true,
-                );
-                if (!confirmed) return false;
-                await repository.post(
-                  'onboarding/invitations/${record['id']}/revoke',
-                );
-                return true;
+      rowActions: (record) => <RowAction>[
+        viewAction(
+          repository: repository,
+          path: 'onboarding/invitations',
+          titleOf: (r) => '${r['companyName'] ?? ''}',
+          linesOf: (l10n, r) => <DetailLine>[
+            DetailLine(AdminStrings.invColCompany, '${r['companyName'] ?? ''}'),
+            DetailLine(AdminStrings.invColOwner, '${r['ownerName'] ?? ''}'),
+            DetailLine(AdminStrings.invColEmail, '${r['email'] ?? ''}'),
+            DetailLine(AdminStrings.invPhone, '${r['phone'] ?? ''}'),
+            DetailLine(AdminStrings.invColStatus, statusText(r)),
+            DetailLine(
+              AdminStrings.invColMail,
+              l10n.text(switch ('${r['emailStatus']}') {
+                'SENT' => AdminStrings.invMailSent,
+                'FAILED' => AdminStrings.invMailFailed,
+                _ => AdminStrings.invMailNotSent,
               }),
-            ],
+            ),
+            DetailLine(AdminStrings.invColExpires, dateOf(r['expiresAt'])),
+            DetailLine(AdminStrings.invColCreated, dateOf(r['createdAt'])),
+          ],
+        ),
+        if (canEdit && '${record['status']}' == 'PENDING')
+          RowAction(
+            AdminStrings.actionEdit,
+            Icons.edit_outlined,
+            (context, record) => showResourceForm(
+              context,
+              title: l10n.text(AdminStrings.invEditTitle),
+              message: l10n.text(AdminStrings.invEditHint),
+              fields: _editFields,
+              initial: <String, Object?>{
+                ...record,
+                'expiresAt': _dayOf(record['expiresAt']),
+              },
+              onSubmit: (values) async {
+                await repository.patch(
+                  'onboarding/invitations/${record['id']}',
+                  _editBody(values, record),
+                );
+              },
+            ),
+          ),
+        if (canEdit && '${record['status']}' == 'PENDING') ...<RowAction>[
+          RowAction(
+            AdminStrings.invActionResend,
+            Icons.forward_to_inbox_outlined,
+            (context, record) async {
+              final result = await repository.post(
+                'onboarding/invitations/${record['id']}/resend',
+              );
+              if (context.mounted) await _showOutcome(context, result);
+              return true;
+            },
+          ),
+          RowAction(AdminStrings.invActionRevoke, Icons.block, (
+            context,
+            record,
+          ) async {
+            final confirmed = await showAbraConfirmDialog(
+              context,
+              title: l10n.text(AdminStrings.invRevokeTitle),
+              message: l10n.text(AdminStrings.invRevokeMessage),
+              confirmLabel: l10n.text(AdminStrings.invRevokeConfirm),
+              isDestructive: true,
+            );
+            if (!confirmed) return false;
+            await repository.post(
+              'onboarding/invitations/${record['id']}/revoke',
+            );
+            return true;
+          }),
+        ],
+        // The server refuses a pending or accepted invitation; only a
+        // withdrawn one is offered
+        if (canDelete && '${record['status']}' == 'REVOKED')
+          deleteAction(
+            repository: repository,
+            path: 'onboarding/invitations',
+            nameOf: (r) => '${r['companyName'] ?? ''}',
+          ),
+      ],
     );
   }
 }

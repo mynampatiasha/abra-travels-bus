@@ -90,7 +90,7 @@ describe('TripSearchQueryDto', () => {
 
   it.each([
     ['an empty list', { amenities: ',' }],
-    ['an unknown amenity', { amenities: 'WIFI,POOL' }],
+    ['an amenity that is not a key', { amenities: 'WIFI,pool' }],
     ['a bus type that is not a key', { busTypes: 'ac sleeper' }],
     ['an object instead of a string', { from: { $ne: '' } }],
     ['a fractional page', { page: '1.5' }],

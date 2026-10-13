@@ -9,6 +9,7 @@ import '../../../l10n/admin_strings.dart';
 import '../../invitations/invitations_page.dart';
 import '../catalogue_repository.dart';
 import '../widgets/catalogue_common.dart';
+import '../widgets/record_actions.dart';
 import '../widgets/resource_form.dart';
 import '../widgets/resource_page.dart';
 
@@ -28,11 +29,14 @@ class OperatorsPage extends ConsumerWidget {
     final access = ref.watch(accessProvider);
     final canEdit = access.can(PermissionKeys.operatorsUpdate);
     final canApprove = access.can(PermissionKeys.operatorsApprove);
+    final canDelete = access.can(PermissionKeys.operatorsDelete);
     final repository = ref.read(catalogueRepositoryProvider);
 
     return ResourcePage(
       path: 'operators',
-      exportName: 'operators',
+      exportPath: access.can(PermissionKeys.operatorsExport)
+          ? 'operators'
+          : null,
       stats: const <StatSpec>[
         StatSpec(
           AdminStrings.operatorActive,
@@ -83,44 +87,71 @@ class OperatorsPage extends ConsumerWidget {
       onCreate: access.can(PermissionKeys.operatorsCreate)
           ? (context) => InvitationsPage.inviteOwner(context, repository)
           : null,
-      rowActions: canEdit || canApprove
-          ? (record) {
-              final next =
-                  CatalogueLabels.operatorTransitions[record['status']] ??
-                  const <String>[];
-              return <RowAction>[
-                if (canEdit)
-                  RowAction(
-                    AdminStrings.actionEdit,
-                    Icons.edit_outlined,
-                    (context, record) => showResourceForm(
-                      context,
-                      title: l10n.text(AdminStrings.operatorEditTitle),
-                      fields: _fields,
-                      initial: record,
-                      onSubmit: (values) =>
-                          repository.put('operators/${record['id']}', values),
-                    ),
-                  ),
-                if (canApprove && next.isNotEmpty)
-                  RowAction(
-                    AdminStrings.actionChangeStatus,
-                    Icons.verified_outlined,
-                    (context, record) => showStatusForm(
-                      context,
-                      ref,
-                      title: l10n.text(AdminStrings.operatorStatusTitle),
-                      path: 'operators/${record['id']}/status',
-                      options: <String, String>{
-                        for (final status in next)
-                          status: CatalogueLabels.operatorStatuses[status]!,
-                      },
-                      reasonRequired: true,
-                    ),
-                  ),
-              ];
-            }
-          : null,
+      rowActions: (record) {
+        final next =
+            CatalogueLabels.operatorTransitions[record['status']] ??
+            const <String>[];
+        return <RowAction>[
+          viewAction(
+            repository: repository,
+            path: 'operators',
+            titleOf: operatorNameOf,
+            linesOf: (l10n, r) => <DetailLine>[
+              DetailLine(
+                AdminStrings.fieldCompanyName,
+                '${r['companyName'] ?? ''}',
+              ),
+              DetailLine(
+                AdminStrings.fieldDisplayName,
+                '${r['displayName'] ?? ''}',
+              ),
+              DetailLine(
+                AdminStrings.fieldStatus,
+                optionLabel(
+                  l10n,
+                  CatalogueLabels.operatorStatuses,
+                  r['status'],
+                ),
+              ),
+            ],
+          ),
+          if (canEdit)
+            RowAction(
+              AdminStrings.actionEdit,
+              Icons.edit_outlined,
+              (context, record) => showResourceForm(
+                context,
+                title: l10n.text(AdminStrings.operatorEditTitle),
+                fields: _fields,
+                initial: record,
+                onSubmit: (values) =>
+                    repository.put('operators/${record['id']}', values),
+              ),
+            ),
+          if (canApprove && next.isNotEmpty)
+            RowAction(
+              AdminStrings.actionChangeStatus,
+              Icons.verified_outlined,
+              (context, record) => showStatusForm(
+                context,
+                ref,
+                title: l10n.text(AdminStrings.operatorStatusTitle),
+                path: 'operators/${record['id']}/status',
+                options: <String, String>{
+                  for (final status in next)
+                    status: CatalogueLabels.operatorStatuses[status]!,
+                },
+                reasonRequired: true,
+              ),
+            ),
+          if (canDelete)
+            deleteAction(
+              repository: repository,
+              path: 'operators',
+              nameOf: operatorNameOf,
+            ),
+        ];
+      },
     );
   }
 }

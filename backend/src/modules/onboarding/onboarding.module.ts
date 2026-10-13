@@ -1,4 +1,7 @@
 import { ClientKycController, ClientKycService } from './client_kyc';
+import { CatalogueSharedModule } from '../catalogue-shared/catalogue_shared_manage';
+import { InvitationsExportController } from './invitations_admin_manage';
+import { SubmissionsExportController } from './kyc_admin_manage';
 import {
   KYC_CONFIGURATION_MODEL,
   kycConfigurationMongoSchema,
@@ -20,6 +23,8 @@ import { OperatorsModule } from '../operators/operators.module';
 import { RbacModule } from '../rbac/rbac.module';
 import { UsersModule } from '../users/users.module';
 import { InvitationsController } from './controllers/invitations.controller';
+import { InvitationsManageController } from './invitations_admin_manage';
+import { InvitationsManageService } from './invitations_admin_manage.service';
 import { SubmissionsController } from './controllers/submissions.controller';
 import { InvitationRepository } from './repositories/invitation.repository';
 import { SubmissionRepository } from './repositories/submission.repository';
@@ -43,7 +48,7 @@ import { SubmissionsService } from './services/submissions.service';
  * per bus, platform review, approval or rejection with reasons (documentation/client-onboarding.md).
  */
 @Module({
-  imports: [
+  imports: [CatalogueSharedModule, 
     MongooseModule.forFeature([
       { name: KYC_CONFIGURATION_MODEL, schema: kycConfigurationMongoSchema },
       { name: DOCUMENT_TYPE_MODEL, schema: documentTypeSchema },
@@ -61,7 +66,12 @@ import { SubmissionsService } from './services/submissions.service';
     FilesModule,
     EmailModule,
   ],
-  controllers: [InvitationsController, SubmissionsController, ClientKycController],
+  controllers: [InvitationsExportController, SubmissionsExportController, 
+    InvitationsController,
+    InvitationsManageController,
+    SubmissionsController,
+    ClientKycController,
+  ],
   providers: [
     ClientKycService,
     InvitationRepository,
@@ -71,6 +81,7 @@ import { SubmissionsService } from './services/submissions.service';
     SubmissionsService,
     SubmissionReviewService,
     InvitationsService,
+    InvitationsManageService,
   ],
 })
 export class OnboardingModule {}
