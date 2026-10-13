@@ -38,7 +38,9 @@ class BusTypesPage extends ConsumerWidget {
 
     return ResourcePage(
       path: 'bus-types',
-      exportName: 'bus-types',
+      exportPath: access.can(PermissionKeys.catalogueExport)
+          ? 'bus-types'
+          : null,
       stats: const <StatSpec>[
         StatSpec(
           AdminStrings.statusActive,

@@ -552,6 +552,26 @@ abstract final class AdminStrings {
   static const invFieldExpires = 'invFieldExpires';
   static const invSearch = 'invSearch';
   static const invSaved = 'invSaved';
+  static const listExportCsv = 'listExportCsv';
+  static const listExportExcel = 'listExportExcel';
+  static const impsWhatCities = 'impsWhatCities';
+  static const impsWhatPlaces = 'impsWhatPlaces';
+  static const impsTitle = 'impsTitle';
+  static const impsIntro = 'impsIntro';
+  static const impsTemplateCsv = 'impsTemplateCsv';
+  static const impsTemplateExcel = 'impsTemplateExcel';
+  static const impsChoose = 'impsChoose';
+  static const impsChecking = 'impsChecking';
+  static const impsReady = 'impsReady';
+  static const impsProblems = 'impsProblems';
+  static const impsRowLine = 'impsRowLine';
+  static const impsIgnored = 'impsIgnored';
+  static const impsImport = 'impsImport';
+  static const impsSaving = 'impsSaving';
+  static const impsDone = 'impsDone';
+  static const impsNothingReady = 'impsNothingReady';
+  static const impsClose = 'impsClose';
+  static const listExportReady = 'listExportReady';
   static const Set<String> all = <String>{
     appName,
     signInTitle,
@@ -1187,5 +1207,25 @@ abstract final class AdminStrings {
     invFieldExpires,
     invSearch,
     invSaved,
+    listExportCsv,
+    listExportExcel,
+    impsWhatCities,
+    impsWhatPlaces,
+    impsTitle,
+    impsIntro,
+    impsTemplateCsv,
+    impsTemplateExcel,
+    impsChoose,
+    impsChecking,
+    impsReady,
+    impsProblems,
+    impsRowLine,
+    impsIgnored,
+    impsImport,
+    impsSaving,
+    impsDone,
+    impsNothingReady,
+    impsClose,
+    listExportReady,
   };
 }

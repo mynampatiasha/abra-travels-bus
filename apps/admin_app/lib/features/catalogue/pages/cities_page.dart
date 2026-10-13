@@ -8,10 +8,10 @@ import '../../../app/providers.dart';
 import '../../../l10n/admin_strings.dart';
 import '../catalogue_repository.dart';
 import '../widgets/catalogue_common.dart';
-import '../widgets/import_dialog.dart';
 import '../widgets/record_actions.dart';
 import '../widgets/resource_form.dart';
 import '../widgets/resource_page.dart';
+import '../widgets/server_import_dialog.dart';
 
 /// Cities: the platform catalogue customers choose from.
 class CitiesPage extends ConsumerWidget {
@@ -37,7 +37,7 @@ class CitiesPage extends ConsumerWidget {
 
     return ResourcePage(
       path: 'cities',
-      exportName: 'cities',
+      exportPath: access.can(PermissionKeys.catalogueExport) ? 'cities' : null,
       stats: const <StatSpec>[
         StatSpec(
           AdminStrings.statusActive,
@@ -52,21 +52,8 @@ class CitiesPage extends ConsumerWidget {
           AbraColors.navySecondary,
         ),
       ],
-      importSpec: canManage
-          ? ImportSpec(
-              name: 'cities',
-              fields: _fields,
-              sampleRow: const <String>[
-                'Bengaluru',
-                'Karnataka',
-                'IN',
-                'yes',
-                '10',
-                '12.9716',
-                '77.5946',
-              ],
-              save: (values) => repository.post('cities', values),
-            )
+      serverImport: canManage
+          ? const ServerImport('cities', AdminStrings.impsWhatCities)
           : null,
       filters: const <FilterSpec>[
         SearchFilter('query', AdminStrings.listSearch),

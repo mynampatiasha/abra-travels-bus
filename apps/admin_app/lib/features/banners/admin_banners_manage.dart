@@ -334,7 +334,7 @@ class AdminBannersPage extends ConsumerWidget {
 
     return ResourcePage(
       path: bannersPath,
-      exportName: canExport ? 'banners' : null,
+      exportPath: canExport ? bannersPath : null,
       stats: const <StatSpec>[
         StatSpec(
           AdminStrings.bnStatusPublished,

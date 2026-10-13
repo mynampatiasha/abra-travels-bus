@@ -62,7 +62,9 @@ class DocumentTypesPage extends ConsumerWidget {
 
     return ResourcePage(
       path: 'document-types',
-      exportName: 'document-types',
+      exportPath: access.can(PermissionKeys.documentsExport)
+          ? 'document-types'
+          : null,
       stats: const <StatSpec>[
         StatSpec(
           AdminStrings.statusActive,

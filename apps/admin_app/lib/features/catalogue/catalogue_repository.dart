@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meta/meta.dart';
 import 'package:shared_core/shared_core.dart';
@@ -112,6 +115,35 @@ class CatalogueRepository {
     _fullPath(path),
     body: body,
   )).decodeObject((json) => json);
+
+  /// A file the server makes: an export or an import template
+  /// (`GET <path>?<query>`), as bytes.
+  Future<Uint8List> download(
+    String path, [
+    Map<String, String> query = const <String, String>{},
+  ]) {
+    final address = _fullPath(path);
+    return _client.getBytes(
+      query.isEmpty ? address : '$address?${Uri(queryParameters: query).query}',
+    );
+  }
+
+  /// Sends a file (`POST <path>?<query>`, field `file`) and returns the answer.
+  Future<JsonMap> upload(
+    String path,
+    Map<String, String> query, {
+    required Uint8List bytes,
+    required String filename,
+  }) async {
+    final address = _fullPath(path);
+    final response = await _client.postForm(
+      query.isEmpty ? address : '$address?${Uri(queryParameters: query).query}',
+      FormData.fromMap(<String, Object?>{
+        'file': MultipartFile.fromBytes(bytes, filename: filename),
+      }),
+    );
+    return response.decodeObject((json) => json);
+  }
 
   Future<JsonMap> patch(String path, JsonMap body) async =>
       (await _client.patch(

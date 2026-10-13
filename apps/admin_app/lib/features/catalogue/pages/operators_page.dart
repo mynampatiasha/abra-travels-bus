@@ -34,7 +34,9 @@ class OperatorsPage extends ConsumerWidget {
 
     return ResourcePage(
       path: 'operators',
-      exportName: 'operators',
+      exportPath: access.can(PermissionKeys.operatorsExport)
+          ? 'operators'
+          : null,
       stats: const <StatSpec>[
         StatSpec(
           AdminStrings.operatorActive,

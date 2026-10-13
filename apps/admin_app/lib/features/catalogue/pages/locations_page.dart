@@ -11,6 +11,7 @@ import '../widgets/catalogue_common.dart';
 import '../widgets/record_actions.dart';
 import '../widgets/resource_form.dart';
 import '../widgets/resource_page.dart';
+import '../widgets/server_import_dialog.dart';
 
 /// Boarding and dropping locations. Shared locations belong to the platform
 /// and are read-only for operator staff; an operator's own locations are
@@ -57,7 +58,12 @@ class LocationsPage extends ConsumerWidget {
 
     return ResourcePage(
       path: 'locations',
-      exportName: 'locations',
+      exportPath: access.can(PermissionKeys.catalogueExport)
+          ? 'locations'
+          : null,
+      serverImport: access.can(PermissionKeys.catalogueManage)
+          ? const ServerImport('locations', AdminStrings.impsWhatPlaces)
+          : null,
       filters: <FilterSpec>[
         if (canListCities)
           const RefFilter(

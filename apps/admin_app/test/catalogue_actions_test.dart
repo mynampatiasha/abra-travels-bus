@@ -1,3 +1,4 @@
+import 'package:admin_app/core/browser_files.dart' as browser;
 import 'package:admin_app/routing/admin_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -123,6 +124,45 @@ void main() {
       expect(find.byTooltip('View'), findsOneWidget);
       expect(find.byTooltip('Edit'), findsOneWidget);
       expect(find.byTooltip('Delete'), findsNothing);
+    });
+  });
+
+  group('Export', () {
+    testWidgets('Excel file asks the server for an xlsx and saves it', (
+      tester,
+    ) async {
+      final backend = FakeBackend(Persona.superAdmin)
+        ..add('bus-types', busType());
+      backend.overrides['GET catalogue/bus-types/export?format=xlsx'] = (_) =>
+          const FakeResponse(200, 'xlsx bytes');
+      final app = await openAs(tester, backend, AdminRoutes.busTypes);
+
+      await tapOn(tester, find.widgetWithText(AbraButton, 'Export'));
+      await tapOn(tester, find.text('Excel file'));
+
+      expect(
+        app.requestsTo('catalogue/bus-types/export?format=xlsx', 'GET'),
+        hasLength(1),
+      );
+      expect(browser.lastDownloadName, startsWith('bus-types-'));
+      expect(browser.lastDownloadName, endsWith('.xlsx'));
+    });
+
+    testWidgets('a refusal from the server is shown, not a file', (
+      tester,
+    ) async {
+      final backend = FakeBackend(Persona.superAdmin)
+        ..add('bus-types', busType());
+      backend.overrides['GET catalogue/bus-types/export?format=csv'] = (_) =>
+          FakeResponse.error(403, 'PERMISSION_DENIED');
+      browser.lastDownloadName = null;
+      await openAs(tester, backend, AdminRoutes.busTypes);
+
+      await tapOn(tester, find.widgetWithText(AbraButton, 'Export'));
+      await tapOn(tester, find.text('CSV file'));
+
+      expect(browser.lastDownloadName, isNull);
+      expect(find.byType(SnackBar), findsOneWidget);
     });
   });
 

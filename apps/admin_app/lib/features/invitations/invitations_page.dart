@@ -159,7 +159,9 @@ class InvitationsPage extends ConsumerWidget {
 
     return ResourcePage(
       path: 'onboarding/invitations',
-      exportName: 'invitations',
+      exportPath: access.can(PermissionKeys.operatorsExport)
+          ? 'onboarding/invitations'
+          : null,
       stats: const <StatSpec>[
         StatSpec(
           AdminStrings.invStatusPending,
