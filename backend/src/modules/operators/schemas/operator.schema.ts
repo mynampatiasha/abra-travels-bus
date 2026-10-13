@@ -26,6 +26,8 @@ export interface Operator {
   status: OperatorStatus;
   /** Why and when Abra suspended it; kept after reactivation as the last suspension. */
   suspension?: OperatorSuspension;
+  /** What the operator says about itself on the Company profile page. */
+  contact?: OperatorContact;
   /** How Abra pays this operator; AUTO_SPLIT needs a verified bank account. */
   payoutMode?: PayoutMode;
   /** Where payouts go. Added by the operator; changing it sends it back to PENDING. */
@@ -44,6 +46,14 @@ export interface OperatorSuspension {
   by: Types.ObjectId;
   reactivatedAt?: Date;
   reactivatedBy?: Types.ObjectId;
+}
+
+export interface OperatorContact {
+  ownerName?: string;
+  email?: string;
+  supportPhone?: string;
+  city?: string;
+  gstin?: string;
 }
 
 export interface OperatorBank {
@@ -68,6 +78,18 @@ export const operatorSchema = new Schema<Operator>(
     companyName: { type: String, required: true, trim: true, maxlength: 160 },
     displayName: { type: String, trim: true, maxlength: 80 },
     status: { type: String, enum: OPERATOR_STATUSES, required: true, default: 'PENDING_APPROVAL' },
+    contact: {
+      type: new Schema<OperatorContact>(
+        {
+          ownerName: { type: String, trim: true, maxlength: 120 },
+          email: { type: String, trim: true, lowercase: true, maxlength: 254 },
+          supportPhone: { type: String, trim: true, maxlength: 20 },
+          city: { type: String, trim: true, maxlength: 80 },
+          gstin: { type: String, trim: true, uppercase: true, maxlength: 15 },
+        },
+        { _id: false },
+      ),
+    },
     payoutMode: { type: String, enum: PAYOUT_MODES, required: true, default: 'MANUAL' },
     bank: {
       type: new Schema<OperatorBank>(

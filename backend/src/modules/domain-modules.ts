@@ -12,6 +12,7 @@ import { OnboardingModule } from './onboarding/onboarding.module';
 import { AmenitiesModule } from './amenities/amenities_admin_manage';
 import { CatalogueSharedModule } from './catalogue-shared/catalogue_shared_manage';
 import { PlaceRequestsModule } from './locations/places_admin_manage';
+import { CompanyClientModule } from './onboarding/kyc_client_manage';
 import { OperatorsAdminModule } from './operators/operators_admin_manage';
 import { SeatLayoutsModule } from './seat-layouts/seat-layouts.module';
 import { CitiesModule } from './cities/cities.module';
@@ -130,4 +131,5 @@ export const DOMAIN_MODULES = [
   AmenitiesModule,
   PlaceRequestsModule,
   OperatorsAdminModule,
+  CompanyClientModule,
 ];

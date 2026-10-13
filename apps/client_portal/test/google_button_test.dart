@@ -59,7 +59,11 @@ void main() {
       findsOneWidget,
     );
     expect(
-      tester.widget<OutlinedButton>(find.byWidgetPredicate((widget) => widget is OutlinedButton)).onPressed,
+      tester
+          .widget<OutlinedButton>(
+            find.byWidgetPredicate((widget) => widget is OutlinedButton),
+          )
+          .onPressed,
       isNotNull,
     );
   });

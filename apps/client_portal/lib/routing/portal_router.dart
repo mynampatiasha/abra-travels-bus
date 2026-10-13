@@ -8,6 +8,7 @@ import '../features/accept_invite/accept_invite_screen.dart';
 import '../features/auth/access_gate_screen.dart';
 import '../features/auth/sign_in_screen.dart';
 import '../features/dashboard/dashboard_page.dart';
+import '../features/kyc/kyc_client_manage_screen.dart';
 import '../features/notifications/client_notification_screen.dart';
 import '../features/onboarding/client_kyc_based_screen.dart';
 import '../features/onboarding/onboarding_page.dart';
@@ -75,6 +76,18 @@ final portalRouterProvider = Provider<GoRouter>((ref) {
                     PortalRoutes.places,
                   )
                   ? const PlacesClientManageScreen()
+                  : const AbraStateView(kind: AbraStateKind.forbidden),
+            ),
+          ),
+          GoRoute(
+            path: PortalRoutes.company,
+            builder: (context, state) => Consumer(
+              builder: (context, ref, _) =>
+                  PortalRouteGuard.canOpen(
+                    ref.watch(accessProvider),
+                    PortalRoutes.company,
+                  )
+                  ? const KycClientManageScreen()
                   : const AbraStateView(kind: AbraStateKind.forbidden),
             ),
           ),

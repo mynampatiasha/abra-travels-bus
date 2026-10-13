@@ -52,6 +52,8 @@ export const AUDIT_ACTIONS = [
   'operator.payout-mode-changed',
   'operator.bank-verified',
   'operator.bank-failed',
+  'operator.profile-updated',
+  'operator.bank-changed',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

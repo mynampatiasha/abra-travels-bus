@@ -193,7 +193,27 @@ class FakeBackend {
 
   Persona persona;
   bool isOnline = true;
-  JsonMap clientKyc = <String, Object?>{'approved': true, 'companyName': 'Alpha Lines', 'companyStatus': 'ACTIVE', 'status': 'APPROVED', 'submissionId': 'company-file', 'kyc': null};
+  JsonMap clientKyc = <String, Object?>{
+    'approved': true,
+    'companyName': 'Alpha Lines',
+    'companyStatus': 'ACTIVE',
+    'status': 'APPROVED',
+    'submissionId': 'company-file',
+    'kyc': null,
+  };
+
+  /// The company profile page (`client/company`), as the backend holds it.
+  JsonMap company = <String, Object?>{
+    'id': operatorAId,
+    'companyName': 'Alpha Lines',
+    'ownerName': 'Omar Operator',
+    'email': 'omar@alpha.test',
+    'supportPhone': '',
+    'city': '',
+    'gstin': '',
+    'payoutMode': 'MANUAL',
+    'bank': null,
+  };
   bool requireMfa = false;
   bool mfaEnrollmentRequired = false;
   String validPassword = 'correct-horse-battery';
@@ -373,11 +393,31 @@ class FakeBackend {
         ? asJsonMap(request.body! as Map)
         : <String, Object?>{};
     switch (path) {
+      case 'client/company':
+        if (method == 'PUT') company = <String, Object?>{...company, ...body};
+        return FakeResponse.ok(company);
+      case 'client/company/bank':
+        final number = '${body['accountNumber']}';
+        company = <String, Object?>{
+          ...company,
+          'payoutMode': 'MANUAL',
+          'bank': <String, Object?>{
+            'holderName': body['holderName'],
+            'accountLast4': number.substring(number.length - 4),
+            'ifsc': body['ifsc'],
+            'status': 'PENDING',
+            'note': null,
+          },
+        };
+        return FakeResponse.ok(company);
       case 'client/kyc':
         if (method == 'PUT') {
           clientKyc['companyName'] = body['companyName'];
           final kyc = clientKyc['kyc'];
-          if (kyc is Map) { kyc['answers'] = body['answers']; kyc['introductionAcceptedAt'] = '2026-10-09T00:00:00Z'; }
+          if (kyc is Map) {
+            kyc['answers'] = body['answers'];
+            kyc['introductionAcceptedAt'] = '2026-10-09T00:00:00Z';
+          }
         }
         return FakeResponse.ok(clientKyc);
       case 'onboarding/invitations/inspect':

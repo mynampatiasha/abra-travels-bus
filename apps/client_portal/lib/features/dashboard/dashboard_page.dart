@@ -133,20 +133,31 @@ class _Dashboard extends ConsumerWidget {
             ),
           ],
         ),
-        if (ref
-            .watch(accessProvider)
-            .can(PermissionKeys.routesRead)) ...<Widget>[
-          const SizedBox(height: AbraSpacing.md),
-          Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: AbraButton(
-              label: 'Places',
-              icon: Icons.place_outlined,
-              variant: AbraButtonVariant.secondary,
-              onPressed: () => context.go(PortalRoutes.places),
+        if (ref.watch(accessProvider).can(PermissionKeys.routesRead) ||
+            ref.watch(accessProvider).can(PermissionKeys.operatorsRead))
+          Padding(
+            padding: const EdgeInsets.only(top: AbraSpacing.md),
+            child: Wrap(
+              spacing: AbraSpacing.sm,
+              runSpacing: AbraSpacing.sm,
+              children: <Widget>[
+                if (ref.watch(accessProvider).can(PermissionKeys.routesRead))
+                  AbraButton(
+                    label: 'Places',
+                    icon: Icons.place_outlined,
+                    variant: AbraButtonVariant.secondary,
+                    onPressed: () => context.go(PortalRoutes.places),
+                  ),
+                if (ref.watch(accessProvider).can(PermissionKeys.operatorsRead))
+                  AbraButton(
+                    label: 'Company profile',
+                    icon: Icons.business_outlined,
+                    variant: AbraButtonVariant.secondary,
+                    onPressed: () => context.go(PortalRoutes.company),
+                  ),
+              ],
             ),
           ),
-        ],
         const SizedBox(height: AbraSpacing.lg),
         AbraCard(
           child: Padding(

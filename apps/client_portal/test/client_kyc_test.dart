@@ -99,7 +99,10 @@ void main() {
     (tester) async {
       await TestPortal(FakeBackend(Persona.owner)).pump(tester);
       expect(find.byTooltip('Continue with Google'), findsOneWidget);
-      expect(find.widgetWithText(TextField, 'Email or phone number'), findsOneWidget);
+      expect(
+        find.widgetWithText(TextField, 'Email or phone number'),
+        findsOneWidget,
+      );
       expect(find.widgetWithText(TextField, 'Password'), findsOneWidget);
     },
   );

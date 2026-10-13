@@ -14,6 +14,9 @@ abstract final class PortalRoutes {
   /// Places: ask Abra for a place, see the places the operator can use.
   static const places = '/places';
 
+  /// Company profile and bank account.
+  static const company = '/company';
+
   /// The documents of the company or of one bus.
   static String onboardingOf(String id) => '$onboardingPrefix$id';
 
@@ -26,9 +29,10 @@ abstract final class PortalRoutes {
   static const Map<String, String> requiredPermission = <String, String>{
     dashboard: PermissionKeys.documentsView,
     places: PermissionKeys.routesRead,
+    company: PermissionKeys.operatorsRead,
   };
 
-  static const List<String> sections = <String>[dashboard, places];
+  static const List<String> sections = <String>[dashboard, places, company];
 
   /// The section a path belongs to: a document file belongs to the dashboard.
   static String sectionOf(String path) =>
