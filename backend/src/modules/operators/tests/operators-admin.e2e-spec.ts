@@ -49,6 +49,17 @@ interface OperatorDetail extends OperatorRow {
     at: string;
     reactivatedAt: string | null;
   } | null;
+  payout: {
+    mode: string;
+    bank: {
+      holderName: string;
+      accountLast4: string;
+      ifsc: string;
+      status: string;
+      method: string | null;
+      note: string | null;
+    } | null;
+  };
 }
 
 function binary(response: Response, callback: (error: Error | null, body: Buffer) => void) {

@@ -49,6 +49,9 @@ export const AUDIT_ACTIONS = [
   'operator.suspended',
   'operator.reactivated',
   'operator.messaged',
+  'operator.payout-mode-changed',
+  'operator.bank-verified',
+  'operator.bank-failed',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

@@ -1099,6 +1099,75 @@ void main() {
       expect(sent.single.body, containsPair('reason', 'Forged documents'));
     });
 
+    testWidgets('the payout tab shows the bank account and staff change the '
+        'mode and record the bank check', (tester) async {
+      final app = TestAdmin.signedIn(seeded(Persona.superAdmin));
+      app.backend.of('operators').first.addAll({
+        'payout': {
+          'mode': 'MANUAL',
+          'bank': {
+            'holderName': 'Alpha Lines Pvt Ltd',
+            'accountLast4': '9012',
+            'ifsc': 'HDFC0001234',
+            'status': 'PENDING',
+          },
+        },
+      });
+      await app.pump(tester);
+      await open(tester, AdminRoutes.operatorOf(operatorAId));
+      await tapOn(tester, find.text('Commission and payout'));
+      await settle(tester);
+
+      expect(find.text('Manual settlement'), findsOneWidget);
+      expect(find.text('XXXXXX9012'), findsOneWidget);
+      expect(find.text('HDFC0001234'), findsOneWidget);
+      expect(find.text('Pending'), findsOneWidget);
+
+      await tapOn(tester, find.text('Change payout mode'));
+      await settle(tester);
+      await tapOn(tester, find.byType(DropdownButtonFormField<String>));
+      await settle(tester);
+      await tapOn(
+        tester,
+        find.text('Automatic - Razorpay Route splits each payment').last,
+      );
+      await settle(tester);
+      await tapOn(tester, find.widgetWithText(FilledButton, 'Save'));
+      await settle(tester);
+      final mode = app.requestsTo('admin/operators/$operatorAId/payout-mode');
+      expect(mode.single.body, {'mode': 'AUTO_SPLIT'});
+
+      await tapOn(tester, find.text('Verify bank'));
+      await settle(tester);
+      await tester.enterText(
+        find.widgetWithText(
+          TextFormField,
+          'What you checked (a failure reason is shown to the owner)',
+        ),
+        'Matches the cancelled cheque',
+      );
+      await tapOn(tester, find.widgetWithText(FilledButton, 'Record result'));
+      await settle(tester);
+      final check = app.requestsTo('admin/operators/$operatorAId/bank/verify');
+      expect(check.single.body, {
+        'outcome': 'VERIFIED',
+        'note': 'Matches the cancelled cheque',
+      });
+    });
+
+    testWidgets('with no bank account the payout tab says so and offers no '
+        'verification', (tester) async {
+      final app = TestAdmin.signedIn(seeded(Persona.superAdmin));
+      await app.pump(tester);
+      await open(tester, AdminRoutes.operatorOf(operatorAId));
+      await tapOn(tester, find.text('Commission and payout'));
+      await settle(tester);
+
+      expect(find.textContaining('No bank account added yet'), findsOneWidget);
+      expect(find.text('Verify bank'), findsNothing);
+      expect(find.text('Change payout mode'), findsOneWidget);
+    });
+
     testWidgets('a person without approval rights gets no suspend or message '
         'buttons', (tester) async {
       final app = TestAdmin.signedIn(seeded(Persona.operatorAdmin));

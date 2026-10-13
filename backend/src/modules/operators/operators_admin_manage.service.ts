@@ -22,7 +22,13 @@ import { RoleRepository } from '../rbac/repositories/role.repository';
 import { AuditedChangeRunner } from '../rbac/services/audited-change.service';
 import { UsersService } from '../users/services/users.service';
 import { type AdminOperatorListQueryDto } from './operators_admin_manage';
-import { OPERATOR_MODEL, type Operator, type OperatorStatus } from './schemas/operator.schema';
+import {
+  type BankStatus,
+  OPERATOR_MODEL,
+  type Operator,
+  type OperatorStatus,
+  type PayoutMode,
+} from './schemas/operator.schema';
 
 // ===== 1. TYPES =====
 
@@ -77,6 +83,21 @@ export interface AdminOperatorDetail extends AdminOperatorRow {
     at: string;
     reactivatedAt: string | null;
   } | null;
+  /** The Commission and payout tab: how Abra pays this operator and where. */
+  payout: {
+    mode: PayoutMode;
+    /** Never the full account number: the last four digits only. */
+    bank: {
+      holderName: string;
+      accountLast4: string;
+      ifsc: string;
+      bankName: string | null;
+      status: BankStatus;
+      method: string | null;
+      note: string | null;
+      verifiedAt: string | null;
+    } | null;
+  };
 }
 
 // ===== 2. READING =====
@@ -146,6 +167,21 @@ export class OperatorsAdminService {
             reactivatedAt: suspension.reactivatedAt?.toISOString() ?? null,
           }
         : null,
+      payout: {
+        mode: operator.payoutMode ?? 'MANUAL',
+        bank: operator.bank
+          ? {
+              holderName: operator.bank.holderName,
+              accountLast4: operator.bank.accountLast4,
+              ifsc: operator.bank.ifsc,
+              bankName: operator.bank.bankName ?? null,
+              status: operator.bank.status,
+              method: operator.bank.method ?? null,
+              note: operator.bank.verificationNote ?? null,
+              verifiedAt: operator.bank.verifiedAt?.toISOString() ?? null,
+            }
+          : null,
+      },
     };
   }
 
@@ -304,6 +340,123 @@ export class OperatorsAdminService {
     return { sent: true };
   }
 
+  /**
+   * Chooses how Abra pays the operator. AUTO_SPLIT needs a verified bank account; settlements
+   * already drafted keep the mode they were drafted with. Audited.
+   */
+  async setPayoutMode(
+    actor: AuthenticatedUserActor,
+    id: string,
+    mode: PayoutMode,
+    client: ClientRequestInfo,
+  ): Promise<AdminOperatorDetail> {
+    assertStaff(actor);
+    const before = await this.require(id);
+    const current = before.payoutMode ?? 'MANUAL';
+    if (current === mode) return this.detail(id);
+    if (mode === 'AUTO_SPLIT' && before.bank?.status !== 'VERIFIED') {
+      throw new ApiException(
+        'INVALID_STATE_TRANSITION',
+        'The bank account must be verified before payouts can be automatic.',
+      );
+    }
+    await this.changes.run<StoredOperator>({
+      actor,
+      client,
+      action: 'operator.payout-mode-changed',
+      entityType: 'operator',
+      before: { payoutMode: current },
+      operatorIdOf: (record) => record._id,
+      apply: async (session) => {
+        const saved = await this.model<Operator>(OPERATOR_MODEL)
+          .findOneAndUpdate(
+            {
+              _id: before._id,
+              ...(mode === 'AUTO_SPLIT' ? { 'bank.status': 'VERIFIED' } : {}),
+            },
+            { $set: { payoutMode: mode } },
+            { returnDocument: 'after', session },
+          )
+          .lean<StoredOperator>()
+          .exec();
+        if (!saved) throw changedMeanwhile();
+        return saved;
+      },
+      describe: (record) => ({ payoutMode: record.payoutMode }),
+    });
+    return this.detail(id);
+  }
+
+  /**
+   * Records the result of checking the operator's bank account by hand (the penny-drop check
+   * arrives with the payment gateway). A pass lets payouts be automatic; a fail tells the owner
+   * why, and an operator paid automatically goes back to manual payouts. Audited.
+   */
+  async verifyBank(
+    actor: AuthenticatedUserActor,
+    id: string,
+    input: { outcome: 'VERIFIED' | 'FAILED'; note: string },
+    client: ClientRequestInfo,
+  ): Promise<AdminOperatorDetail> {
+    assertStaff(actor);
+    const before = await this.require(id);
+    if (!before.bank) {
+      throw new ApiException(
+        'INVALID_STATE_TRANSITION',
+        'This operator has not added a bank account.',
+      );
+    }
+    if (before.bank.status === 'VERIFIED') {
+      throw new ApiException('INVALID_STATE_TRANSITION', 'This bank account is already verified.');
+    }
+    const previous = before.bank.status;
+    const failed = input.outcome === 'FAILED';
+    const droppedToManual = failed && before.payoutMode === 'AUTO_SPLIT';
+    await this.changes.run<StoredOperator>({
+      actor,
+      client,
+      action: failed ? 'operator.bank-failed' : 'operator.bank-verified',
+      entityType: 'operator',
+      before: { bankStatus: previous, payoutMode: before.payoutMode ?? 'MANUAL' },
+      reason: input.note,
+      operatorIdOf: (record) => record._id,
+      apply: async (session) => {
+        const saved = await this.model<Operator>(OPERATOR_MODEL)
+          .findOneAndUpdate(
+            { _id: before._id, 'bank.status': previous },
+            {
+              $set: {
+                'bank.status': input.outcome,
+                'bank.method': 'MANUAL',
+                'bank.verificationNote': input.note,
+                'bank.verifiedAt': new Date(),
+                'bank.verifiedBy': new Types.ObjectId(actor.userId),
+                ...(droppedToManual ? { payoutMode: 'MANUAL' } : {}),
+              },
+            },
+            { returnDocument: 'after', session },
+          )
+          .lean<StoredOperator>()
+          .exec();
+        if (!saved) throw changedMeanwhile();
+        await this.outbox.record(
+          eventOf(
+            failed ? 'operator.bank-failed' : 'operator.bank-verified',
+            saved,
+            failed ? { reason: input.note } : {},
+          ),
+          session,
+        );
+        return saved;
+      },
+      describe: (record) => ({
+        bankStatus: record.bank?.status,
+        payoutMode: record.payoutMode,
+      }),
+    });
+    return this.detail(id);
+  }
+
   private async changeStatus(
     actor: AuthenticatedUserActor,
     client: ClientRequestInfo,
@@ -375,8 +528,20 @@ function assertStaff(actor: AuthenticatedUserActor): void {
   }
 }
 
+function changedMeanwhile(): ApiException {
+  return new ApiException(
+    'INVALID_STATE_TRANSITION',
+    'Someone changed this operator a moment ago. Reload the page.',
+  );
+}
+
 function eventOf(
-  type: 'operator.suspended' | 'operator.reactivated' | 'operator.messaged',
+  type:
+    | 'operator.suspended'
+    | 'operator.reactivated'
+    | 'operator.messaged'
+    | 'operator.bank-verified'
+    | 'operator.bank-failed',
   operator: StoredOperator,
   payload: Record<string, unknown>,
 ): { type: string; aggregateType: string; aggregateId: string; payload: Record<string, unknown> } {
@@ -414,6 +579,16 @@ export function operatorNotice(
       };
     case 'operator.messaged':
       return { title: 'Message from Abra Travels', body: text(payload.message) };
+    case 'operator.bank-verified':
+      return {
+        title: 'Your bank account is verified',
+        body: 'Abra can now pay out to this account.',
+      };
+    case 'operator.bank-failed':
+      return {
+        title: 'Your bank account could not be verified',
+        body: `Please check the details and add the account again. Reason: ${text(payload.reason)}`.trim(),
+      };
     default:
       return undefined;
   }
@@ -423,7 +598,13 @@ export function operatorNotice(
 @Injectable()
 export class OperatorNotificationHandler implements DomainEventHandler, OnModuleInit {
   readonly name = 'operator-notifications';
-  readonly eventTypes = ['operator.suspended', 'operator.reactivated', 'operator.messaged'];
+  readonly eventTypes = [
+    'operator.suspended',
+    'operator.reactivated',
+    'operator.messaged',
+    'operator.bank-verified',
+    'operator.bank-failed',
+  ];
   private readonly logger = new Logger(OperatorNotificationHandler.name);
 
   constructor(

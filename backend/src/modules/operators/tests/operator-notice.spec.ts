@@ -43,6 +43,15 @@ describe('operatorNotice', () => {
     });
   });
 
+  it('tells the owner a bank account passed or failed, with the reason', () => {
+    expect(operatorNotice(event('operator.bank-verified', {}))?.title).toBe(
+      'Your bank account is verified',
+    );
+    const failed = operatorNotice(event('operator.bank-failed', { reason: 'Name does not match' }));
+    expect(failed?.title).toBe('Your bank account could not be verified');
+    expect(failed?.body).toContain('Name does not match');
+  });
+
   it('says nothing for another event', () => {
     expect(operatorNotice(event('operator.something-else', {}))).toBeUndefined();
   });

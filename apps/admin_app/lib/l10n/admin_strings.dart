@@ -676,6 +676,36 @@ abstract final class AdminStrings {
   static const opJoinedColumn = 'opJoinedColumn';
   static const opSearch = 'opSearch';
   static const opInvite = 'opInvite';
+  static const opdPayoutMode = 'opdPayoutMode';
+  static const opdPayoutAuto = 'opdPayoutAuto';
+  static const opdPayoutManual = 'opdPayoutManual';
+  static const opdBankHolder = 'opdBankHolder';
+  static const opdBankAccount = 'opdBankAccount';
+  static const opdBankIfsc = 'opdBankIfsc';
+  static const opdBankStatus = 'opdBankStatus';
+  static const opdBankCheck = 'opdBankCheck';
+  static const opdBankNone = 'opdBankNone';
+  static const opdBankPending = 'opdBankPending';
+  static const opdBankVerifiedLabel = 'opdBankVerifiedLabel';
+  static const opdBankFailedLabel = 'opdBankFailedLabel';
+  static const opdChangeMode = 'opdChangeMode';
+  static const opdModeTitle = 'opdModeTitle';
+  static const opdModeField = 'opdModeField';
+  static const opdModeAutoOption = 'opdModeAutoOption';
+  static const opdModeManualOption = 'opdModeManualOption';
+  static const opdModeHint = 'opdModeHint';
+  static const opdModeSaved = 'opdModeSaved';
+  static const opdModeSave = 'opdModeSave';
+  static const opdVerifyBank = 'opdVerifyBank';
+  static const opdVerifyTitle = 'opdVerifyTitle';
+  static const opdVerifyOutcome = 'opdVerifyOutcome';
+  static const opdVerifyPassed = 'opdVerifyPassed';
+  static const opdVerifyFailedOption = 'opdVerifyFailedOption';
+  static const opdVerifyNote = 'opdVerifyNote';
+  static const opdVerifyHint = 'opdVerifyHint';
+  static const opdVerifySave = 'opdVerifySave';
+  static const opdBankMarkedVerified = 'opdBankMarkedVerified';
+  static const opdBankMarkedFailed = 'opdBankMarkedFailed';
   static const Set<String> all = <String>{
     appName,
     signInTitle,
@@ -1435,5 +1465,35 @@ abstract final class AdminStrings {
     opJoinedColumn,
     opSearch,
     opInvite,
+    opdPayoutMode,
+    opdPayoutAuto,
+    opdPayoutManual,
+    opdBankHolder,
+    opdBankAccount,
+    opdBankIfsc,
+    opdBankStatus,
+    opdBankCheck,
+    opdBankNone,
+    opdBankPending,
+    opdBankVerifiedLabel,
+    opdBankFailedLabel,
+    opdChangeMode,
+    opdModeTitle,
+    opdModeField,
+    opdModeAutoOption,
+    opdModeManualOption,
+    opdModeHint,
+    opdModeSaved,
+    opdModeSave,
+    opdVerifyBank,
+    opdVerifyTitle,
+    opdVerifyOutcome,
+    opdVerifyPassed,
+    opdVerifyFailedOption,
+    opdVerifyNote,
+    opdVerifyHint,
+    opdVerifySave,
+    opdBankMarkedVerified,
+    opdBankMarkedFailed,
   };
 }

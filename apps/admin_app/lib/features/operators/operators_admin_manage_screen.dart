@@ -686,19 +686,106 @@ class _BusesTab extends ConsumerWidget {
 }
 
 class _PayoutTab extends StatelessWidget {
-  const _PayoutTab();
+  const _PayoutTab({
+    required this.operator,
+    required this.canEdit,
+    required this.onChangeMode,
+    required this.onVerifyBank,
+  });
+
+  final JsonMap operator;
+  final bool canEdit;
+  final VoidCallback onChangeMode;
+  final VoidCallback onVerifyBank;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AbraLocalizations.of(context);
     final isWide = AbraBreakpoint.of(context) != AbraBreakpoint.phone;
+    final payoutInfo = operator['payout'] is Map
+        ? asJsonMap(operator['payout'] as Map)
+        : const <String, Object?>{};
+    final bank = payoutInfo['bank'] is Map
+        ? asJsonMap(payoutInfo['bank'] as Map)
+        : null;
+    final auto = payoutInfo['mode'] == 'AUTO_SPLIT';
+    final bankStatus = '${bank?['status']}';
+    final note = '${bank?['note'] ?? ''}';
     final commission = _Card(
       title: l10n.text(AdminStrings.opdCommissionTitle),
       children: <Widget>[_Empty(l10n.text(AdminStrings.opdCommissionEmpty))],
     );
     final payout = _Card(
       title: l10n.text(AdminStrings.opdPayoutTitle),
-      children: <Widget>[_Empty(l10n.text(AdminStrings.opdPayoutEmpty))],
+      children: <Widget>[
+        _Line(
+          l10n.text(AdminStrings.opdPayoutMode),
+          l10n.text(
+            auto ? AdminStrings.opdPayoutAuto : AdminStrings.opdPayoutManual,
+          ),
+        ),
+        if (bank == null)
+          _Empty(l10n.text(AdminStrings.opdBankNone))
+        else ...<Widget>[
+          _Line(l10n.text(AdminStrings.opdBankHolder), '${bank['holderName']}'),
+          _Line(
+            l10n.text(AdminStrings.opdBankAccount),
+            'XXXXXX${bank['accountLast4']}',
+          ),
+          _Line(l10n.text(AdminStrings.opdBankIfsc), '${bank['ifsc']}'),
+          Padding(
+            padding: const EdgeInsets.only(bottom: AbraSpacing.sm),
+            child: Row(
+              children: <Widget>[
+                SizedBox(
+                  width: 130,
+                  child: Text(
+                    l10n.text(AdminStrings.opdBankStatus),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AbraColors.textSecondary,
+                    ),
+                  ),
+                ),
+                AbraStatusBadge(
+                  label: l10n.text(switch (bankStatus) {
+                    'VERIFIED' => AdminStrings.opdBankVerifiedLabel,
+                    'FAILED' => AdminStrings.opdBankFailedLabel,
+                    _ => AdminStrings.opdBankPending,
+                  }),
+                  tone: switch (bankStatus) {
+                    'VERIFIED' => AbraStatusTone.success,
+                    'FAILED' => AbraStatusTone.danger,
+                    _ => AbraStatusTone.warning,
+                  },
+                ),
+              ],
+            ),
+          ),
+          if (note.isNotEmpty)
+            _Line(l10n.text(AdminStrings.opdBankCheck), note),
+        ],
+        if (canEdit)
+          Padding(
+            padding: const EdgeInsets.only(top: AbraSpacing.sm),
+            child: Wrap(
+              spacing: AbraSpacing.sm,
+              runSpacing: AbraSpacing.sm,
+              children: <Widget>[
+                OutlinedButton.icon(
+                  onPressed: onChangeMode,
+                  icon: const Icon(Icons.account_balance_wallet_outlined),
+                  label: Text(l10n.text(AdminStrings.opdChangeMode)),
+                ),
+                if (bank != null && bankStatus != 'VERIFIED')
+                  OutlinedButton.icon(
+                    onPressed: onVerifyBank,
+                    icon: const Icon(Icons.shield_outlined),
+                    label: Text(l10n.text(AdminStrings.opdVerifyBank)),
+                  ),
+              ],
+            ),
+          ),
+      ],
     );
     return isWide
         ? Row(
@@ -716,6 +803,276 @@ class _PayoutTab extends StatelessWidget {
               payout,
             ],
           );
+  }
+}
+
+// ===== 3b. PAYOUT WINDOWS =====
+
+/// "Change payout mode": automatic (needs a verified bank account) or manual.
+/// Returns true when it was saved.
+Future<bool> showPayoutModeDialog(
+  BuildContext context,
+  JsonMap operator,
+) async {
+  final done = await showDialog<bool>(
+    context: context,
+    builder: (context) => _PayoutModeDialog(operator: operator),
+  );
+  return done ?? false;
+}
+
+class _PayoutModeDialog extends ConsumerStatefulWidget {
+  const _PayoutModeDialog({required this.operator});
+
+  final JsonMap operator;
+
+  @override
+  ConsumerState<_PayoutModeDialog> createState() => _PayoutModeDialogState();
+}
+
+class _PayoutModeDialogState extends ConsumerState<_PayoutModeDialog> {
+  late String _mode =
+      (widget.operator['payout'] is Map
+              ? asJsonMap(widget.operator['payout'] as Map)['mode']
+              : null)
+          as String? ??
+      'MANUAL';
+  var _saving = false;
+  String? _failure;
+
+  Future<void> _submit() async {
+    final l10n = AbraLocalizations.of(context);
+    setState(() {
+      _saving = true;
+      _failure = null;
+    });
+    try {
+      await ref.read(catalogueRepositoryProvider).put(
+        'admin/operators/${widget.operator['id']}/payout-mode',
+        <String, Object?>{'mode': _mode},
+      );
+      if (mounted) Navigator.of(context).pop(true);
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _failure = failureText(l10n, error);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AbraLocalizations.of(context);
+    return AlertDialog(
+      title: Text(
+        l10n.text(AdminStrings.opdModeTitle, <String, Object?>{
+          'name': _nameOf(widget.operator),
+        }),
+      ),
+      content: SizedBox(
+        width: 480,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            if (_failure != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AbraSpacing.md),
+                child: Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    _failure!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
+              ),
+            DropdownButtonFormField<String>(
+              initialValue: _mode,
+              isExpanded: true,
+              decoration: InputDecoration(
+                labelText: l10n.text(AdminStrings.opdModeField),
+              ),
+              items: <DropdownMenuItem<String>>[
+                DropdownMenuItem<String>(
+                  value: 'AUTO_SPLIT',
+                  child: Text(l10n.text(AdminStrings.opdModeAutoOption)),
+                ),
+                DropdownMenuItem<String>(
+                  value: 'MANUAL',
+                  child: Text(l10n.text(AdminStrings.opdModeManualOption)),
+                ),
+              ],
+              onChanged: _saving
+                  ? null
+                  : (value) => setState(() => _mode = value ?? _mode),
+            ),
+            const SizedBox(height: AbraSpacing.md),
+            Text(
+              l10n.text(AdminStrings.opdModeHint),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AbraColors.textSecondary),
+            ),
+          ],
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: _saving ? null : () => Navigator.of(context).pop(false),
+          child: Text(l10n.text(AbraStrings.commonCancel)),
+        ),
+        FilledButton(
+          onPressed: _saving ? null : _submit,
+          child: Text(l10n.text(AdminStrings.opdModeSave)),
+        ),
+      ],
+    );
+  }
+}
+
+/// "Verify bank": records the result of checking the account by hand.
+/// Returns 'VERIFIED' or 'FAILED' when saved, null when closed.
+Future<String?> showVerifyBankDialog(BuildContext context, JsonMap operator) =>
+    showDialog<String>(
+      context: context,
+      builder: (context) => _VerifyBankDialog(operator: operator),
+    );
+
+class _VerifyBankDialog extends ConsumerStatefulWidget {
+  const _VerifyBankDialog({required this.operator});
+
+  final JsonMap operator;
+
+  @override
+  ConsumerState<_VerifyBankDialog> createState() => _VerifyBankDialogState();
+}
+
+class _VerifyBankDialogState extends ConsumerState<_VerifyBankDialog> {
+  final _note = TextEditingController();
+  var _outcome = 'VERIFIED';
+  var _showError = false;
+  var _saving = false;
+  String? _failure;
+
+  @override
+  void dispose() {
+    _note.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final l10n = AbraLocalizations.of(context);
+    final note = _note.text.trim();
+    if (note.length < 3) {
+      setState(() => _showError = true);
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _failure = null;
+    });
+    try {
+      await ref.read(catalogueRepositoryProvider).post(
+        'admin/operators/${widget.operator['id']}/bank/verify',
+        <String, Object?>{'outcome': _outcome, 'note': note},
+      );
+      if (mounted) Navigator.of(context).pop(_outcome);
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _failure = failureText(l10n, error);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AbraLocalizations.of(context);
+    return AlertDialog(
+      title: Text(
+        l10n.text(AdminStrings.opdVerifyTitle, <String, Object?>{
+          'name': _nameOf(widget.operator),
+        }),
+      ),
+      content: SizedBox(
+        width: 480,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Text(
+                l10n.text(AdminStrings.opdVerifyHint),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AbraColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: AbraSpacing.md),
+              if (_failure != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AbraSpacing.md),
+                  child: Semantics(
+                    liveRegion: true,
+                    child: Text(
+                      _failure!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                  ),
+                ),
+              DropdownButtonFormField<String>(
+                initialValue: _outcome,
+                isExpanded: true,
+                decoration: InputDecoration(
+                  labelText: l10n.text(AdminStrings.opdVerifyOutcome),
+                ),
+                items: <DropdownMenuItem<String>>[
+                  DropdownMenuItem<String>(
+                    value: 'VERIFIED',
+                    child: Text(l10n.text(AdminStrings.opdVerifyPassed)),
+                  ),
+                  DropdownMenuItem<String>(
+                    value: 'FAILED',
+                    child: Text(l10n.text(AdminStrings.opdVerifyFailedOption)),
+                  ),
+                ],
+                onChanged: _saving
+                    ? null
+                    : (value) => setState(() => _outcome = value ?? _outcome),
+              ),
+              const SizedBox(height: AbraSpacing.md),
+              TextFormField(
+                controller: _note,
+                enabled: !_saving,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  labelText: l10n.text(AdminStrings.opdVerifyNote),
+                  errorText: _showError && _note.text.trim().length < 3
+                      ? l10n.text(AdminStrings.formRequired)
+                      : null,
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: _saving ? null : () => Navigator.of(context).pop(),
+          child: Text(l10n.text(AbraStrings.commonCancel)),
+        ),
+        FilledButton(
+          onPressed: _saving ? null : _submit,
+          child: Text(l10n.text(AdminStrings.opdVerifySave)),
+        ),
+      ],
+    );
   }
 }
 
@@ -846,6 +1203,34 @@ class _OperatorBodyState extends ConsumerState<_OperatorBody> {
     }
   }
 
+  Future<void> _changeMode() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final saved = await showPayoutModeDialog(context, widget.operator);
+    if (!saved || !mounted) return;
+    _reload();
+    messenger.showSnackBar(
+      SnackBar(content: Text(_l10n.text(AdminStrings.opdModeSaved))),
+    );
+  }
+
+  Future<void> _verifyBank() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final outcome = await showVerifyBankDialog(context, widget.operator);
+    if (outcome == null || !mounted) return;
+    _reload();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          _l10n.text(
+            outcome == 'VERIFIED'
+                ? AdminStrings.opdBankMarkedVerified
+                : AdminStrings.opdBankMarkedFailed,
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _message() async {
     final messenger = ScaffoldMessenger.of(context);
     final sent = await showMessageOwnerDialog(context, widget.id);
@@ -965,7 +1350,12 @@ class _OperatorBodyState extends ConsumerState<_OperatorBody> {
         switch (_tab) {
           OperatorTab.overview => _OverviewTab(operator: operator),
           OperatorTab.buses => _BusesTab(id: widget.id),
-          OperatorTab.payout => const _PayoutTab(),
+          OperatorTab.payout => _PayoutTab(
+            operator: operator,
+            canEdit: canDecide,
+            onChangeMode: _changeMode,
+            onVerifyBank: _verifyBank,
+          ),
           OperatorTab.bookings => _Empty(
             l10n.text(AdminStrings.opdBookingsEmpty),
           ),

@@ -1,4 +1,15 @@
-import { Body, Controller, Get, HttpCode, Module, Param, Post, Query, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Module,
+  Param,
+  Post,
+  Put,
+  Query,
+  Req,
+} from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { type Request } from 'express';
 import { z } from 'zod';
@@ -28,7 +39,7 @@ import {
   OperatorNotificationHandler,
   OperatorsAdminService,
 } from './operators_admin_manage.service';
-import { OPERATOR_STATUSES } from './schemas/operator.schema';
+import { OPERATOR_STATUSES, PAYOUT_MODES } from './schemas/operator.schema';
 import { type OperatorView, OperatorsService } from './services/operators.service';
 
 /** The operators list as a file. */
@@ -84,6 +95,16 @@ export class ReactivateOperatorDto extends createZodDto(
 
 export class MessageOwnerDto extends createZodDto(
   z.object({ message: z.string().trim().min(2).max(1000) }),
+) {}
+
+export class PayoutModeDto extends createZodDto(z.object({ mode: z.enum(PAYOUT_MODES) })) {}
+
+export class VerifyBankDto extends createZodDto(
+  z.object({
+    outcome: z.enum(['VERIFIED', 'FAILED']),
+    /** What was checked; for a failure this is the reason the owner reads. */
+    note: changeReason,
+  }),
 ) {}
 
 /** The admin Operators list as a file (the columns of the demo). */
@@ -205,6 +226,48 @@ export class OperatorsAdminController {
     @Req() request: Request,
   ): Promise<{ sent: true }> {
     return this.operators.messageOwner(actor, params.id, body.message, clientRequestInfo(request));
+  }
+
+  // operators.approve; audit operator.payout-mode-changed
+  @Put(':id/payout-mode')
+  @RequirePermission('operators.approve')
+  @ZodApiBody(PayoutModeDto)
+  @ApiOperation({
+    summary: 'Set how the operator is paid',
+    description:
+      'Requires operators.approve (platform staff). AUTO_SPLIT (Razorpay Route splits each ' +
+      'payment) needs a verified bank account; MANUAL (Abra settles each cycle) does not. ' +
+      'Settlements already drafted keep their mode. Audited.',
+  })
+  payoutMode(
+    @CurrentActor() actor: AuthenticatedUserActor,
+    @Param() params: AdminOperatorIdParamDto,
+    @Body() body: PayoutModeDto,
+    @Req() request: Request,
+  ): Promise<AdminOperatorDetail> {
+    return this.operators.setPayoutMode(actor, params.id, body.mode, clientRequestInfo(request));
+  }
+
+  // operators.approve; audit operator.bank-verified / operator.bank-failed; event tells the owner
+  @Post(':id/bank/verify')
+  @HttpCode(200)
+  @RequirePermission('operators.approve')
+  @ZodApiBody(VerifyBankDto)
+  @ApiOperation({
+    summary: 'Record the check of the operator bank account',
+    description:
+      'Requires operators.approve (platform staff). A person checks the account against the ' +
+      'bank proof and records VERIFIED or FAILED with a note (the penny-drop check arrives ' +
+      'with the payment gateway). Refused when no account was added or it is already verified. ' +
+      'A failure tells the owner why and returns an automatic operator to manual payouts. Audited.',
+  })
+  verifyBank(
+    @CurrentActor() actor: AuthenticatedUserActor,
+    @Param() params: AdminOperatorIdParamDto,
+    @Body() body: VerifyBankDto,
+    @Req() request: Request,
+  ): Promise<AdminOperatorDetail> {
+    return this.operators.verifyBank(actor, params.id, body, clientRequestInfo(request));
   }
 }
 
