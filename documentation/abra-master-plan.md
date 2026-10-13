@@ -277,7 +277,7 @@ Each phase builds backend and screens together for the features inside it, so ev
 | 2b | Admin screens for step 2; banner fields as in the demo (colour style, shown to, operator link, higher order first) | Done 13 Oct | 2001676, edbd087 |
 | 3 | Server-side export of eight lists (CSV and Excel); import with template and dry run for cities and places | Done 13 Oct | 39e7ee4, fe15857 |
 | 4 | Amenities as a managed list; Amenities card on the Bus types page | Done 13 Oct | 6f75cb4, 222913e |
-| 5 | Place requests (backend, admin tab, client page) | Not started |  |
+| 5 | Place requests (backend, admin tab, client page); admin page "Cities and places" with tabs Places, Cities, Operator requests; client Places page | Done 13 Oct | b15e122 |
 | 6 | Operator detail with tabs; suspend with reason and proof; message owner | Not started |  |
 | 7 | Payout mode and bank details with verification | Not started |  |
 | 8 | Company profile and bank details (client portal) | Not started |  |
@@ -303,7 +303,7 @@ Each phase builds backend and screens together for the features inside it, so ev
 - An import saves the rows that are right and leaves out the others, saying why for each row; a file is never refused as a whole because of one bad row (only for missing columns, size or row count).
 - Export and import controllers are registered before a module's other controllers, because those have `GET <list>/:id` routes.
 - Tests that need the database run on the local Docker MongoDB in a throw-away database whose name ends in `_test`, not on Atlas.
-- Step 5 (reported 13 October 2026, not merged yet): on the Operator requests tab, View uses `GET /admin/place-requests/:id`, not `/catalogue/locations/:id` as Appendix D.9 shows. Place requests are never deleted; they are kept for the record.
+- Step 5: on the Operator requests tab, View uses `GET /admin/place-requests/:id`, not `/catalogue/locations/:id` as Appendix D.9 shows. Place requests are never deleted; they are kept for the record.
 
 **Where the real screens still differ from the demo**
 
@@ -685,10 +685,10 @@ Kept up to date as work is done. Last updated 13 October 2026. After merging Pha
 | 1 | Step 2: banner duplicate, archive and reorder; banners shown higher-order first with audience and colour style as in the demo; read-one routes; invitation edit and expiry | Built and tested (branch) | banners end-to-end 28 pass; invitations suite passes; admin app 144 tests pass | banners_admin_manage*, invitations_admin_manage* |
 | 1 | Step 3: server-side export (CSV and Excel) for 8 lists; import with template and dry run for cities and places | Built and tested (branch) | export 15 and import 10 end-to-end tests pass | catalogue-shared; exceljs added to package.json |
 | 1 | Step 4: amenities (add, switch on and off, bus forms use the active ones) | Built and tested (branch) | amenities 8 end-to-end tests pass; admin app 150 tests pass | modules/amenities/amenities_admin_manage*.ts |
+| 1 | Step 5: place requests (operator asks, admin approves or rejects with a reason; approve creates a shared place; audited; notifications); places gain "Used for" and "Trips using it"; admin "Cities and places" page with three tabs; client Places page | Built and tested; merged into main | locations, catalogue-shared, amenities, trips, routes end-to-end pass; admin app 154 and client portal 20 tests pass; checked in a browser on a local database except the client "Request a place" window | modules/locations/places_admin_manage*.ts, places_client_manage*.ts |
 
 Still to do in Phase 1:
 
-- Step 5: place requests (operator asks, admin approves or rejects) and the three-tab Places page
 - Step 6: operator detail page with tabs; suspend with reason and proof; reactivate; message the owner
 - Step 7: payout mode and bank details with verification
 - Step 8: company profile and bank page in the client portal
@@ -4015,8 +4015,8 @@ Status was last updated 13 October 2026 (Part 9 has the detail). One row per fea
 | Phase 0 | AI assistant (Groq) | apps/customer_app/lib/features/assistant/assistant_customer_screen.dart | backend/src/modules/chatbot/assistant_customer.ts | backend/src/modules/chatbot/assistant_customer.service.ts | Backend built (Phase 0): same endpoint |
 | Phase 0 | AI assistant (Groq) | apps/driver_app/lib/features/assistant/assistant_driver_screen.dart | backend/src/modules/chatbot/assistant_driver.ts | backend/src/modules/chatbot/assistant_driver.service.ts | Backend built (Phase 0): same endpoint |
 | Phase 0 | Seed data and live updates | (backend only) | backend/src/modules/database/seed_core.ts | backend/src/modules/database/seed_core.service.ts | Built (Phase 0): npm run seed:demo (local databases only); live channel built (`realtime/live_updates_channel*`) |
-| Phase 1 | Cities and places | apps/admin_app/lib/features/places/places_admin_manage_screen.dart | backend/src/modules/cities/places_admin_manage.ts | backend/src/modules/cities/places_admin_manage.service.ts | In progress (13 Oct 2026): view, delete and Undo, export, import done; tabs, filters and operator requests not yet. Files in use: `modules/cities/cities_admin_manage*`, `modules/locations/places_admin_manage*`, screens in `features/catalogue/pages/` |
-| Phase 1 | Cities and places | apps/client_portal/lib/features/places/places_client_manage_screen.dart | backend/src/modules/cities/places_client_manage.ts | backend/src/modules/cities/places_client_manage.service.ts | Not started (step 5) |
+| Phase 1 | Cities and places | apps/admin_app/lib/features/places/places_admin_manage_screen.dart | backend/src/modules/cities/places_admin_manage.ts | backend/src/modules/cities/places_admin_manage.service.ts | Done 13 Oct 2026 (step 5): tabs Places, Cities, Operator requests; approve and reject; view, delete and Undo, export, import. Files in use: `modules/locations/places_admin_manage*`, `modules/cities/cities_admin_manage*`, screen `features/places/places_admin_manage_screen.dart` |
+| Phase 1 | Cities and places | apps/client_portal/lib/features/places/places_client_manage_screen.dart | backend/src/modules/cities/places_client_manage.ts | backend/src/modules/cities/places_client_manage.service.ts | Done 13 Oct 2026 (step 5): request a place, your requests, places you can use, export. Files: `modules/locations/places_client_manage*`, screen `features/places/places_client_manage_screen.dart` |
 | Phase 1 | Cities and places | apps/customer_app/lib/features/places/places_customer_screen.dart | backend/src/modules/cities/places_customer.ts | backend/src/modules/cities/places_customer.service.ts | Not started |
 | Phase 1 | Bus types and amenities | apps/admin_app/lib/features/bus_types/bus_types_admin_manage_screen.dart | backend/src/modules/bus-types/bus_types_admin_manage.ts | backend/src/modules/bus-types/bus_types_admin_manage.service.ts | Done 13 Oct 2026: view, delete and Undo, export, amenities. Files in use: `modules/bus-types/bus_types_admin_manage*`, `modules/amenities/amenities_admin_manage*`, screen widget `amenities_card.dart` |
 | Phase 1 | Required documents and KYC questionnaire | apps/admin_app/lib/features/kyc_config/kyc_config_admin_manage_screen.dart | backend/src/modules/document-types/kyc_config_admin_manage.ts | backend/src/modules/document-types/kyc_config_admin_manage.service.ts | In progress (13 Oct 2026): view, delete and Undo, export of documents done; the questionnaire waits for step 10 |

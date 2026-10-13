@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { activeFlag, objectIdString, pagingShape } from '../../../common/pipes/list-query';
 import { createZodDto } from '../../../common/pipes/zod-dto.factory';
+import { PLACE_USES } from '../schemas/location.schema';
 
 const fields = {
   name: z.string().trim().min(2).max(120),
@@ -14,6 +15,7 @@ const fields = {
     .optional(),
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
+  usedFor: z.enum(PLACE_USES).optional(),
 };
 
 export class CreateLocationDto extends createZodDto(
@@ -33,5 +35,12 @@ export class UpdateLocationDto extends createZodDto(
 ) {}
 
 export class LocationListQueryDto extends createZodDto(
-  z.object({ cityId: objectIdString.optional(), active: activeFlag, ...pagingShape }),
+  z.object({
+    cityId: objectIdString.optional(),
+    active: activeFlag,
+    /** Part of the name, address or landmark. */
+    query: z.string().trim().max(100).optional(),
+    usedFor: z.enum(PLACE_USES).optional(),
+    ...pagingShape,
+  }),
 ) {}

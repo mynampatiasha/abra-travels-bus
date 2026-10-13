@@ -3,7 +3,7 @@ import { Types } from 'mongoose';
 import { ApiException } from '../../../common/errors/api-exception';
 import { type ClientRequestInfo } from '../../../common/http/client-request-info';
 import { PaginatedResult } from '../../../common/interceptors/response-envelope.interceptor';
-import { skipOf } from '../../../common/pipes/list-query';
+import { escapeRegExp, skipOf } from '../../../common/pipes/list-query';
 import {
   hasPlatformScope,
   operatorForNewRecord,
@@ -19,7 +19,7 @@ import {
   type UpdateLocationDto,
 } from '../dto/location.dto';
 import { LocationRepository, type StoredLocation } from '../repositories/location.repository';
-import { type Location } from '../schemas/location.schema';
+import { type Location, type PlaceSource, type PlaceUse } from '../schemas/location.schema';
 
 export interface LocationView {
   id: string;
@@ -33,7 +33,11 @@ export interface LocationView {
   contactPhone: string | null;
   latitude: number | null;
   longitude: number | null;
+  usedFor: PlaceUse;
+  source: PlaceSource;
   isActive: boolean;
+  /** Trips whose boarding or dropping points use the place (lists only). */
+  tripsUsing?: number;
 }
 
 export function locationViewOf(location: StoredLocation): LocationView {
@@ -48,6 +52,8 @@ export function locationViewOf(location: StoredLocation): LocationView {
     contactPhone: location.contactPhone ?? null,
     latitude: location.location?.coordinates?.[1] ?? null,
     longitude: location.location?.coordinates?.[0] ?? null,
+    usedFor: location.usedFor ?? 'BOTH',
+    source: location.source ?? (location.operatorId ? 'OPERATOR' : 'ADMIN'),
     isActive: location.isActive,
   };
 }
@@ -71,14 +77,31 @@ export class LocationsService {
   ) {}
 
   async list(query: LocationListQueryDto): Promise<PaginatedResult<LocationView>> {
+    const search = query.query ? new RegExp(escapeRegExp(query.query), 'i') : undefined;
     const { items, total } = await this.locations.findVisible(
       {
         ...(query.cityId ? { cityId: new Types.ObjectId(query.cityId) } : {}),
         ...(query.active === undefined ? {} : { isActive: query.active }),
+        // Places stored before "used for" existed count as BOTH
+        ...(query.usedFor === 'BOTH'
+          ? { usedFor: { $in: ['BOTH', null] } }
+          : query.usedFor
+            ? { usedFor: query.usedFor }
+            : {}),
+        ...(search ? { $or: [{ name: search }, { address: search }, { landmark: search }] } : {}),
       },
       { skip: skipOf(query), limit: query.pageSize },
     );
-    return new PaginatedResult(items.map(locationViewOf), query.page, query.pageSize, total);
+    const trips = await this.locations.tripCounts(items.map((item) => item._id));
+    return new PaginatedResult(
+      items.map((item) => ({
+        ...locationViewOf(item),
+        tripsUsing: trips.get(item._id.toHexString()) ?? 0,
+      })),
+      query.page,
+      query.pageSize,
+      total,
+    );
   }
 
   async get(id: string): Promise<LocationView> {
@@ -91,6 +114,7 @@ export class LocationsService {
     actor: AuthenticatedUserActor,
     input: CreateLocationDto,
     client: ClientRequestInfo,
+    source?: PlaceSource,
   ): Promise<LocationView> {
     // Only platform staff may create a location without an operator (shared by all)
     const operatorId =
@@ -120,6 +144,8 @@ export class LocationsService {
             ...(input.instructions ? { instructions: input.instructions } : {}),
             ...(input.contactPhone ? { contactPhone: input.contactPhone } : {}),
             ...(location ? { location } : {}),
+            usedFor: input.usedFor ?? 'BOTH',
+            source: source ?? (operatorId ? 'OPERATOR' : 'ADMIN'),
             isActive: true,
           },
           { session },

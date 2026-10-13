@@ -159,7 +159,7 @@ describe('Catalogue export e2e', () => {
     const lists: ReadonlyArray<[path: string, header: string]> = [
       [
         '/catalogue/locations/export',
-        'Place,City,Address,Landmark,Instructions,Contact phone,Latitude,Longitude,Added by,Status',
+        'Place,City,Address,Landmark,Used for,Instructions,Contact phone,Latitude,Longitude,Added by,Trips using it,Status',
       ],
       ['/catalogue/bus-types/export', 'Bus type,Key,Air conditioned,Seating,Status'],
       [

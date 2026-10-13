@@ -133,6 +133,20 @@ class _Dashboard extends ConsumerWidget {
             ),
           ],
         ),
+        if (ref
+            .watch(accessProvider)
+            .can(PermissionKeys.routesRead)) ...<Widget>[
+          const SizedBox(height: AbraSpacing.md),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: AbraButton(
+              label: 'Places',
+              icon: Icons.place_outlined,
+              variant: AbraButtonVariant.secondary,
+              onPressed: () => context.go(PortalRoutes.places),
+            ),
+          ),
+        ],
         const SizedBox(height: AbraSpacing.lg),
         AbraCard(
           child: Padding(

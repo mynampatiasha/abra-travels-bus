@@ -22,10 +22,10 @@ export const PHASE1 = [
   ['1', 'Step 2: banner duplicate, archive and reorder; banners shown higher-order first with audience and colour style as in the demo; read-one routes; invitation edit and expiry', 'Built and tested (branch)', 'banners end-to-end 28 pass; invitations suite passes; admin app 144 tests pass', 'banners_admin_manage*, invitations_admin_manage*'],
   ['1', 'Step 3: server-side export (CSV and Excel) for 8 lists; import with template and dry run for cities and places', 'Built and tested (branch)', 'export 15 and import 10 end-to-end tests pass', 'catalogue-shared; exceljs added to package.json'],
   ['1', 'Step 4: amenities (add, switch on and off, bus forms use the active ones)', 'Built and tested (branch)', 'amenities 8 end-to-end tests pass; admin app 150 tests pass', 'modules/amenities/amenities_admin_manage*.ts'],
+  ['1', 'Step 5: place requests (operator asks, admin approves or rejects with a reason; approve creates a shared place; audited; notifications); places gain "Used for" and "Trips using it"; admin "Cities and places" page with three tabs; client Places page', 'Built and tested; merged into main', 'locations, catalogue-shared, amenities, trips, routes end-to-end pass; admin app 154 and client portal 20 tests pass; checked in a browser on a local database except the client "Request a place" window', 'modules/locations/places_admin_manage*.ts, places_client_manage*.ts'],
 ];
 
 export const PHASE1_REMAINING = [
-  'Step 5: place requests (operator asks, admin approves or rejects) and the three-tab Places page',
   'Step 6: operator detail page with tabs; suspend with reason and proof; reactivate; message the owner',
   'Step 7: payout mode and bank details with verification',
   'Step 8: company profile and bank page in the client portal',
@@ -107,7 +107,7 @@ export function phase1Status(d) {
     ['2b', 'Admin screens for step 2; banner fields as in the demo (colour style, shown to, operator link, higher order first)', 'Done 13 Oct', '2001676, edbd087'],
     ['3', 'Server-side export of eight lists (CSV and Excel); import with template and dry run for cities and places', 'Done 13 Oct', '39e7ee4, fe15857'],
     ['4', 'Amenities as a managed list; Amenities card on the Bus types page', 'Done 13 Oct', '6f75cb4, 222913e'],
-    ['5', 'Place requests (backend, admin tab, client page)', 'Not started', ''],
+    ['5', 'Place requests (backend, admin tab, client page); admin page "Cities and places" with tabs Places, Cities, Operator requests; client Places page', 'Done 13 Oct', 'b15e122'],
     ['6', 'Operator detail with tabs; suspend with reason and proof; message owner', 'Not started', ''],
     ['7', 'Payout mode and bank details with verification', 'Not started', ''],
     ['8', 'Company profile and bank details (client portal)', 'Not started', ''],
@@ -133,7 +133,7 @@ export function phase1Status(d) {
     'An import saves the rows that are right and leaves out the others, saying why for each row; a file is never refused as a whole because of one bad row (only for missing columns, size or row count).',
     'Export and import controllers are registered before a module\'s other controllers, because those have `GET <list>/:id` routes.',
     'Tests that need the database run on the local Docker MongoDB in a throw-away database whose name ends in `_test`, not on Atlas.',
-    'Step 5 (reported 13 October 2026, not merged yet): on the Operator requests tab, View uses `GET /admin/place-requests/:id`, not `/catalogue/locations/:id` as Appendix D.9 shows. Place requests are never deleted; they are kept for the record.',
+    'Step 5: on the Operator requests tab, View uses `GET /admin/place-requests/:id`, not `/catalogue/locations/:id` as Appendix D.9 shows. Place requests are never deleted; they are kept for the record.',
   ]);
   d.p('**Where the real screens still differ from the demo**');
   d.ul([
