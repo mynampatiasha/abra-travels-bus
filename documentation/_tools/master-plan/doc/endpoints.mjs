@@ -213,3 +213,34 @@ Object.assign(CLIENT, {
   role_ren_ok: 'PATCH /access-matrix/roles/:roleKey', role_del: 'DELETE /access-matrix/roles/:roleKey',
   perm_set: 'PUT /access-matrix/roles/:roleKey/pages/:pageId | the owner only (phase 8)', perm_all: 'PUT /access-matrix/roles/:roleKey | one level for every page',
 });
+
+// Integration settings: built 2026-10-12 (backend/src/modules/system-settings/integrations_admin_manage*).
+Object.assign(ADMIN, {
+  int_edit: 'UI | opens the integration form (values and write-only secrets)',
+  int_save: 'PUT /settings/integrations/:key | built; key = razorpay, maps, sms, push or assistant (WhatsApp and email keep their own PUT routes, which exist); secrets stored encrypted, never returned; reason required; audit settings.integration.changed',
+  int_test: 'POST /settings/integrations/:key/test-connection | built; asks the provider a harmless question; nothing is sent to a customer; WhatsApp and email have their own test routes (exist)',
+  ai_cfg: 'PUT /settings/integrations/assistant | built; provider, Groq key (secret), model, "may propose actions"; audit',
+  ai_test: 'POST /settings/integrations/assistant/test-connection | built; checks the Groq key and the model name',
+});
+
+// Assistant: built 2026-10-12 (backend/src/modules/chatbot/assistant_chat*). One endpoint serves every app.
+Object.assign(ADMIN, {
+  ai_send: 'POST /assistant/chat | built; the conversation so far + app language; answers only from tools the person\'s role allows; 20 a minute; returns reply, proposals, turn id (streaming is not built yet)',
+  ai_q: 'POST /assistant/chat | built; a suggested question is sent like any other',
+  ai_fb: 'POST /assistant/messages/:turnId/feedback | built; thumbs up or down on one answer',
+  ai_ok: 'POST /assistant/actions/:id/confirm | built; checks the permission again, makes the change once, audit assistant.action.confirmed',
+  ai_no: 'POST /assistant/actions/:id/decline | built; audit assistant.action.declined',
+});
+Object.assign(CLIENT, {
+  cai_send: 'POST /assistant/chat | built; same endpoint as the admin portal; the operator assistant sees only that operator\'s tools',
+  cai_q: 'POST /assistant/chat | built',
+  cai_ok: 'POST /assistant/actions/:id/confirm | built',
+  cai_no: 'POST /assistant/actions/:id/decline | built',
+});
+
+// Feature flags and maintenance: built 2026-10-12 (backend/src/modules/feature-flags/flags_admin_manage*).
+Object.assign(ADMIN, {
+  flag_tog: 'PUT /admin/feature-flags/:key | built; body on and a reason; audit feature-flag.changed; reaches every server within seconds; the public map GET /features follows',
+  maint_tog: 'PUT /admin/maintenance | built; body scopes (global, customer, operator, partner, admin) and a reason; audit maintenance.changed; the guard enforces it on every request',
+  maint_save: 'PUT /admin/maintenance | built; body message, from, to (end must be after start) and a reason; same endpoint as the switches',
+});

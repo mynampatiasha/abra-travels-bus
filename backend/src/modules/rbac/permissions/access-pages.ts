@@ -66,7 +66,7 @@ export const ACCESS_PAGES: readonly AccessPage[] = [
   admin('settlements', 'Settlements', 'settlements'),
   admin('customers', 'Customers', 'customers'),
   admin('tickets', 'Support tickets', 'support'),
-  admin('messages', 'Messages sent', 'notifications'),
+  admin('messages', 'Messages sent', 'messages'),
   admin('content', 'Help centre and pages', 'content'),
   admin('banners', 'Banners', 'banners'),
   admin('offers', 'Offers and coupons', 'offers'),

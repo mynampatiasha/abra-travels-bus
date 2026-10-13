@@ -5,10 +5,11 @@ import * as N from './narrative.mjs';
 import { COLL } from './collections.mjs';
 import { ADMIN_BASE, CLIENT_BASE, GENERIC, ADMIN, CLIENT, PAGE_UI } from './endpoints.mjs';
 import { CUSTOMER, DRIVER, WEBSITE } from './mobile.mjs';
+import { LAST_UPDATED, PHASE0_CHECKLIST, progress, phase1Status, routesAddedSince } from './progress.mjs';
 
 const SP = 'C:/Users/user/AppData/Local/Temp/claude/C--Users-user-Downloads/efdc9bca-7893-4dd5-8808-e375b1102896/scratchpad/';
 const OUT = 'D:/New_project/abra-travels/documentation/';
-const today = '12 October 2026';
+const today = LAST_UPDATED;
 const AA = JSON.parse(fs.readFileSync(SP + 'all_admin.json', 'utf8'));
 const CC = JSON.parse(fs.readFileSync(SP + 'all_client.json', 'utf8'));
 const BR = JSON.parse(fs.readFileSync(SP + 'backend_routes.json', 'utf8'));
@@ -146,8 +147,9 @@ for (const p of PHASES) {
     for (const id of f.driver) { const sc = DRIVER.find(x => x.id === id); if (sc) items.push(`Driver app, **${sc.title}**: ${sc.rows.slice(0, 5).map(r => r[0]).join('; ')}.`); }
     for (const id of f.web) { const sc = WEBSITE.find(x => x.id === id); if (sc) items.push(`Website, **${sc.title}**: ${sc.rows.slice(0, 4).map(r => r[0]).join('; ')}.`); }
   }
+  if (p.n === 1) phase1Status(d);
   d.h(4, `Phase ${p.n}: your test checklist`);
-  d.ul(items.length ? items : ['Backend only: Claude shows you the results of the automatic tests; there is nothing to press.']);
+  d.ul(p.n === 0 ? PHASE0_CHECKLIST : items.length ? items : ['Backend only: Claude shows you the results of the automatic tests; there is nothing to press.']);
 }
 function checkLine(label, pg, app) {
   const facts = screenFacts(pg);
@@ -159,13 +161,15 @@ N.part5(d);
 N.part6(d);
 N.part7(d);
 N.part8(d);
+progress(d);
 
 // ---------- Appendices
 d.pagebreak();
 d.h(2, 'Appendix A. Collections (the database)');
 d.p('The demo store has 62 keys. This table maps each to a real MongoDB collection. Collection names are plural snake case. Every collection also gets `_id`, `createdAt`, `updatedAt`, `createdBy`, and `deletedAt` where soft delete applies. Operator-owned collections carry `operatorId` and every query for an operator user is filtered by it on the server. Money fields are integers in paise. "Demo fields" are the fields of the first record in the demo store, with their types.');
+d.note('**Phase 1 change (13 Oct 2026):** cities, places (`locations`), bus types, required documents, operators, invitations and banners now carry `deletedAt` and `deletedBy` (soft delete; a deleted record is hidden from every query and can be restored). A record without the field counts as not deleted, so nothing had to be migrated.', 'note');
 d.table(['Demo key', 'Collection', 'Backend today', 'Phase', 'Owner module', 'Purpose', 'Relations', 'Indexes'],
-  COLL.map(c => [c.key, '`' + c.real + '`', c.exists ? 'exists' : 'new', String(c.phase), c.mod, c.purpose, c.rel || '-', c.idx || '-']));
+  COLL.map(c => [c.key, '`' + c.real + '`', c.status || (c.exists ? 'exists' : 'new'), String(c.phase), c.mod, c.purpose, c.rel || '-', c.idx || '-']));
 d.h(3, 'A.2 Demo fields per collection');
 d.table(['Demo key', 'Fields (name:type)'], CO.filter(c => !/^_|busList|replies|reviews|series$/.test(c.key)).map(c => [c.key + ' (' + c.count + ' in the demo)', c.fields.join(', ')]));
 
@@ -216,6 +220,29 @@ d.table(['Event', 'Channels', 'Subject', 'Body (in the customer\'s language)'], 
   ['Boarding started', 'WhatsApp and email', 'Boarding now: <PNR>', 'Bus number, reach your boarding point'],
 ], {});
 d.note('The demo stores English text only. The real build uses templates per language (Appendix K lists the 8 languages) and logs every message in the `messages` collection.', 'note');
+
+d.h(3, 'B.3 Live events (the socket channel)');
+d.p('Built 2026-10-12 (`backend/src/modules/realtime/live_updates_channel*`). One socket event, `live`, carries every "something changed" message: `{ type, topic?, data, at }`. `data` holds ids and the new state only, never a record; the app fetches the rest with its own permissions. A client connects with its access token (`auth: { token }`), receives `ready`, or `unauthorized` and a closed socket. It joins by itself: its own room, `staff` (admin portal), `operator:<id>` (operator staff and drivers). It may follow a topic such as `trip:<id>` by sending `subscribe`; each feature registers who may follow its topic. The connection is checked again every minute, so signing out or a change of access ends it within a minute. The bell keeps its own event, `notification`.');
+d.table(['Event type', 'Published to', 'Data', 'When'], [
+  ['sos.raised', 'staff, operator:<id>, user:<driver>', 'id, tripId', 'A customer or a driver raises SOS'],
+  ['sos.updated', 'staff, operator:<id>, user:<who raised it>', 'id, status', 'Acknowledged, escalated, resolved, false alarm'],
+  ['trip.status-changed', 'topic trip:<id>, staff, operator:<id>', 'tripId, status', 'Boarding, started, arrived, cancelled'],
+  ['trip.delayed', 'topic trip:<id>, staff, operator:<id>', 'tripId, minutes', 'A delay is reported'],
+  ['tracking.position', 'topic tracking:<tripId>', 'lat, lng, speed', 'About every 5 seconds while a trip runs (not stored in the socket)'],
+  ['seat.held, seat.released, seat.sold', 'topic trip:<id>', 'seat', 'Another person holds, frees or buys a seat'],
+  ['booking.created, booking.cancelled', 'operator:<id>, staff, user:<customer>', 'bookingId', 'A booking is made or cancelled'],
+  ['refund.updated', 'user:<customer>, staff', 'refundId, status', 'A refund moves on'],
+  ['report.submitted', 'operator:<id>', 'reportId', 'A driver sends a report'],
+  ['report.reviewed', 'user:<driver>', 'reportId, status', 'The owner approves or returns a report'],
+  ['trip-check.warning', 'operator:<id>, staff', 'checkId', 'A trip starts with a warning or an override'],
+  ['settlement.updated', 'operator:<id>, staff', 'settlementId, status', 'A settlement changes state or gets a query'],
+  ['ticket.replied', 'user:<customer>, staff', 'ticketId', 'A support reply arrives'],
+  ['kyc.updated', 'staff, operator:<id>', 'submissionId, status', 'Documents are sent, approved or rejected'],
+], {});
+d.table(['Topic kind', 'Who may follow it (registered by the feature that owns it)'], [
+  ['trip:<id>', 'A customer with a booking on the trip, staff of the operator that runs it, the assigned driver, admins who may read trips'],
+  ['tracking:<tripId>', 'The same people as trip, only while the trip runs'],
+], {});
 
 // Appendix C: access matrix
 d.h(2, 'Appendix C. Access matrix (starting values)');
@@ -321,6 +348,7 @@ d.p('Read from the controllers in `backend/src`: 26 controllers, 113 routes. Eve
 const byMod = {};
 BR.forEach(r => (byMod[r.module] = byMod[r.module] || []).push(r.method + ' ' + r.path));
 d.table(['Module', 'Routes'], Object.entries(byMod).map(([m, l]) => [m, l.join('\n')]));
+routesAddedSince(d);
 d.h(3, 'I.2 Modules with no controller yet');
 const have = new Set(Object.keys(byMod));
 const placeholders = ['analytics', 'api-clients', 'bookings', 'boarding-points', 'chatbot', 'check-in', 'commissions', 'content', 'coupons', 'customers', 'drivers', 'fares', 'feature-flags', 'inventory', 'live-tracking', 'maintenance', 'notification-templates', 'offers', 'operator-staff', 'partner-webhooks', 'partners', 'passengers', 'payments', 'popular-routes', 'reconciliation', 'refunds', 'reports', 'schedules', 'seat-layouts', 'settlements', 'support', 'tickets', 'translations', 'trip-operations', 'users', 'whatsapp', 'women-safety'];
@@ -342,8 +370,24 @@ d.p(`Customer app: ${CUSTOMER.length} screens, ${cnt(CUSTOMER)} mapped elements.
 // Appendix J: file index
 d.pagebreak();
 d.h(2, 'Appendix J. Feature file index (the three files of every feature)');
-d.p('One row per feature and audience. Paths are relative to the repository root. Flutter files live in the app\'s `lib/features/<feature>/` folder; backend files in `backend/src/modules/<first module>/`. A "(backend only)" feature has no screen. Update the Status column as work finishes.');
+d.p('Status was last updated 13 October 2026 (Part 9 has the detail). One row per feature and audience. Paths are relative to the repository root. Flutter files live in the app\'s `lib/features/<feature>/` folder; backend files in `backend/src/modules/<first module>/`. A "(backend only)" feature has no screen. Update the Status column as work finishes.');
 const rowsJ = [];
+// What is built so far. Phase 0 is backend only (screens come later); Phase 1 steps 0 to 4 are merged into main.
+const BUILT_BACKEND = {
+  auth_access: { admin_manage: 'Backend built (Phase 0): access matrix' },
+  messages: { admin_manage: 'Backend built (Phase 0). Files in use: `modules/messages/messages_admin_manage*`', customer: 'Backend built (Phase 0). Files in use: `modules/messages/messages_customer*`' },
+  settings: { admin_manage: 'Backend built (Phase 0): integrations, feature flags, maintenance. Files in use: `system-settings/integrations_admin_manage*`, `feature-flags/flags_admin_manage*`' },
+  assistant: { admin_manage: 'Backend built (Phase 0): one endpoint for every app (`chatbot/assistant_chat*`)', customer: 'Backend built (Phase 0): same endpoint', driver: 'Backend built (Phase 0): same endpoint' },
+  seed: { core: 'Built (Phase 0): npm run seed:demo (local databases only); live channel built (`realtime/live_updates_channel*`)' },
+  places: { admin_manage: 'In progress (13 Oct 2026): view, delete and Undo, export, import done; tabs, filters and operator requests not yet. Files in use: `modules/cities/cities_admin_manage*`, `modules/locations/places_admin_manage*`, screens in `features/catalogue/pages/`', client_manage: 'Not started (step 5)' },
+  bus_types: { admin_manage: 'Done 13 Oct 2026: view, delete and Undo, export, amenities. Files in use: `modules/bus-types/bus_types_admin_manage*`, `modules/amenities/amenities_admin_manage*`, screen widget `amenities_card.dart`' },
+  kyc_config: { admin_manage: 'In progress (13 Oct 2026): view, delete and Undo, export of documents done; the questionnaire waits for step 10' },
+  invitations: { admin_manage: 'Done 13 Oct 2026: view, edit, Expired, search, delete and Undo, export. Files in use: `modules/onboarding/invitations_admin_manage*`, screen `features/invitations/invitations_page.dart`' },
+  kyc: { admin_manage: 'In progress (13 Oct 2026): export done; history in step 9. File in use: `modules/onboarding/kyc_admin_manage.ts`', client_manage: 'Not started (steps 8 and 9)' },
+  operators: { admin_manage: 'In progress (13 Oct 2026): view, delete and Undo, export done; detail page, suspend with proof and payout in steps 6 and 7. File in use: `modules/operators/operators_admin_manage.ts`' },
+  banners: { admin_manage: 'Done 13 Oct 2026 except the Analytics tab: demo columns and form, Save draft and Publish, duplicate, archive, order, delete and Undo, export. Files in use: `modules/admin-banners/banners_admin_manage*`, screen `features/banners/admin_banners_manage.dart`' },
+};
+const fileStatus = (id, audience) => (BUILT_BACKEND[id] && BUILT_BACKEND[id][audience]) || 'Not started';
 const appDir = { admin: 'apps/admin_app', client: 'apps/client_portal', customer: 'apps/customer_app', driver: 'apps/driver_app', public: 'apps/public_website' };
 for (const f of FEATURES) {
   const mod = f.mod.split(',')[0].trim().split(' ')[0];
@@ -353,7 +397,7 @@ for (const f of FEATURES) {
   for (const a of auds) {
     const key = a.startsWith('admin') ? 'admin' : a.startsWith('client') ? 'client' : a;
     const screen = a === 'core' ? '(backend only)' : `${appDir[key]}/lib/features/${f.id}/${f.id}_${a}_${a === 'public' ? 'page.tsx' : 'screen.dart'}`.replace('apps/public_website/lib/features', 'apps/public_website/app');
-    rowsJ.push([`Phase ${f.phase}`, f.name, screen, `backend/src/modules/${mod}/${f.id}_${a}.ts`, `backend/src/modules/${mod}/${f.id}_${a}.service.ts`, 'Not started']);
+    rowsJ.push([`Phase ${f.phase}`, f.name, screen, `backend/src/modules/${mod}/${f.id}_${a}.ts`, `backend/src/modules/${mod}/${f.id}_${a}.service.ts`, fileStatus(f.id, a)]);
   }
 }
 d.table(['Phase', 'Feature', 'Screen file (all widgets inside)', 'Backend file (schema, DTOs, controller, module)', 'Service file', 'Status'], rowsJ);

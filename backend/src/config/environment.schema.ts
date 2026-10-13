@@ -165,8 +165,10 @@ export const environmentShape = z.object({
   MAPS_PROVIDER: z.enum(['google', 'osm', 'development']),
   MAPS_API_KEY: optionalText,
 
-  AI_PROVIDER: z.enum(['anthropic', 'development']),
+  AI_PROVIDER: z.enum(['anthropic', 'groq', 'development']),
   ANTHROPIC_API_KEY: optionalText,
+  /** The assistant runs on Groq (decision of 2026-10-10). An administrator can also save the key in Settings. */
+  GROQ_API_KEY: optionalText,
   AI_MODEL: z.string().min(1),
 
   STORAGE_DRIVER: z.enum(['s3', 'local']),

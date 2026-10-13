@@ -325,6 +325,29 @@ export const NOTIFICATION_PERMISSIONS = definePermissions('notifications', {
   },
 });
 
+export const MESSAGE_PERMISSIONS = definePermissions('messages', {
+  read: {
+    name: 'View messages sent',
+    description:
+      'View the WhatsApp messages and emails the platform sent, with their delivery status.',
+    grantableTo: PLATFORM_ONLY,
+  },
+  resend: {
+    name: 'Resend messages',
+    description: 'Send a WhatsApp message or email again.',
+    grantableTo: PLATFORM_ONLY,
+  },
+});
+
+export const MAINTENANCE_PERMISSIONS = definePermissions('maintenance', {
+  bypass: {
+    name: 'Sign in during maintenance',
+    description: 'Keep using the admin portal while it is in maintenance, so nobody is locked out.',
+    grantableTo: PLATFORM_ONLY,
+    sensitive: true,
+  },
+});
+
 export const SETTING_PERMISSIONS = definePermissions('settings', {
   read: { name: 'View settings', description: 'View system settings.', grantableTo: PLATFORM_ONLY },
   update: {
@@ -363,6 +386,8 @@ export const PERMISSION_CATALOG = {
   ...OPERATOR_PERMISSIONS,
   ...PARTNER_PERMISSIONS,
   ...NOTIFICATION_PERMISSIONS,
+  ...MESSAGE_PERMISSIONS,
+  ...MAINTENANCE_PERMISSIONS,
   ...SETTING_PERMISSIONS,
   ...AUDIT_PERMISSIONS,
   ...BANNER_PERMISSIONS,

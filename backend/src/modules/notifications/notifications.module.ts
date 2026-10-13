@@ -7,7 +7,6 @@ import { AuthenticationModule } from '../authentication/authentication.module';
 import { RbacModule } from '../rbac/rbac.module';
 import { UsersModule } from '../users/users.module';
 import { NotificationsController } from './controllers/notifications.controller';
-import { NotificationGateway } from './realtime/notification.gateway';
 import { RealtimeEmitter } from './realtime/realtime';
 import {
   NotificationRepository,
@@ -47,11 +46,10 @@ import { OnboardingNotificationHandler } from './services/onboarding-notificatio
     NotificationRepository,
     PushTokenRepository,
     RealtimeEmitter,
-    NotificationGateway,
     NotificationDispatcher,
     NotificationsService,
     OnboardingNotificationHandler,
   ],
-  exports: [NotificationDispatcher],
+  exports: [NotificationDispatcher, NotificationsService],
 })
 export class NotificationsModule {}

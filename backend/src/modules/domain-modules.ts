@@ -38,7 +38,9 @@ import { PartnerWebhooksModule } from './partner-webhooks/partner-webhooks.modul
 import { NotificationsModule } from './notifications/notifications.module';
 import { NotificationTemplatesModule } from './notification-templates/notification-templates.module';
 import { WhatsappModule } from './whatsapp/whatsapp.module';
-import { ChatbotModule } from './chatbot/chatbot.module';
+import { MessagesModule } from './messages/messages_admin_manage';
+import { RealtimeModule } from './realtime/live_updates_channel';
+import { ChatbotModule } from './chatbot/assistant_chat';
 import { TripOperationsModule } from './trip-operations/trip-operations.module';
 import { LiveTrackingModule } from './live-tracking/live-tracking.module';
 import { WomenSafetyModule } from './women-safety/women-safety.module';
@@ -51,8 +53,7 @@ import { TranslationsModule } from './translations/translations.module';
 import { AuditLogsModule } from './audit-logs/audit-logs.module';
 import { FilesModule } from './files/files.module';
 import { SystemSettingsModule } from './system-settings/system-settings.module';
-import { FeatureFlagsModule } from './feature-flags/feature-flags.module';
-import { MaintenanceModule } from './maintenance/maintenance.module';
+import { FeatureFlagsModule } from './feature-flags/flags_admin_manage';
 import { ReportsModule } from './reports/reports.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 
@@ -103,6 +104,8 @@ export const DOMAIN_MODULES = [
   NotificationsModule,
   NotificationTemplatesModule,
   WhatsappModule,
+  MessagesModule,
+  RealtimeModule,
   ChatbotModule,
   // Operations
   TripOperationsModule,
@@ -120,7 +123,6 @@ export const DOMAIN_MODULES = [
   FilesModule,
   SystemSettingsModule,
   FeatureFlagsModule,
-  MaintenanceModule,
   ReportsModule,
   AnalyticsModule,
   CatalogueSharedModule,

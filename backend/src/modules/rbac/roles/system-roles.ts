@@ -72,6 +72,8 @@ export const SYSTEM_ROLES: readonly RoleDefinition[] = [
       'buses.read',
       'operators.read',
       'notifications.read',
+      'messages.read',
+      'messages.resend',
     ],
   },
   {

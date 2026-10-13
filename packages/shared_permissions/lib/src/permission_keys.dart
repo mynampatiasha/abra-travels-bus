@@ -69,6 +69,9 @@ abstract final class PermissionKeys {
   static const bannersRead = 'banners.read';
   static const bannersExport = 'banners.export';
   static const rolesManage = 'roles.manage';
+  static const messagesRead = 'messages.read';
+  static const messagesResend = 'messages.resend';
+  static const maintenanceBypass = 'maintenance.bypass';
 
   /// Every key above.
   static const Set<String> all = <String>{
@@ -134,5 +137,8 @@ abstract final class PermissionKeys {
     bannersRead,
     bannersExport,
     rolesManage,
+    messagesRead,
+    messagesResend,
+    maintenanceBypass,
   };
 }

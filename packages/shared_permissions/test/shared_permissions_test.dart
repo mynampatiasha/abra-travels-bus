@@ -347,7 +347,7 @@ void main() {
 
     test('PermissionKeys is exactly the backend catalogue', () {
       final backend = backendPermissionKeys();
-      expect(backend, hasLength(62), reason: 'backend catalogue size changed');
+      expect(backend, hasLength(65), reason: 'backend catalogue size changed');
       expect(
         PermissionKeys.all.difference(backend),
         isEmpty,

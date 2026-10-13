@@ -56,6 +56,23 @@ export async function seedUser(
     operatorIds: scopeType === 'OWN_OPERATOR' && input.operatorId ? [input.operatorId] : [],
   };
 
+  // The authentication guard only lets operator staff use the portal once their company is ACTIVE,
+  // so a test operator needs a real, active company record behind its id.
+  if (userType === 'OPERATOR_STAFF' && input.operatorId) {
+    await context.connection.collection('operators').updateOne(
+      { _id: input.operatorId },
+      {
+        $setOnInsert: {
+          companyName: `Test operator ${input.operatorId.toHexString().slice(-6)}`,
+          status: 'ACTIVE',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      },
+      { upsert: true },
+    );
+  }
+
   const email = uniqueEmail();
   const [created] = await context.users.create([
     {
