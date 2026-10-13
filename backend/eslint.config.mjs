@@ -28,6 +28,28 @@ export default tseslint.config(
     rules: { '@typescript-eslint/no-extraneous-class': 'off' },
   },
   {
+    // The three-file feature rule (documentation/abra-master-plan.md, Part 3): one backend file and
+    // one service file hold a whole feature for one audience, so the ~400-line cap is raised for
+    // those files only. Every other file keeps the cap.
+    files: [
+      '**/*_admin_manage.ts',
+      '**/*_admin_manage.service.ts',
+      '**/*_client_manage.ts',
+      '**/*_client_manage.service.ts',
+      '**/*_customer.ts',
+      '**/*_customer.service.ts',
+      '**/*_driver.ts',
+      '**/*_driver.service.ts',
+      '**/*_public.ts',
+      '**/*_public.service.ts',
+      '**/*_chat.ts',
+      '**/*_chat.service.ts',
+      '**/*_channel.ts',
+      '**/*_channel.service.ts',
+    ],
+    rules: { 'max-lines': ['error', { max: 1200, skipBlankLines: true, skipComments: true }] },
+  },
+  {
     files: ['**/*.spec.ts', '**/*.e2e-spec.ts'],
     rules: { '@typescript-eslint/unbound-method': 'off' },
   },

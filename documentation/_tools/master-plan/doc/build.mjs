@@ -5,10 +5,11 @@ import * as N from './narrative.mjs';
 import { COLL } from './collections.mjs';
 import { ADMIN_BASE, CLIENT_BASE, GENERIC, ADMIN, CLIENT, PAGE_UI } from './endpoints.mjs';
 import { CUSTOMER, DRIVER, WEBSITE } from './mobile.mjs';
+import { LAST_UPDATED, PHASE0_CHECKLIST, progress } from './progress.mjs';
 
 const SP = 'C:/Users/user/AppData/Local/Temp/claude/C--Users-user-Downloads/efdc9bca-7893-4dd5-8808-e375b1102896/scratchpad/';
 const OUT = 'D:/New_project/abra-travels/documentation/';
-const today = '12 October 2026';
+const today = LAST_UPDATED;
 const AA = JSON.parse(fs.readFileSync(SP + 'all_admin.json', 'utf8'));
 const CC = JSON.parse(fs.readFileSync(SP + 'all_client.json', 'utf8'));
 const BR = JSON.parse(fs.readFileSync(SP + 'backend_routes.json', 'utf8'));
@@ -147,7 +148,7 @@ for (const p of PHASES) {
     for (const id of f.web) { const sc = WEBSITE.find(x => x.id === id); if (sc) items.push(`Website, **${sc.title}**: ${sc.rows.slice(0, 4).map(r => r[0]).join('; ')}.`); }
   }
   d.h(4, `Phase ${p.n}: your test checklist`);
-  d.ul(items.length ? items : ['Backend only: Claude shows you the results of the automatic tests; there is nothing to press.']);
+  d.ul(p.n === 0 ? PHASE0_CHECKLIST : items.length ? items : ['Backend only: Claude shows you the results of the automatic tests; there is nothing to press.']);
 }
 function checkLine(label, pg, app) {
   const facts = screenFacts(pg);
@@ -159,6 +160,7 @@ N.part5(d);
 N.part6(d);
 N.part7(d);
 N.part8(d);
+progress(d);
 
 // ---------- Appendices
 d.pagebreak();
@@ -216,6 +218,29 @@ d.table(['Event', 'Channels', 'Subject', 'Body (in the customer\'s language)'], 
   ['Boarding started', 'WhatsApp and email', 'Boarding now: <PNR>', 'Bus number, reach your boarding point'],
 ], {});
 d.note('The demo stores English text only. The real build uses templates per language (Appendix K lists the 8 languages) and logs every message in the `messages` collection.', 'note');
+
+d.h(3, 'B.3 Live events (the socket channel)');
+d.p('Built 2026-10-12 (`backend/src/modules/realtime/live_updates_channel*`). One socket event, `live`, carries every "something changed" message: `{ type, topic?, data, at }`. `data` holds ids and the new state only, never a record; the app fetches the rest with its own permissions. A client connects with its access token (`auth: { token }`), receives `ready`, or `unauthorized` and a closed socket. It joins by itself: its own room, `staff` (admin portal), `operator:<id>` (operator staff and drivers). It may follow a topic such as `trip:<id>` by sending `subscribe`; each feature registers who may follow its topic. The connection is checked again every minute, so signing out or a change of access ends it within a minute. The bell keeps its own event, `notification`.');
+d.table(['Event type', 'Published to', 'Data', 'When'], [
+  ['sos.raised', 'staff, operator:<id>, user:<driver>', 'id, tripId', 'A customer or a driver raises SOS'],
+  ['sos.updated', 'staff, operator:<id>, user:<who raised it>', 'id, status', 'Acknowledged, escalated, resolved, false alarm'],
+  ['trip.status-changed', 'topic trip:<id>, staff, operator:<id>', 'tripId, status', 'Boarding, started, arrived, cancelled'],
+  ['trip.delayed', 'topic trip:<id>, staff, operator:<id>', 'tripId, minutes', 'A delay is reported'],
+  ['tracking.position', 'topic tracking:<tripId>', 'lat, lng, speed', 'About every 5 seconds while a trip runs (not stored in the socket)'],
+  ['seat.held, seat.released, seat.sold', 'topic trip:<id>', 'seat', 'Another person holds, frees or buys a seat'],
+  ['booking.created, booking.cancelled', 'operator:<id>, staff, user:<customer>', 'bookingId', 'A booking is made or cancelled'],
+  ['refund.updated', 'user:<customer>, staff', 'refundId, status', 'A refund moves on'],
+  ['report.submitted', 'operator:<id>', 'reportId', 'A driver sends a report'],
+  ['report.reviewed', 'user:<driver>', 'reportId, status', 'The owner approves or returns a report'],
+  ['trip-check.warning', 'operator:<id>, staff', 'checkId', 'A trip starts with a warning or an override'],
+  ['settlement.updated', 'operator:<id>, staff', 'settlementId, status', 'A settlement changes state or gets a query'],
+  ['ticket.replied', 'user:<customer>, staff', 'ticketId', 'A support reply arrives'],
+  ['kyc.updated', 'staff, operator:<id>', 'submissionId, status', 'Documents are sent, approved or rejected'],
+], {});
+d.table(['Topic kind', 'Who may follow it (registered by the feature that owns it)'], [
+  ['trip:<id>', 'A customer with a booking on the trip, staff of the operator that runs it, the assigned driver, admins who may read trips'],
+  ['tracking:<tripId>', 'The same people as trip, only while the trip runs'],
+], {});
 
 // Appendix C: access matrix
 d.h(2, 'Appendix C. Access matrix (starting values)');
@@ -342,8 +367,24 @@ d.p(`Customer app: ${CUSTOMER.length} screens, ${cnt(CUSTOMER)} mapped elements.
 // Appendix J: file index
 d.pagebreak();
 d.h(2, 'Appendix J. Feature file index (the three files of every feature)');
-d.p('One row per feature and audience. Paths are relative to the repository root. Flutter files live in the app\'s `lib/features/<feature>/` folder; backend files in `backend/src/modules/<first module>/`. A "(backend only)" feature has no screen. Update the Status column as work finishes.');
+d.p('Status was last updated 13 October 2026 (Part 9 has the detail). One row per feature and audience. Paths are relative to the repository root. Flutter files live in the app\'s `lib/features/<feature>/` folder; backend files in `backend/src/modules/<first module>/`. A "(backend only)" feature has no screen. Update the Status column as work finishes.');
 const rowsJ = [];
+// Backend files built so far (screens are built later). Phase 1 items live on the branch and are not merged yet.
+const BUILT_BACKEND = {
+  auth_access: { admin_manage: 'Backend built (Phase 0): access matrix' },
+  messages: { admin_manage: 'Backend built (Phase 0)', customer: 'Backend built (Phase 0)' },
+  settings: { admin_manage: 'Backend built (Phase 0): integrations, feature flags, maintenance' },
+  assistant: { admin_manage: 'Backend built (Phase 0): one endpoint for every app', customer: 'Backend built (Phase 0): same endpoint', driver: 'Backend built (Phase 0): same endpoint' },
+  seed: { core: 'Built (Phase 0): npm run seed:demo; live channel built' },
+  places: { admin_manage: 'Backend built on Phase 1 branch (delete, export, import)' },
+  bus_types: { admin_manage: 'Backend built on Phase 1 branch (amenities, delete, export)' },
+  invitations: { admin_manage: 'Backend built on Phase 1 branch (edit, expiry, delete, export)' },
+  banners: { admin_manage: 'Backend built on Phase 1 branch (duplicate, archive, reorder, export)' },
+  kyc_config: { admin_manage: 'Backend built on Phase 1 branch (read-one, delete, export)' },
+  kyc: { admin_manage: 'Backend built on Phase 1 branch (export)' },
+  operators: { admin_manage: 'Backend built on Phase 1 branch (delete, export)' },
+};
+const fileStatus = (id, audience) => (BUILT_BACKEND[id] && BUILT_BACKEND[id][audience]) || 'Not started';
 const appDir = { admin: 'apps/admin_app', client: 'apps/client_portal', customer: 'apps/customer_app', driver: 'apps/driver_app', public: 'apps/public_website' };
 for (const f of FEATURES) {
   const mod = f.mod.split(',')[0].trim().split(' ')[0];
@@ -353,7 +394,7 @@ for (const f of FEATURES) {
   for (const a of auds) {
     const key = a.startsWith('admin') ? 'admin' : a.startsWith('client') ? 'client' : a;
     const screen = a === 'core' ? '(backend only)' : `${appDir[key]}/lib/features/${f.id}/${f.id}_${a}_${a === 'public' ? 'page.tsx' : 'screen.dart'}`.replace('apps/public_website/lib/features', 'apps/public_website/app');
-    rowsJ.push([`Phase ${f.phase}`, f.name, screen, `backend/src/modules/${mod}/${f.id}_${a}.ts`, `backend/src/modules/${mod}/${f.id}_${a}.service.ts`, 'Not started']);
+    rowsJ.push([`Phase ${f.phase}`, f.name, screen, `backend/src/modules/${mod}/${f.id}_${a}.ts`, `backend/src/modules/${mod}/${f.id}_${a}.service.ts`, fileStatus(f.id, a)]);
   }
 }
 d.table(['Phase', 'Feature', 'Screen file (all widgets inside)', 'Backend file (schema, DTOs, controller, module)', 'Service file', 'Status'], rowsJ);

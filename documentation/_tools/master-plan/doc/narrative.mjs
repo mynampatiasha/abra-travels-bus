@@ -20,7 +20,7 @@ export function part0(d, ctx) {
     ['Apps not started', 'Driver app, public website (Next.js), partner app'],
     ['UI rule (mandatory)', '**The real screens must look and behave exactly like the demo**: same layout, same labels and wording, same order of buttons, same colours and gradient, same dialogs and fields, same empty, error and loading states, same table and list views, same horizontal and vertical layouts. The demo is the design, not a sketch.'],
     ['Design rule', 'Navy and blue palette with the brand gradient, from `documentation/design-system.md`. UI and functionality ship together. Every new screen gets a visual check.'],
-    ['Current phase', '**Phase 0, Foundation, in progress** (2026-10-12). Done: MongoDB connected, Redis running in Docker, backend starts with both up, access matrix built (code, 603 unit tests green). Waiting: allow the PC IP in Atlas Network Access, then run the Super Admin bootstrap and the matrix end-to-end test. See Part 4.'],
+    ['Current phase', "**Phase 0 built and checked, waiting for your yes; Phase 1 in progress on a separate branch** (updated 13 October 2026). Phase 0: access matrix, messages log, integration settings, assistant, live updates, feature flags with maintenance and the demo seed are built and tested; the 27-step checklist passes. Phase 1: steps 0 to 4 are done on branch `phase1-catalogue-kyc` (not merged). Full detail and what is not proven: Part 9."],
   ]);
   d.h(3, '0.2 How the demos map to the real build');
   d.table(['In the demo', 'In the real application'], [
@@ -36,18 +36,12 @@ export function part0(d, ctx) {
   ]);
   d.h(3, '0.3 How to read this document');
   d.ul([
-    '**Part 1** the product and the flow. **Part 2** architecture and decisions. **Part 3** the file rule (three files per feature). **Part 4** the phases. **Part 5** the rules that apply to every feature. **Part 6** testing. **Part 7** open items and who owns them. **Part 8** how we work.',
+    '**Part 1** the product and the flow. **Part 2** architecture and decisions. **Part 3** the file rule (three files per feature). **Part 4** the phases. **Part 5** the rules that apply to every feature. **Part 6** testing. **Part 7** open items and who owns them. **Part 8** how we work. **Part 9** the progress log: what is built, how it was checked, what is not done and the known problems.',
     '**Appendices D to H** list every page, tab, filter, table column, button, dialog field and the endpoint behind each button, exactly as the demos show them. **Appendix J** lists the three files of every feature.',
     'If a number or label here and the demo ever disagree, the demo wins and this document is fixed.',
   ]);
-  d.h(3, '0.4 What happens next (Phase 0 starts here)');
-  d.ol([
-    'Start Redis in Docker and confirm that `/health/ready` on the backend shows MongoDB and Redis up. (Claude; you confirm Docker Desktop is running.)',
-    'Reset the MongoDB Atlas password (it was exposed in a screenshot and in chat), allow your IP in Atlas, and put the new connection string in `backend/.env.development`. (You.)',
-    'Decide where proof files are stored: MongoDB GridFS or a cloud bucket. (You.)',
-    'Build the Phase 0 items: access matrix on the server, audit hook, event router, message log, settings, assistant endpoint, seed script and the Socket.IO channel. Each follows the three-file rule.',
-    'Run the Phase 0 checklist (Part 4); then Phase 1 begins.',
-  ]);
+  d.h(3, '0.4 What happens next');
+  d.p('The current list is in Part 9.5. In short: you run the Phase 0 checklist (Part 4), you say "Phase 0 is good", the two branches are merged and Phase 1 continues. No sample data is loaded into the real database: the first data is created by testing through the apps.');
 }
 
 export function part1(d) {
@@ -138,7 +132,7 @@ export function part3(d) {
   d.h(3, '3.1 The three files');
   d.table(['#', 'File', 'Where', 'What is inside it'], [
     ['1', '`<feature>_<app>_screen.dart`', '`apps/<app>/lib/features/<feature>/`', 'Everything the user sees for this feature, in this order inside the one file: (1) data models, (2) state and controller, (3) API calls through the shared client, (4) every widget the screen needs (cards, tables, dialogs, forms, charts), (5) the screen itself. **No widgets in other files.**'],
-    ['2', '`<feature>_<app>.ts`', '`backend/src/modules/<module>/`', 'Everything the API needs for this feature, in this order: (1) Mongoose schema, (2) request and response types with validation, (3) the controller with every endpoint, (4) the Nest module wiring. **No other backend files for the feature.**'],
+    ['2', '`<feature>_<app>.ts`', '`backend/src/modules/<module>/`', 'Everything the API needs for this feature, in this order: (1) Mongoose schema, (2) request and response types with validation, (3) the controller with every endpoint, (4) the Nest module wiring. **No other backend files for the feature.** If the service needs the schema, the schema sits at the top of the service file instead, so the two files never import each other in a circle.'],
     ['3', '`<feature>_<app>.service.ts`', '`backend/src/modules/<module>/`', 'All business logic: rules, calculations, permission checks, events, notifications, queries. The controller only calls the service.'],
   ]);
   d.p('`<app>` is the audience: `admin_manage` for the admin portal, `client_manage` for the operator portal, `customer` for the customer app, `driver` for the driver app, `public` for the website. The SOS feature therefore has, for the admin: `sos_admin_manage_screen.dart`, `sos_admin_manage.ts`, `sos_admin_manage.service.ts`; for the customer: `sos_customer_screen.dart`, `sos_customer.ts`, `sos_customer.service.ts`; for the driver: the same with `driver`.');
@@ -186,6 +180,7 @@ export function part5(d) {
     ['Messages', 'WhatsApp and email after booking, cancellation, refund, payment failure, delay and boarding; logged; resendable by admin.'],
     ['Languages', 'All text through one translation system; 8 languages; names shown in English; the assistant answers in the language the user used.'],
     ['Number cards', 'Each card links to the filtered list behind it; the count and the list always agree.'],
+    ['Maintenance and switches', 'Enforced by one global guard on every request. Every app sends the header `X-Abra-App: customer | operator | driver | partner | admin | website` so a request without a token can be placed; signed-in people are placed by their account. `GET /maintenance/status` and `GET /features` are public and always work, so an app can show the message and hide what is off. Staff with `maintenance.bypass` (and the Super Admin) are never locked out of the admin portal. A feature that can be switched off carries `@RequireFeature(\'key\')`.'],
     ['Realtime', 'GPS, SOS, notifications, seat changes and report status arrive by Socket.IO; the screen updates without a reload.'],
     ['Privacy', 'Phone numbers and emails are masked in lists for roles that only need to see the record. Account deletion keeps past financial records but removes personal data.'],
     ['Errors', 'One error format with a code and a human sentence; the app shows the sentence, not the code.'],

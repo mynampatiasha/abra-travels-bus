@@ -94,11 +94,13 @@ describe('Authorization e2e: operator and partner isolation', () => {
       expect(JSON.stringify(response.body)).not.toMatch(
         /passwordHash|FirebaseUid|secretEncrypted|recoveryCodeHashes/,
       );
-      // The current client KYC gate denies this unapproved operator before the directory runs.
-      await api()
+      // An approved operator administrator may ask, but the data scope keeps customers out:
+      // they belong to no operator, so the answer is an empty list, never the customer directory.
+      const operatorView = await api()
         .get('/api/v1/users?userType=CUSTOMER&search=sample&loginMethod=google')
         .set(...bearer(adminA.tokens))
-        .expect(403);
+        .expect(200);
+      expect(dataOf<DirectoryUser[]>(operatorView)).toEqual([]);
       for (const loginMethod of ['apple', 'whatsapp', 'password']) {
         const filtered = await api()
           .get('/api/v1/users')

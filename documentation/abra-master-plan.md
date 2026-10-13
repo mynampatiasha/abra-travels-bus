@@ -1,6 +1,6 @@
 # Abra Travels: Master Build Plan
 
-_One document for the whole project. Written 12 October 2026._
+_One document for the whole project. Written 13 October 2026._
 
 
 ## Part 0. Start here (for anyone new, including another session)
@@ -14,14 +14,14 @@ Abra Travels is a bus booking platform: travellers book seats, bus owners (opera
 | Repository | `D:\New_project\abra-travels` (monorepo) |
 | Functional source of truth | `Abra Travels.pdf` (122 sections) in the repo root; the older design notes are in `documentation/` |
 | The demos (the specification) | `prototypes/index.html` opens five working HTML demos: admin, client (operator), customer, driver, website. They share one data store and sync live. Everything in this document was read from them. |
-| Backend | NestJS + TypeScript in `backend/`. 26 controllers and 113 routes in `*.controller.ts` files, plus 4 more controllers in `<feature>_manage` style files (access matrix, Google/Apple sign-in, client KYC, KYC configuration; see Appendix I.1). Only about 19 of the 56 module folders have real code; the rest are empty placeholders (Appendix I.2). |
+| Backend | NestJS + TypeScript in `backend/`. 26 controllers and 113 routes exist today (Appendix I). |
 | Database | MongoDB Atlas, database `abra_travels`. The connection string is in `backend/.env.development` (git-ignored). **Never put it in a document, a chat or git.** Connection tested: working. |
 | Redis | Needed for seat holds, queues and live updates. Runs in Docker from `infrastructure/docker-compose.development.yml` (container `abra-redis`); start Docker Desktop first. |
 | Flutter apps today | `apps/customer_app` (built on mock data, some screens missing), `apps/admin_app` and `apps/client_portal` (partly built: sign-in, KYC, banners, catalogue, settings). Shared code is in `packages/shared_*`. |
 | Apps not started | Driver app, public website (Next.js), partner app |
 | UI rule (mandatory) | **The real screens must look and behave exactly like the demo**: same layout, same labels and wording, same order of buttons, same colours and gradient, same dialogs and fields, same empty, error and loading states, same table and list views, same horizontal and vertical layouts. The demo is the design, not a sketch. |
 | Design rule | Navy and blue palette with the brand gradient, from `documentation/design-system.md`. UI and functionality ship together. Every new screen gets a visual check. |
-| Current phase | **Phase 0, Foundation, in progress** (2026-10-12). Done: MongoDB connected, Redis running in Docker, backend starts with both up, access matrix built (code, 603 unit tests green). Waiting: allow the PC IP in Atlas Network Access, then run the Super Admin bootstrap and the matrix end-to-end test. See Part 4. |
+| Current phase | **Phase 0 built and checked, waiting for your yes; Phase 1 in progress on a separate branch** (updated 13 October 2026). Phase 0: access matrix, messages log, integration settings, assistant, live updates, feature flags with maintenance and the demo seed are built and tested; the 27-step checklist passes. Phase 1: steps 0 to 4 are done on branch `phase1-catalogue-kyc` (not merged). Full detail and what is not proven: Part 9. |
 
 ### 0.2 How the demos map to the real build
 
@@ -39,17 +39,13 @@ Abra Travels is a bus booking platform: travellers book seats, bus owners (opera
 
 ### 0.3 How to read this document
 
-- **Part 1** the product and the flow. **Part 2** architecture and decisions. **Part 3** the file rule (three files per feature). **Part 4** the phases. **Part 5** the rules that apply to every feature. **Part 6** testing. **Part 7** open items and who owns them. **Part 8** how we work.
+- **Part 1** the product and the flow. **Part 2** architecture and decisions. **Part 3** the file rule (three files per feature). **Part 4** the phases. **Part 5** the rules that apply to every feature. **Part 6** testing. **Part 7** open items and who owns them. **Part 8** how we work. **Part 9** the progress log: what is built, how it was checked, what is not done and the known problems.
 - **Appendices D to H** list every page, tab, filter, table column, button, dialog field and the endpoint behind each button, exactly as the demos show them. **Appendix J** lists the three files of every feature.
 - If a number or label here and the demo ever disagree, the demo wins and this document is fixed.
 
-### 0.4 What happens next (Phase 0 starts here)
+### 0.4 What happens next
 
-1. Start Redis in Docker and confirm that `/health/ready` on the backend shows MongoDB and Redis up. (Claude; you confirm Docker Desktop is running.)
-2. Reset the MongoDB Atlas password (it was exposed in a screenshot and in chat), allow your IP in Atlas, and put the new connection string in `backend/.env.development`. (You.)
-3. Decide where proof files are stored: MongoDB GridFS or a cloud bucket. (You.)
-4. Build the Phase 0 items: access matrix on the server, audit hook, event router, message log, settings, assistant endpoint, seed script and the Socket.IO channel. Each follows the three-file rule.
-5. Run the Phase 0 checklist (Part 4); then Phase 1 begins.
+The current list is in Part 9.5. In short: you run the Phase 0 checklist (Part 4), you say "Phase 0 is good", the two branches are merged and Phase 1 continues. No sample data is loaded into the real database: the first data is created by testing through the apps.
 
 ## Part 1. The product and the flow
 
@@ -136,11 +132,6 @@ Abra Travels is a bus booking platform: travellers book seats, bus owners (opera
 | Operator app | The client portal is the operator app. One app, not two. |
 | Driver rules | The operator maintains pre-trip and end-of-trip checklists and the report types. Abra provides default templates and a locked minimum that operators cannot remove. |
 | Driver reports | Daily and weekly numbers come from the system and are frozen when the driver sends the report. The driver only adds what the system cannot know. |
-| Shared catalogue mechanism (decided 12 Oct 2026) | One soft-delete field + restore route + audit hook, written once and used by every catalogue feature, built before the Phase 1 features. Per-module delete and export permission keys are added first so the access matrix can tell Edit from Edit+Delete; every new route gets its own key. |
-| Export and import (decided 12 Oct 2026) | Server-side as in the plan: `GET .../export?format=csv\|xlsx` with the list's filters and permissions; import = template + dry run with row-by-row errors + save. The current client-side CSV import stays until the new one replaces it. |
-| Proof files (decided 12 Oct 2026) | The existing files service: local storage in development, an S3-style bucket before staging. Not GridFS. |
-| Three-file rule (decided 12 Oct 2026) | New code only. Working files are not rewritten. New endpoints on an existing module go in the new `<feature>_<app>_manage` `.ts` and `.service.ts` files. |
-| KYC questionnaire (decided 12 Oct 2026) | Keep the one-configuration design at `/settings/kyc-configuration`; add only what the demo's three tabs need. |
 | Database separation | This project uses its own database (`abra_travels`) on the Atlas cluster the user shared. Keep it separate from the databases of other Abra projects. |
 
 ## Part 3. The file rule: three files per feature
@@ -152,7 +143,7 @@ Abra Travels is a bus booking platform: travellers book seats, bus owners (opera
 | # | File | Where | What is inside it |
 |---|---|---|---|
 | 1 | `<feature>_<app>_screen.dart` | `apps/<app>/lib/features/<feature>/` | Everything the user sees for this feature, in this order inside the one file: (1) data models, (2) state and controller, (3) API calls through the shared client, (4) every widget the screen needs (cards, tables, dialogs, forms, charts), (5) the screen itself. **No widgets in other files.** |
-| 2 | `<feature>_<app>.ts` | `backend/src/modules/<module>/` | Everything the API needs for this feature, in this order: (1) Mongoose schema, (2) request and response types with validation, (3) the controller with every endpoint, (4) the Nest module wiring. **No other backend files for the feature.** |
+| 2 | `<feature>_<app>.ts` | `backend/src/modules/<module>/` | Everything the API needs for this feature, in this order: (1) Mongoose schema, (2) request and response types with validation, (3) the controller with every endpoint, (4) the Nest module wiring. **No other backend files for the feature.** If the service needs the schema, the schema sits at the top of the service file instead, so the two files never import each other in a circle. |
 | 3 | `<feature>_<app>.service.ts` | `backend/src/modules/<module>/` | All business logic: rules, calculations, permission checks, events, notifications, queries. The controller only calls the service. |
 
 `<app>` is the audience: `admin_manage` for the admin portal, `client_manage` for the operator portal, `customer` for the customer app, `driver` for the driver app, `public` for the website. The SOS feature therefore has, for the admin: `sos_admin_manage_screen.dart`, `sos_admin_manage.ts`, `sos_admin_manage.service.ts`; for the customer: `sos_customer_screen.dart`, `sos_customer.ts`, `sos_customer.service.ts`; for the driver: the same with `driver`.
@@ -233,26 +224,26 @@ Each phase builds backend and screens together for the features inside it, so ev
 | **Audit log** (`audit`) | Admin: audit | Partly built (audit-logs) | audit | 2 new / 0 existing | Read endpoint exists. Add the write hook every sensitive action must call, filters, detail view and export. |
 | **Notifications and event router** (`notifications`) | Admin: notifications<br>Client: notifications<br>Customer: notifs, nset<br>Driver: alerts | Partly built (notifications) | notifs, inbox | 12 new / 12 existing | In-app, push and live delivery exist. Add the event router that turns a business event into the right notification for the right person (see Appendix B). |
 | **File storage and proof attachments** (`files`) | backend only | Done (files) | - | 0 new / 0 existing | Upload and download exist. Proofs use the same service: picture, PDF or text, up to 5 files and 600 KB each, viewable and downloadable by Abra and the person concerned. |
-| **WhatsApp and email messages** (`messages`) | Admin: messages<br>Customer: msgs | Partly built (whatsapp, notification-templates, notifications) | messages | 6 new / 0 existing | Provider settings exist. Add the message log, the templates per event and the resend action. |
-| **Integrations, feature flags and maintenance** (`settings`) | Admin: settings, flags | Partly built (system-settings, feature-flags, maintenance) | settings, flags, maint | 9 new / 2 existing | Email and WhatsApp settings exist. Add Razorpay, Maps, Groq, SMS, feature flags and the maintenance switch. |
-| **AI assistant (Groq)** (`assistant`) | Admin: ai<br>Customer: assistant<br>Driver: assistant | New (chatbot) | - | 5 new / 0 existing | One backend endpoint calls Groq and answers only from the caller's own data. Admin chooses the model and key in settings. Spoken input uses the phone or browser speech service. |
-| **Seed data and live updates** (`seed`) | backend only | New (database, events) | - | 0 new / 0 existing | A script loads the demo data into MongoDB. A socket channel replaces the demo's browser-to-browser sync. |
+| **WhatsApp and email messages** (`messages`) | Admin: messages<br>Customer: msgs | Partly built (whatsapp, notification-templates, notifications) | messages | 6 new / 0 existing | BUILT 2026-10-12 as messages_admin_manage and messages_customer: the `messages` log, admin list, filters, read and resend with audit, customer "Messages sent to me", and MessageSenderService for other features to send and log WhatsApp and email. 10 unit and 11 end-to-end tests pass. Still to add: per-language templates and the event handlers that call the sender (Phase 3 onward). |
+| **Integrations, feature flags and maintenance** (`settings`) | Admin: settings, flags | Partly built (system-settings, feature-flags, maintenance) | settings, flags, maint | 8 new / 2 existing | Email and WhatsApp settings exist. Razorpay, Maps, SMS, Push and the assistant settings BUILT 2026-10-12 as integrations_admin_manage (16 unit and 9 end-to-end tests). Feature flags and maintenance BUILT 2026-10-12 as flags_admin_manage: the nine switches of the demo, five maintenance scopes with a message and a window, a global guard that enforces both on every request (staff with maintenance.bypass and the Super Admin are never locked out), public GET /features and GET /maintenance/status, audit on every change (31 unit and 15 end-to-end tests). No endpoint uses @RequireFeature yet: each feature adds it when it is built. Apps must send the X-Abra-App header. |
+| **AI assistant (Groq)** (`assistant`) | Admin: ai<br>Customer: assistant<br>Driver: assistant | New (chatbot) | - | 5 new / 0 existing | BUILT 2026-10-12 as assistant_chat: POST /assistant/chat for every app. Groq runs through the backend with the key and model from Admin settings. It answers only from tools the person's role allows (profile, access and notifications today; each feature adds its own tools). Proposed changes wait for confirm or decline and are audited. 20 questions a minute, thumbs up or down, and a development assistant when no AI key is set. 23 unit and 16 end-to-end tests pass. Not built: streaming the answer word by word, and tools for bookings, trips and the like (added with those features). |
+| **Seed data and live updates** (`seed`) | backend only | New (database, events) | - | 0 new / 0 existing | BUILT 2026-10-12: the live-update channel (live_updates_channel, Appendix B.3) and the demo seed (`npm run seed:demo`, backend/src/seed, fixture backend/seed/demo-data.json taken from the demos' store). The seed loads 20 cities, 52 places, 6 bus types, 14 companies and 31 buses; it is development-only, adds only what is missing (never changes an existing record), supports --dry-run and --only=catalogue\|companies, and prints created, already there and skipped per collection. 18 unit tests check that every demo record becomes a valid real document. Not seeded yet: routes, trips, fares, bookings, customers, tickets and the rest, which are added to the seed in the phase that creates each collection. |
 
 #### Phase 0: your test checklist
 
-- Driver app, **Sign in**: Sign in.
-- Admin, **Audit log**: the list loads; try the filters (Search, Person, Type, Action); press Export CSV, View; export downloads; as a view-only role the buttons are hidden and the server refuses; the screen looks the same as the demo page.
-- Admin, **Notifications**: the list loads; try the filters (Search, Status); press Mark all read, View, Save changes, Delete, History, Reject submission, Approve; export downloads; as a view-only role the buttons are hidden and the server refuses; the screen looks the same as the demo page.
-- Client portal, **Notifications**: the list loads; try the filters (Search); press Mark all read, Send for approval, Import, Export CSV, View, Mark maintenance; export downloads; as a view-only role the buttons are hidden and the server refuses; the screen looks the same as the demo page.
-- Customer app, **Notifications**: List / open; Mark all read. Everything shown comes from the real backend; nothing is mock, and it looks the same as the demo.
-- Driver app, **Notifications**: List / read all.
-- Admin, **Messages sent**: the list loads; try the filters (Customer, phone, email, PNR, Channel, Type); each number card opens its records; press Export CSV, Send again, View, Save changes, Delete; export downloads; as a view-only role the buttons are hidden and the server refuses; the screen looks the same as the demo page.
-- Customer app, **Messages sent to me**: List / open. Everything shown comes from the real backend; nothing is mock, and it looks the same as the demo.
-- Admin, **Settings and integrations**: the list loads; press Save, Test connection, Confirm, Preview; export downloads; as a view-only role the buttons are hidden and the server refuses; the screen looks the same as the demo page.
-- Admin, **Feature flags and maintenance**: the list loads; try the filters (Starts, Ends); press Turn off, Turn on, Save message and schedule; export downloads; as a view-only role the buttons are hidden and the server refuses; the screen looks the same as the demo page.
-- Admin, **AI assistant**: the list loads; try the filters (Provider, Model, Messages per admin per day, Saved on the server only); each number card opens its records; press Test connection, Save, Export CSV; export downloads; as a view-only role the buttons are hidden and the server refuses; the screen looks the same as the demo page.
-- Customer app, **AI assistant**: Send / voice. Everything shown comes from the real backend; nothing is mock, and it looks the same as the demo.
-- Driver app, **AI assistant**: Send / voice.
+- Start Docker Desktop and wait for "running", then start the backend (`npm run start` in the backend folder) and open `http://localhost:4000/api/docs`.
+- **A. Health:** `GET /health/ready` shows ready, MongoDB up, Redis up.
+- **B. Sign in:** `POST /api/v1/auth/login` with `{ "identifier": "<Super Admin email>", "password": "...", "device": { "clientType": "MOBILE" } }` (use MOBILE so the refresh token is in the answer). Copy `accessToken` into Authorize. `GET /me` shows your name and `userType` STAFF inside `user`.
+- **C. Access matrix:** `GET /access-matrix?audience=ADMIN` shows 38 pages, the Super Admin row locked and FULL. Create a role with `POST /access-matrix/roles`, set Trips to VIEW, try to change SUPER_ADMIN (must be refused with 403), then delete the test role.
+- **D. Audit:** `GET /audit-logs` shows created, access changed and deleted, each with who and why.
+- **E. Messages:** `GET /admin/messages` is an empty list (correct until bookings exist).
+- **F. Integrations:** `GET /settings/integrations` lists 7 cards. Set Maps to `osm`, test it. Save a test SMS secret: only "set" and the last four characters come back. Clear it.
+- **G. Assistant:** `POST /assistant/chat` with "who am i?" answers with your role.
+- **H. Feature flags:** `GET /features` (no sign-in) shows 9 switches, 4 on. Switch `live_tracking` off, see it false, switch it back on.
+- **I. Maintenance:** switch the customer scope on with a message, see `/maintenance/status?app=customer` active, see a customer-app request answered 503 with the message, see the admin portal still works, then **switch it off**.
+- **J. Sample data: skipped on purpose.** No sample data is loaded into Atlas; you create the real data through the apps. (On a throw-away local database only: `npm run seed:demo`, then 20 cities show.)
+- **K. Sign out:** `POST /auth/logout` with `{ "refreshToken": "..." }` from the sign-in answer; the old token then answers 401.
+- All of this can be run by script: `CHECKLIST_EMAIL=... CHECKLIST_PASSWORD=... node scripts/phase0-checklist.mjs` (26 steps on Atlas; step J is skipped).
 
 ### Phase 1. Catalogue, operators and KYC
 
@@ -271,12 +262,6 @@ Each phase builds backend and screens together for the features inside it, so ev
 | **KYC review and company onboarding** (`kyc`) | Admin: kyc<br>Client: kyc, company | Done (onboarding) | submissions | 4 new / 2 existing | Submissions, per-document review, approve and reject exist. Add history, export, bus-level KYC from the client portal. |
 | **Operators** (`operators`) | Admin: operators | Partly built (operators) | operators | 6 new / 2 existing | List, read, update, status exist. Add suspend and reactivate with reason and proof, message to owner, bank verification. |
 | **Banners** (`banners`) | Admin: banners<br>Customer: home banner<br>Website: home | Done (admin-banners) | banners | 5 new / 5 existing | Done. Add click and impression counts and the archive job. |
-
-#### Phase 1: build order (approved 12 October 2026)
-
-0. Checkpoint commit (done) and this document corrected. 1. Per-module delete and export permission keys, then the shared mechanism (soft delete, restore, audit hook, shared list query, "in use" check). 2. Small items: banner duplicate, archive and reorder; read-one routes; invitation edit and expiry. 3. Server-side export for every list, then import with template and dry run. 4. Amenities. 5. Place requests (backend, admin tabs, client Places page). 6. Operator detail page with tabs, suspend with proof, message owner. 7. Payout mode and bank verification. 8. Company profile and bank details (client portal). 9. Bus KYC (client portal) and KYC history. 10. KYC questionnaire compared with the demo's three tabs (can run early, in parallel). One step at a time; you test after each.
-
-Boundaries: do not run prettier or eslint --fix across `rbac` or `users`; the audit action list is shared, so only add actions; stay out of `whatsapp`, `notifications`, `system-settings` and `chatbot` (another session works there).
 
 #### Phase 1: your test checklist
 
@@ -555,6 +540,7 @@ Boundaries: do not run prettier or eslint --fix across `rbac` or `users`; the au
 | Messages | WhatsApp and email after booking, cancellation, refund, payment failure, delay and boarding; logged; resendable by admin. |
 | Languages | All text through one translation system; 8 languages; names shown in English; the assistant answers in the language the user used. |
 | Number cards | Each card links to the filtered list behind it; the count and the list always agree. |
+| Maintenance and switches | Enforced by one global guard on every request. Every app sends the header `X-Abra-App: customer \| operator \| driver \| partner \| admin \| website` so a request without a token can be placed; signed-in people are placed by their account. `GET /maintenance/status` and `GET /features` are public and always work, so an app can show the message and hide what is off. Staff with `maintenance.bypass` (and the Super Admin) are never locked out of the admin portal. A feature that can be switched off carries `@RequireFeature('key')`. |
 | Realtime | GPS, SOS, notifications, seat changes and report status arrive by Socket.IO; the screen updates without a reload. |
 | Privacy | Phone numbers and emails are masked in lists for roles that only need to see the record. Account deletion keeps past financial records but removes personal data. |
 | Errors | One error format with a code and a human sentence; the app shows the sentence, not the code. |
@@ -615,6 +601,78 @@ Boundaries: do not run prettier or eslint --fix across `rbac` or `users`; the au
 - No fake or sample data ships to production; development seed data stays behind a development switch.
 - The demos in `prototypes/` stay as the specification and are not deleted. `prototypes/_build/build_client.py` is stale and must not be run.
 - Keep the three-file rule (Part 3) in every new feature.
+
+## Part 9. Progress log
+
+Kept up to date as work is done. Last updated 13 October 2026. Unit tests: 730 (729 pass; one queue test fails now and then). End-to-end tests: every new suite passes; the 15 older failures are fixed. Phase 0 checklist: 27 of 27.
+
+### 9.1 Phase 0 (main folder, not committed yet)
+
+| Phase | What | Status | How it was checked | Where |
+|---|---|---|---|---|
+| 0 | MongoDB Atlas connected; the database accepts only the two PC addresses | Done | Connection tested from the backend; the open "anywhere" entry was removed | backend/.env.development (git-ignored) |
+| 0 | Redis in Docker, backend starts with MongoDB, Redis, queues and outbox up | Done | /health/ready answers ready | infrastructure/docker-compose.development.yml |
+| 0 | Super Admin account created | Done | Signed in over HTTP; the bootstrap lines were then deleted from the env file | npm run bootstrap:super-admin |
+| 0 | Access matrix (None, View, Edit, Edit and delete per role per page), Super Admin only, audited | Built and tested | 19 unit tests; tested against Atlas: create, change and delete a role, the Super Admin row refuses changes | rbac/access_matrix_admin_manage*.ts, rbac/permissions/access-pages.ts |
+| 0 | Messages log: admin list, filters, read, resend; customer "Messages sent to me"; the sender other features call | Built and tested | 10 unit and 11 end-to-end tests | messages/messages_admin_manage*.ts, messages_customer*.ts |
+| 0 | Integration settings: Razorpay, Maps, SMS, Push, AI assistant (secrets encrypted, never returned), connection tests | Built and tested | 16 unit and 9 end-to-end tests; real provider calls tested only against a fake network | system-settings/integrations_admin_manage*.ts |
+| 0 | Assistant endpoint (Groq through the backend, tools by role, proposed changes need confirmation, development mode without a key) | Built and tested | 23 unit and 16 end-to-end tests; real Groq not tested (no key) | chatbot/assistant_chat*.ts |
+| 0 | Live-update channel (sockets): token check, rooms, followable topics, publisher for API and worker, re-check every minute | Built and tested | 29 unit and 13 end-to-end tests with real socket connections | realtime/live_updates_channel*.ts |
+| 0 | Feature flags (9 switches) and maintenance (5 scopes, message, window) enforced by one global guard | Built and tested | 31 unit and 15 end-to-end tests | feature-flags/flags_admin_manage*.ts |
+| 0 | Demo seed: 20 cities, 52 places, 6 bus types, 14 companies, 31 buses | Built, tested locally; NOT loaded into Atlas by decision | 18 unit tests; run for real on a local database and twice (adds nothing the second time). Decision of 13 October 2026: no sample data goes into Atlas; real data is created by testing through the apps. The seed stays a tool for throw-away local databases only | npm run seed:demo, backend/src/seed, backend/seed/demo-data.json |
+| 0 | 15 end-to-end tests that were failing before any of this work | Fixed | Cause: test operators had no active company record, which the login guard now requires. Test helper fixed; one test now checks the real data-scope protection | rbac/tests/rbac-e2e.harness.ts, authorization-isolation.e2e-spec.ts |
+| 0 | Phase 0 checklist (27 steps) run end to end over HTTP | All 27 pass | On a temporary local database with a throw-away admin, then deleted (step J, the sample data, is skipped on Atlas). Rerun on Atlas with your password | backend/scripts/phase0-checklist.mjs |
+
+### 9.2 Phase 1 (other session, branch `phase1-catalogue-kyc`, worktree `D:/New_project/abra-wt-p1`, not merged)
+
+| Phase | What | Status | How it was checked | Where |
+|---|---|---|---|---|
+| 1 | Step 0 and 1: permission keys for delete and export, shared soft delete and restore, audit of delete and restore, "in use" refusals | Built and tested (branch) | catalogue-shared end-to-end suite passes (33) | modules/catalogue-shared/catalogue_shared_manage*.ts |
+| 1 | Step 2: banner duplicate, archive and reorder; banners shown higher-order first with audience and colour style as in the demo; read-one routes; invitation edit and expiry | Built and tested (branch) | banners end-to-end 28 pass; invitations suite passes; admin app 144 tests pass | banners_admin_manage*, invitations_admin_manage* |
+| 1 | Step 3: server-side export (CSV and Excel) for 8 lists; import with template and dry run for cities and places | Built and tested (branch) | export 15 and import 10 end-to-end tests pass | catalogue-shared; exceljs added to package.json |
+| 1 | Step 4: amenities (add, switch on and off, bus forms use the active ones) | Built and tested (branch) | amenities 8 end-to-end tests pass; admin app 150 tests pass | modules/amenities/amenities_admin_manage*.ts |
+
+Still to do in Phase 1:
+
+- Step 5: place requests (operator asks, admin approves or rejects) and the three-tab Places page
+- Step 6: operator detail page with tabs; suspend with reason and proof; reactivate; message the owner
+- Step 7: payout mode and bank details with verification
+- Step 8: company profile and bank page in the client portal
+- Step 9: bus KYC from the client portal, KYC history
+- Step 10: compare the KYC questionnaire with the demo; export of the questionnaire
+- Import with a dry run for bus types, document types and banners (they still use the old on-device CSV import)
+- Merge the Phase 1 branch (worktree abra-wt-p1) with the Phase 0 work in the main folder
+
+### 9.3 What is not done or not proven
+
+| Item | Detail |
+|---|---|
+| Real outside services | Razorpay, Google Maps, Groq, SMS, Firebase push and WhatsApp were only tested against a fake network. Keys are needed (Part 7). |
+| Atlas for the newer features | Messages, integration settings, assistant, feature flags, maintenance and live updates were tested on a local database. The checklist script can run them against Atlas with your password. |
+| Event router and notification demo | The plan's Phase 0 goal "a notification travels from the backend to a phone and to the admin bell" is not shown yet: the notification and socket machinery exists and is tested, but no business event feeds it until bookings, trips and refunds exist. |
+| Audit log page | The read endpoint exists. Filters, the detail view and export from the demo are still to build (Phase 7). |
+| Proof files | The storage decision (existing files service, local in development, a bucket before staging) is recommended but not yet built into the proof boxes. |
+| Apple sign-in | Not built. |
+| Flutter apps | No app calls any of the Phase 0 endpoints yet. The admin app is being wired to Phase 1 on its own branch. |
+| Assistant details | Answers arrive whole, not word by word. Feature tools (bookings, trips) are added with those features. Behaviour with the real Groq model, including attempts to break its rules, is untested. |
+
+### 9.4 Known problems
+
+| Problem | Detail |
+|---|---|
+| Docker Desktop is unreliable on this PC | It stopped twice and once crashed during the Redis-restart test. Database tests need it. Start it first and wait for "running". |
+| Two tests are timing-sensitive | A Super Admin bootstrap test that starts several runs at once (passes about 2 of 3 times alone) and a queue test (passes about 3 of 4). Neither is in code changed in Phase 0. |
+| Redis-restart test | It stops and starts the Redis container itself and can bring Docker down. Run it alone, or leave it out of a full run. |
+| Branch merge | Both branches changed the same shared files (permission list, audit action list, module list, eslint config). Keep both sides; the cross-session notes list each line. The Dart permission parity test needs messages.read, messages.resend and maintenance.bypass. |
+| customer_app analyze | Shows 3 informational lines on the untouched main branch. |
+| Atlas password | The database password was shown in a screenshot and in chat. It still needs resetting; then update backend/.env.development. |
+
+### 9.5 What happens next
+
+1. You run the Phase 0 checklist (Part 4) or tell Claude to run it against Atlas with your password.
+2. No sample data is loaded into Atlas (your decision): the first real data is created through the apps while you test.
+3. You say "Phase 0 is good". Then the two branches are merged and Phase 1 continues with step 5.
+4. You reset the Atlas password and supply the keys listed in Part 7 when each phase needs them.
 
 ## Appendix A. Collections (the database)
 
@@ -791,6 +849,32 @@ These are the rules the demo's event router applies. In the real build the backe
 | Boarding started | WhatsApp and email | Boarding now: <PNR> | Bus number, reach your boarding point |
 
 > **Note:** The demo stores English text only. The real build uses templates per language (Appendix K lists the 8 languages) and logs every message in the `messages` collection.
+
+### B.3 Live events (the socket channel)
+
+Built 2026-10-12 (`backend/src/modules/realtime/live_updates_channel*`). One socket event, `live`, carries every "something changed" message: `{ type, topic?, data, at }`. `data` holds ids and the new state only, never a record; the app fetches the rest with its own permissions. A client connects with its access token (`auth: { token }`), receives `ready`, or `unauthorized` and a closed socket. It joins by itself: its own room, `staff` (admin portal), `operator:<id>` (operator staff and drivers). It may follow a topic such as `trip:<id>` by sending `subscribe`; each feature registers who may follow its topic. The connection is checked again every minute, so signing out or a change of access ends it within a minute. The bell keeps its own event, `notification`.
+
+| Event type | Published to | Data | When |
+|---|---|---|---|
+| sos.raised | staff, operator:<id>, user:<driver> | id, tripId | A customer or a driver raises SOS |
+| sos.updated | staff, operator:<id>, user:<who raised it> | id, status | Acknowledged, escalated, resolved, false alarm |
+| trip.status-changed | topic trip:<id>, staff, operator:<id> | tripId, status | Boarding, started, arrived, cancelled |
+| trip.delayed | topic trip:<id>, staff, operator:<id> | tripId, minutes | A delay is reported |
+| tracking.position | topic tracking:<tripId> | lat, lng, speed | About every 5 seconds while a trip runs (not stored in the socket) |
+| seat.held, seat.released, seat.sold | topic trip:<id> | seat | Another person holds, frees or buys a seat |
+| booking.created, booking.cancelled | operator:<id>, staff, user:<customer> | bookingId | A booking is made or cancelled |
+| refund.updated | user:<customer>, staff | refundId, status | A refund moves on |
+| report.submitted | operator:<id> | reportId | A driver sends a report |
+| report.reviewed | user:<driver> | reportId, status | The owner approves or returns a report |
+| trip-check.warning | operator:<id>, staff | checkId | A trip starts with a warning or an override |
+| settlement.updated | operator:<id>, staff | settlementId, status | A settlement changes state or gets a query |
+| ticket.replied | user:<customer>, staff | ticketId | A support reply arrives |
+| kyc.updated | staff, operator:<id> | submissionId, status | Documents are sent, approved or rejected |
+
+| Topic kind | Who may follow it (registered by the feature that owns it) |
+|---|---|
+| trip:<id> | A customer with a booking on the trip, staff of the operator that runs it, the assigned driver, admins who may read trips |
+| tracking:<tripId> | The same people as trip, only while the trip runs |
 
 ## Appendix C. Access matrix (starting values)
 
@@ -2269,8 +2353,8 @@ How to read each page: first its facts (feature, base path, files), then what is
 
 | Where | Button | Opens | Endpoint | Status | Notes |
 |---|---|---|---|---|---|
-| Page | Test connection |  | POST /admin/settings/assistant/test | New | test connection |
-| Page | Save |  | PUT /admin/settings/assistant | New | provider, model, key (encrypted); audit |
+| Page | Test connection |  | POST /settings/integrations/assistant/test-connection | New | built; checks the Groq key and the model name |
+| Page | Save |  | PUT /settings/integrations/assistant | New | built; provider, Groq key (secret), model, "may propose actions"; audit |
 | Page | (icon) |  | No server call | UI | show or hide the API key field |
 | Page | Export CSV |  | GET /admin/settings/assistant/export?format=csv\|xlsx | New | same filters, search and permissions as the list |
 | Page | Table |  | No server call | UI | table or list view of the same data |
@@ -2297,12 +2381,12 @@ How to read each page: first its facts (feature, base path, files), then what is
 
 | Where | Button | Opens | Endpoint | Status | Notes |
 |---|---|---|---|---|---|
-| Page | Set up | Set up whatsapp: Phone number id; Access token | No server call | UI | opens the integration form |
-| Page > dialog | Save |  | PUT /settings/integrations/:key | Exists | email and WhatsApp Razorpay, Maps, SMS, Groq, push are new; secrets encrypted |
-| Page | Test connection |  | POST /settings/integrations/:key/test-connection | Exists | for email and WhatsApp |
-| Tab: Integrations | Set up | Set up whatsapp: Phone number id; Access token | No server call | UI | opens the integration form |
-| Tab: Integrations > dialog | Save |  | PUT /settings/integrations/:key | Exists | email and WhatsApp Razorpay, Maps, SMS, Groq, push are new; secrets encrypted |
-| Tab: Integrations | Test connection |  | POST /settings/integrations/:key/test-connection | Exists | for email and WhatsApp |
+| Page | Set up | Set up whatsapp: Phone number id; Access token | No server call | UI | opens the integration form (values and write-only secrets) |
+| Page > dialog | Save |  | PUT /settings/integrations/:key | Exists | built; key = razorpay, maps, sms, push or assistant (WhatsApp and email keep their own PUT routes, which ); secrets stored encrypted, never returned; reason required; audit settings.integration.changed |
+| Page | Test connection |  | POST /settings/integrations/:key/test-connection | Exists | built; asks the provider a harmless question; nothing is sent to a customer; WhatsApp and email have their own test routes () |
+| Tab: Integrations | Set up | Set up whatsapp: Phone number id; Access token | No server call | UI | opens the integration form (values and write-only secrets) |
+| Tab: Integrations > dialog | Save |  | PUT /settings/integrations/:key | Exists | built; key = razorpay, maps, sms, push or assistant (WhatsApp and email keep their own PUT routes, which ); secrets stored encrypted, never returned; reason required; audit settings.integration.changed |
+| Tab: Integrations | Test connection |  | POST /settings/integrations/:key/test-connection | Exists | built; asks the provider a harmless question; nothing is sent to a customer; WhatsApp and email have their own test routes () |
 | Tab: Company | Save |  | PUT /admin/settings/company | New | audit |
 | Tab: Booking rules | Save | Reason for change: Why are you changing this?* | No server call | UI | opens the reason form |
 | Tab: Booking rules > dialog | Confirm |  | PUT /admin/settings/booking | New | hold minutes, seat limit and similar; a reason is required; audit |
@@ -2375,11 +2459,11 @@ How to read each page: first its facts (feature, base path, files), then what is
 
 | Where | Button | Opens | Endpoint | Status | Notes |
 |---|---|---|---|---|---|
-| Page | (icon) | Turn off Live tracking (Customers lose this feature straight away.) | PUT /admin/feature-flags/:key | New | confirmation first; takes effect straight away; audit |
+| Page | (icon) | Turn off Live tracking (Customers lose this feature straight away.) | PUT /admin/feature-flags/:key | New | built; body on and a reason; audit feature-flag.changed; reaches every server within seconds; the public map GET /features follows |
 | Page > dialog | Turn off |  | DELETE /admin/feature-flags/:id | New | confirm of a delete or revoke; audit |
-| Page | (icon) | Global maintenance (Customer, operator and partner apps stop working. Admin staff still get in.) | PUT /admin/maintenance | New | on or off per scope (global, customer, operator, partner) |
+| Page | (icon) | Global maintenance (Customer, operator and partner apps stop working. Admin staff still get in.) | PUT /admin/maintenance | New | built; body scopes (global, customer, operator, partner, admin) and a reason; audit maintenance.changed; the guard enforces it on every request |
 | Page > dialog | Turn on |  | DELETE /admin/feature-flags/:id | New | confirm of a delete or revoke; audit |
-| Page | Save message and schedule |  | PUT /admin/maintenance/message | New | message and window |
+| Page | Save message and schedule |  | PUT /admin/maintenance | New | built; body message, from, to (end must be after start) and a reason; same endpoint as the switches |
 
 ### D.37 Audit log (`audit`)
 
@@ -2461,10 +2545,10 @@ These buttons are in the demo code but were not on screen in the default state (
 
 | Action | Where | Endpoint | Status | Notes |
 |---|---|---|---|---|
-| ai_fb | AI assistant | POST /assistant/messages/:id/feedback | New | thumbs up or down |
+| ai_fb | AI assistant | POST /assistant/messages/:turnId/feedback | New | built; thumbs up or down on one answer |
 | ai_go | AI assistant | No server call | UI | opens the page the answer points to |
-| ai_no | AI assistant | POST /assistant/actions/:id/decline | New | audit |
-| ai_ok | AI assistant | POST /assistant/actions/:id/confirm | New | runs an action the assistant proposed, with the same permission check and an audit entry |
+| ai_no | AI assistant | POST /assistant/actions/:id/decline | New | built; audit assistant.action.declined |
+| ai_ok | AI assistant | POST /assistant/actions/:id/confirm | New | built; checks the permission again, makes the change once, audit assistant.action.confirmed |
 | ai_rep_csv | AI assistant | GET /admin/reports/trip-revenue/export | New | the report the assistant showed |
 | ban_img | banners | POST /admin/banners/:id/image | Exists | JPG, PNG or WebP, up to 1 MB |
 | bus_bulk_m | buses | POST /admin/buses/bulk-status | New | selected active buses to maintenance; audit |
@@ -3115,8 +3199,8 @@ These buttons are in the demo code but were not on screen in the default state (
 | bd_resend | sign-in and KYC wizard | POST /onboarding/submissions/:id/submit | Exists |  |
 | bdoc | sign-in and KYC wizard | No server call | UI | choose the bus document |
 | cai_go | AI assistant | No server call | UI | opens the page the answer points to |
-| cai_no | AI assistant | POST /assistant/actions/:id/decline | New |  |
-| cai_ok | AI assistant | POST /assistant/actions/:id/confirm | New | same permission check and audit |
+| cai_no | AI assistant | POST /assistant/actions/:id/decline | New | built |
+| cai_ok | AI assistant | POST /assistant/actions/:id/confirm | New | built |
 | cb_cancel_ok | bookings | POST /client/bookings/:id/cancel | New | operator-side cancellation; refund by the operator's slab; audit |
 | cs_q_ok | earnings | POST /client/settlements/:id/query | New | notifies admin |
 | d_reset | drules / dreports | No server call | UI | confirm reset |
@@ -3812,19 +3896,6 @@ Read from the controllers in `backend/src`: 26 controllers, 113 routes. Everythi
 | trips | GET /trips/search<br>GET /trips/search/filters<br>GET /trips/:tripId<br>GET /catalogue/trips<br>GET /catalogue/trips/:id<br>POST /catalogue/trips<br>PUT /catalogue/trips/:id<br>POST /catalogue/trips/:id/publish<br>POST /catalogue/trips/:id/cancel |
 | users | GET /users |
 
-### I.1 Controllers in `<feature>_manage` style files (not in the table above)
-
-Checked 12 October 2026 against `backend/src`. These routes exist and count as "Exists".
-
-| File | Routes |
-|---|---|
-| rbac/access_matrix_admin_manage.ts | GET /access-matrix<br>PUT /access-matrix/roles/:roleKey/pages/:pageId<br>PUT /access-matrix/roles/:roleKey<br>POST /access-matrix/roles<br>PATCH /access-matrix/roles/:roleKey<br>DELETE /access-matrix/roles/:roleKey |
-| authentication/google_sign_in.ts | POST /auth/google<br>POST /auth/apple<br>POST /auth/client/otp/verify<br>GET /client/kyc/login-methods<br>POST /client/kyc/login-methods/phone<br>POST /client/kyc/login-methods/social |
-| onboarding/client_kyc.ts | GET /client/kyc<br>PUT /client/kyc |
-| system-settings/admin_kyc_configuration.ts | GET /settings/kyc-configuration<br>PUT /settings/kyc-configuration<br>POST /settings/kyc-configuration/validate-import<br>POST /settings/kyc-configuration/preview |
-
-Corrections found on the same check: Apple sign-in already has a route; the KYC questionnaire is one configuration document at `/settings/kyc-configuration`, not the `/admin/kyc/...` routes named in D.12 (to be rewritten in Phase 1 step 10).
-
 ### I.2 Modules with no controller yet
 
 `analytics`, `api-clients`, `bookings`, `boarding-points`, `chatbot`, `check-in`, `commissions`, `content`, `coupons`, `customers`, `drivers`, `fares`, `feature-flags`, `inventory`, `live-tracking`, `maintenance`, `notification-templates`, `offers`, `operator-staff`, `partner-webhooks`, `partners`, `passengers`, `payments`, `popular-routes`, `reconciliation`, `refunds`, `reports`, `schedules`, `seat-layouts`, `settlements`, `support`, `tickets`, `translations`, `trip-operations`, `whatsapp`, `women-safety`. These folders exist as empty placeholders; they get their three-file packages in the phases above.
@@ -3840,7 +3911,7 @@ Customer app: 26 screens, 78 mapped elements. Driver app: 9 screens, 23. Website
 
 ## Appendix J. Feature file index (the three files of every feature)
 
-One row per feature and audience. Paths are relative to the repository root. Flutter files live in the app's `lib/features/<feature>/` folder; backend files in `backend/src/modules/<first module>/`. A "(backend only)" feature has no screen. Update the Status column as work finishes.
+Status was last updated 13 October 2026 (Part 9 has the detail). One row per feature and audience. Paths are relative to the repository root. Flutter files live in the app's `lib/features/<feature>/` folder; backend files in `backend/src/modules/<first module>/`. A "(backend only)" feature has no screen. Update the Status column as work finishes.
 
 | Phase | Feature | Screen file (all widgets inside) | Backend file (schema, DTOs, controller, module) | Service file | Status |
 |---|---|---|---|---|---|
@@ -3852,23 +3923,23 @@ One row per feature and audience. Paths are relative to the repository root. Flu
 | Phase 0 | Notifications and event router | apps/customer_app/lib/features/notifications/notifications_customer_screen.dart | backend/src/modules/notifications/notifications_customer.ts | backend/src/modules/notifications/notifications_customer.service.ts | Not started |
 | Phase 0 | Notifications and event router | apps/driver_app/lib/features/notifications/notifications_driver_screen.dart | backend/src/modules/notifications/notifications_driver.ts | backend/src/modules/notifications/notifications_driver.service.ts | Not started |
 | Phase 0 | File storage and proof attachments | (backend only) | backend/src/modules/files/files_core.ts | backend/src/modules/files/files_core.service.ts | Not started |
-| Phase 0 | WhatsApp and email messages | apps/admin_app/lib/features/messages/messages_admin_manage_screen.dart | backend/src/modules/whatsapp/messages_admin_manage.ts | backend/src/modules/whatsapp/messages_admin_manage.service.ts | Not started |
-| Phase 0 | WhatsApp and email messages | apps/customer_app/lib/features/messages/messages_customer_screen.dart | backend/src/modules/whatsapp/messages_customer.ts | backend/src/modules/whatsapp/messages_customer.service.ts | Not started |
-| Phase 0 | Integrations, feature flags and maintenance | apps/admin_app/lib/features/settings/settings_admin_manage_screen.dart | backend/src/modules/system-settings/settings_admin_manage.ts | backend/src/modules/system-settings/settings_admin_manage.service.ts | Not started |
-| Phase 0 | AI assistant (Groq) | apps/admin_app/lib/features/assistant/assistant_admin_manage_screen.dart | backend/src/modules/chatbot/assistant_admin_manage.ts | backend/src/modules/chatbot/assistant_admin_manage.service.ts | Not started |
-| Phase 0 | AI assistant (Groq) | apps/customer_app/lib/features/assistant/assistant_customer_screen.dart | backend/src/modules/chatbot/assistant_customer.ts | backend/src/modules/chatbot/assistant_customer.service.ts | Not started |
-| Phase 0 | AI assistant (Groq) | apps/driver_app/lib/features/assistant/assistant_driver_screen.dart | backend/src/modules/chatbot/assistant_driver.ts | backend/src/modules/chatbot/assistant_driver.service.ts | Not started |
-| Phase 0 | Seed data and live updates | (backend only) | backend/src/modules/database/seed_core.ts | backend/src/modules/database/seed_core.service.ts | Not started |
-| Phase 1 | Cities and places | apps/admin_app/lib/features/places/places_admin_manage_screen.dart | backend/src/modules/cities/places_admin_manage.ts | backend/src/modules/cities/places_admin_manage.service.ts | Not started |
+| Phase 0 | WhatsApp and email messages | apps/admin_app/lib/features/messages/messages_admin_manage_screen.dart | backend/src/modules/whatsapp/messages_admin_manage.ts | backend/src/modules/whatsapp/messages_admin_manage.service.ts | Backend built (Phase 0) |
+| Phase 0 | WhatsApp and email messages | apps/customer_app/lib/features/messages/messages_customer_screen.dart | backend/src/modules/whatsapp/messages_customer.ts | backend/src/modules/whatsapp/messages_customer.service.ts | Backend built (Phase 0) |
+| Phase 0 | Integrations, feature flags and maintenance | apps/admin_app/lib/features/settings/settings_admin_manage_screen.dart | backend/src/modules/system-settings/settings_admin_manage.ts | backend/src/modules/system-settings/settings_admin_manage.service.ts | Backend built (Phase 0): integrations, feature flags, maintenance |
+| Phase 0 | AI assistant (Groq) | apps/admin_app/lib/features/assistant/assistant_admin_manage_screen.dart | backend/src/modules/chatbot/assistant_admin_manage.ts | backend/src/modules/chatbot/assistant_admin_manage.service.ts | Backend built (Phase 0): one endpoint for every app |
+| Phase 0 | AI assistant (Groq) | apps/customer_app/lib/features/assistant/assistant_customer_screen.dart | backend/src/modules/chatbot/assistant_customer.ts | backend/src/modules/chatbot/assistant_customer.service.ts | Backend built (Phase 0): same endpoint |
+| Phase 0 | AI assistant (Groq) | apps/driver_app/lib/features/assistant/assistant_driver_screen.dart | backend/src/modules/chatbot/assistant_driver.ts | backend/src/modules/chatbot/assistant_driver.service.ts | Backend built (Phase 0): same endpoint |
+| Phase 0 | Seed data and live updates | (backend only) | backend/src/modules/database/seed_core.ts | backend/src/modules/database/seed_core.service.ts | Built (Phase 0): npm run seed:demo; live channel built |
+| Phase 1 | Cities and places | apps/admin_app/lib/features/places/places_admin_manage_screen.dart | backend/src/modules/cities/places_admin_manage.ts | backend/src/modules/cities/places_admin_manage.service.ts | Backend built on Phase 1 branch (delete, export, import) |
 | Phase 1 | Cities and places | apps/client_portal/lib/features/places/places_client_manage_screen.dart | backend/src/modules/cities/places_client_manage.ts | backend/src/modules/cities/places_client_manage.service.ts | Not started |
 | Phase 1 | Cities and places | apps/customer_app/lib/features/places/places_customer_screen.dart | backend/src/modules/cities/places_customer.ts | backend/src/modules/cities/places_customer.service.ts | Not started |
-| Phase 1 | Bus types and amenities | apps/admin_app/lib/features/bus_types/bus_types_admin_manage_screen.dart | backend/src/modules/bus-types/bus_types_admin_manage.ts | backend/src/modules/bus-types/bus_types_admin_manage.service.ts | Not started |
-| Phase 1 | Required documents and KYC questionnaire | apps/admin_app/lib/features/kyc_config/kyc_config_admin_manage_screen.dart | backend/src/modules/document-types/kyc_config_admin_manage.ts | backend/src/modules/document-types/kyc_config_admin_manage.service.ts | Not started |
-| Phase 1 | Operator invitations | apps/admin_app/lib/features/invitations/invitations_admin_manage_screen.dart | backend/src/modules/onboarding/invitations_admin_manage.ts | backend/src/modules/onboarding/invitations_admin_manage.service.ts | Not started |
-| Phase 1 | KYC review and company onboarding | apps/admin_app/lib/features/kyc/kyc_admin_manage_screen.dart | backend/src/modules/onboarding/kyc_admin_manage.ts | backend/src/modules/onboarding/kyc_admin_manage.service.ts | Not started |
+| Phase 1 | Bus types and amenities | apps/admin_app/lib/features/bus_types/bus_types_admin_manage_screen.dart | backend/src/modules/bus-types/bus_types_admin_manage.ts | backend/src/modules/bus-types/bus_types_admin_manage.service.ts | Backend built on Phase 1 branch (amenities, delete, export) |
+| Phase 1 | Required documents and KYC questionnaire | apps/admin_app/lib/features/kyc_config/kyc_config_admin_manage_screen.dart | backend/src/modules/document-types/kyc_config_admin_manage.ts | backend/src/modules/document-types/kyc_config_admin_manage.service.ts | Backend built on Phase 1 branch (read-one, delete, export) |
+| Phase 1 | Operator invitations | apps/admin_app/lib/features/invitations/invitations_admin_manage_screen.dart | backend/src/modules/onboarding/invitations_admin_manage.ts | backend/src/modules/onboarding/invitations_admin_manage.service.ts | Backend built on Phase 1 branch (edit, expiry, delete, export) |
+| Phase 1 | KYC review and company onboarding | apps/admin_app/lib/features/kyc/kyc_admin_manage_screen.dart | backend/src/modules/onboarding/kyc_admin_manage.ts | backend/src/modules/onboarding/kyc_admin_manage.service.ts | Backend built on Phase 1 branch (export) |
 | Phase 1 | KYC review and company onboarding | apps/client_portal/lib/features/kyc/kyc_client_manage_screen.dart | backend/src/modules/onboarding/kyc_client_manage.ts | backend/src/modules/onboarding/kyc_client_manage.service.ts | Not started |
-| Phase 1 | Operators | apps/admin_app/lib/features/operators/operators_admin_manage_screen.dart | backend/src/modules/operators/operators_admin_manage.ts | backend/src/modules/operators/operators_admin_manage.service.ts | Not started |
-| Phase 1 | Banners | apps/admin_app/lib/features/banners/banners_admin_manage_screen.dart | backend/src/modules/admin-banners/banners_admin_manage.ts | backend/src/modules/admin-banners/banners_admin_manage.service.ts | Not started |
+| Phase 1 | Operators | apps/admin_app/lib/features/operators/operators_admin_manage_screen.dart | backend/src/modules/operators/operators_admin_manage.ts | backend/src/modules/operators/operators_admin_manage.service.ts | Backend built on Phase 1 branch (delete, export) |
+| Phase 1 | Banners | apps/admin_app/lib/features/banners/banners_admin_manage_screen.dart | backend/src/modules/admin-banners/banners_admin_manage.ts | backend/src/modules/admin-banners/banners_admin_manage.service.ts | Backend built on Phase 1 branch (duplicate, archive, reorder, export) |
 | Phase 1 | Banners | apps/customer_app/lib/features/banners/banners_customer_screen.dart | backend/src/modules/admin-banners/banners_customer.ts | backend/src/modules/admin-banners/banners_customer.service.ts | Not started |
 | Phase 1 | Banners | apps/public_website/app/banners/banners_public_page.tsx | backend/src/modules/admin-banners/banners_public.ts | backend/src/modules/admin-banners/banners_public.service.ts | Not started |
 | Phase 2 | Buses and seat layouts | apps/admin_app/lib/features/buses/buses_admin_manage_screen.dart | backend/src/modules/buses/buses_admin_manage.ts | backend/src/modules/buses/buses_admin_manage.service.ts | Not started |

@@ -76,6 +76,7 @@
     "worker:dev": "nest start --watch --entryFile worker",
     "worker:prod": "node dist/worker",
     "bootstrap:super-admin": "nest start --entryFile bootstrap-super-admin",
+    "seed:demo": "nest start --entryFile seed-demo-data --",
     "bootstrap:super-admin:prod": "node dist/bootstrap-super-admin"
   },
   "allowScripts": {

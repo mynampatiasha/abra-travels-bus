@@ -1,5 +1,7 @@
 # Session briefs
 
+Sessions share one working folder, so each brief tells its session to create its own folder (a git worktree) and branch. The main folder stays on main and belongs to the coordinator.
+
 How to use: open a new session, paste the whole block of one brief (it already contains the common rules), and let it work. The coordinator (the first brief) is the session that already has the full picture. Start with briefs 1 to 3; start briefs 4 and 5 when the coordinator says Phase 0 is stable.
 
 Written 12 October 2026. Repository: `D:\New_project\abra-travels`.
@@ -18,7 +20,7 @@ You are the **coordinator** session of the Abra Travels build. Several sessions 
 2. The demo files in `prototypes/` for every screen you build. **The real UI must look and behave exactly like the demo** (same layout, wording, buttons, dialogs, fields, states).
 
 **Working rules**
-- Work only on your own git branch `main (merges only)`. Do not commit to the main branch, do not push, do not reset or rebase anything you did not create. If the checkpoint commit does not exist yet, ask the coordinator.
+- You work in the main folder `D:/New_project/abra-travels` on `main` and never create a worktree. Every other session works in its own worktree and branch; you merge their branches into main one at a time, only after the checks pass, and you never switch branches inside the main folder.
 - **Three files per feature and audience**: `<feature>_<app>_screen.dart` (models, state, API calls and ALL widgets inside), `<feature>_<app>.ts` (schema, DTOs, controller, module), `<feature>_<app>.service.ts` (logic). New code only; do not rewrite working files. Tests go in `test/` or `tests/` folders.
 - **Shared files belong to the coordinator**: `rbac/permissions/permission-catalog.ts`, `rbac/permissions/access-pages.ts`, `audit-logs/schemas/audit-log.schema.ts` (audit action list), `modules/domain-modules.ts`, `app.module.ts`, `config/environment.schema.ts`, everything in `packages/shared_*`, and `documentation/abra-master-plan.*`. If you need a change there, write it in your report under "Shared changes I need" with the exact lines; do not edit the file. (The only exception: adding new entries at the end of a list is allowed in your own branch, never reorder or remove, and list each one in your report.)
 - Do not run Prettier or ESLint `--fix` over folders you do not own.
@@ -82,7 +84,11 @@ You are the **Phase 1** session of the Abra Travels build. Several sessions work
 2. The demo files in `prototypes/` for every screen you build. **The real UI must look and behave exactly like the demo** (same layout, wording, buttons, dialogs, fields, states).
 
 **Working rules**
-- Work only on your own git branch `phase1-catalogue-kyc`. Do not commit to the main branch, do not push, do not reset or rebase anything you did not create. If the checkpoint commit does not exist yet, ask the coordinator.
+- **Work only in your own folder (a git worktree) on your own branch `phase1-catalogue-kyc`.** All sessions share the folder `D:/New_project/abra-travels`, so never switch branches inside it; that would move every other session's files. The checkpoint commit already exists on main. Create your folder once, from a terminal:
+  `git -C D:/New_project/abra-travels worktree add D:/New_project/abra-wt-p1 -b phase1-catalogue-kyc main`
+  Then work only inside `D:/New_project/abra-wt-p1`. Git does not copy ignored files, so copy `backend/.env.development` and the folder `backend/secrets` from the main folder into the same paths in yours (copy the files with the operating system; never open, print or paste their contents), then run `npm ci` in `backend` and `flutter pub get` in each Flutter app you touch.
+- Commit only on your branch, in small commits. Do not commit to main, do not push, do not reset or rebase anything you did not create. The coordinator merges your branch.
+- (The coordinator session is the exception: it works in the main folder on main and never creates a worktree.)
 - **Three files per feature and audience**: `<feature>_<app>_screen.dart` (models, state, API calls and ALL widgets inside), `<feature>_<app>.ts` (schema, DTOs, controller, module), `<feature>_<app>.service.ts` (logic). New code only; do not rewrite working files. Tests go in `test/` or `tests/` folders.
 - **Shared files belong to the coordinator**: `rbac/permissions/permission-catalog.ts`, `rbac/permissions/access-pages.ts`, `audit-logs/schemas/audit-log.schema.ts` (audit action list), `modules/domain-modules.ts`, `app.module.ts`, `config/environment.schema.ts`, everything in `packages/shared_*`, and `documentation/abra-master-plan.*`. If you need a change there, write it in your report under "Shared changes I need" with the exact lines; do not edit the file. (The only exception: adding new entries at the end of a list is allowed in your own branch, never reorder or remove, and list each one in your report.)
 - Do not run Prettier or ESLint `--fix` over folders you do not own.
@@ -150,7 +156,11 @@ You are the **Phase 2** session of the Abra Travels build. Several sessions work
 2. The demo files in `prototypes/` for every screen you build. **The real UI must look and behave exactly like the demo** (same layout, wording, buttons, dialogs, fields, states).
 
 **Working rules**
-- Work only on your own git branch `phase2-supply`. Do not commit to the main branch, do not push, do not reset or rebase anything you did not create. If the checkpoint commit does not exist yet, ask the coordinator.
+- **Work only in your own folder (a git worktree) on your own branch `phase2-supply`.** All sessions share the folder `D:/New_project/abra-travels`, so never switch branches inside it; that would move every other session's files. The checkpoint commit already exists on main. Create your folder once, from a terminal:
+  `git -C D:/New_project/abra-travels worktree add D:/New_project/abra-wt-p2 -b phase2-supply main`
+  Then work only inside `D:/New_project/abra-wt-p2`. Git does not copy ignored files, so copy `backend/.env.development` and the folder `backend/secrets` from the main folder into the same paths in yours (copy the files with the operating system; never open, print or paste their contents), then run `npm ci` in `backend` and `flutter pub get` in each Flutter app you touch.
+- Commit only on your branch, in small commits. Do not commit to main, do not push, do not reset or rebase anything you did not create. The coordinator merges your branch.
+- (The coordinator session is the exception: it works in the main folder on main and never creates a worktree.)
 - **Three files per feature and audience**: `<feature>_<app>_screen.dart` (models, state, API calls and ALL widgets inside), `<feature>_<app>.ts` (schema, DTOs, controller, module), `<feature>_<app>.service.ts` (logic). New code only; do not rewrite working files. Tests go in `test/` or `tests/` folders.
 - **Shared files belong to the coordinator**: `rbac/permissions/permission-catalog.ts`, `rbac/permissions/access-pages.ts`, `audit-logs/schemas/audit-log.schema.ts` (audit action list), `modules/domain-modules.ts`, `app.module.ts`, `config/environment.schema.ts`, everything in `packages/shared_*`, and `documentation/abra-master-plan.*`. If you need a change there, write it in your report under "Shared changes I need" with the exact lines; do not edit the file. (The only exception: adding new entries at the end of a list is allowed in your own branch, never reorder or remove, and list each one in your report.)
 - Do not run Prettier or ESLint `--fix` over folders you do not own.
@@ -210,7 +220,11 @@ You are the **Driver app and website** session of the Abra Travels build. Severa
 2. The demo files in `prototypes/` for every screen you build. **The real UI must look and behave exactly like the demo** (same layout, wording, buttons, dialogs, fields, states).
 
 **Working rules**
-- Work only on your own git branch `driver-and-website`. Do not commit to the main branch, do not push, do not reset or rebase anything you did not create. If the checkpoint commit does not exist yet, ask the coordinator.
+- **Work only in your own folder (a git worktree) on your own branch `driver-and-website`.** All sessions share the folder `D:/New_project/abra-travels`, so never switch branches inside it; that would move every other session's files. The checkpoint commit already exists on main. Create your folder once, from a terminal:
+  `git -C D:/New_project/abra-travels worktree add D:/New_project/abra-wt-dw -b driver-and-website main`
+  Then work only inside `D:/New_project/abra-wt-dw`. Git does not copy ignored files, so copy `backend/.env.development` and the folder `backend/secrets` from the main folder into the same paths in yours (copy the files with the operating system; never open, print or paste their contents), then run `npm ci` in `backend` and `flutter pub get` in each Flutter app you touch.
+- Commit only on your branch, in small commits. Do not commit to main, do not push, do not reset or rebase anything you did not create. The coordinator merges your branch.
+- (The coordinator session is the exception: it works in the main folder on main and never creates a worktree.)
 - **Three files per feature and audience**: `<feature>_<app>_screen.dart` (models, state, API calls and ALL widgets inside), `<feature>_<app>.ts` (schema, DTOs, controller, module), `<feature>_<app>.service.ts` (logic). New code only; do not rewrite working files. Tests go in `test/` or `tests/` folders.
 - **Shared files belong to the coordinator**: `rbac/permissions/permission-catalog.ts`, `rbac/permissions/access-pages.ts`, `audit-logs/schemas/audit-log.schema.ts` (audit action list), `modules/domain-modules.ts`, `app.module.ts`, `config/environment.schema.ts`, everything in `packages/shared_*`, and `documentation/abra-master-plan.*`. If you need a change there, write it in your report under "Shared changes I need" with the exact lines; do not edit the file. (The only exception: adding new entries at the end of a list is allowed in your own branch, never reorder or remove, and list each one in your report.)
 - Do not run Prettier or ESLint `--fix` over folders you do not own.
@@ -268,7 +282,11 @@ You are the **Customer app** session of the Abra Travels build. Several sessions
 2. The demo files in `prototypes/` for every screen you build. **The real UI must look and behave exactly like the demo** (same layout, wording, buttons, dialogs, fields, states).
 
 **Working rules**
-- Work only on your own git branch `customer-app`. Do not commit to the main branch, do not push, do not reset or rebase anything you did not create. If the checkpoint commit does not exist yet, ask the coordinator.
+- **Work only in your own folder (a git worktree) on your own branch `customer-app`.** All sessions share the folder `D:/New_project/abra-travels`, so never switch branches inside it; that would move every other session's files. The checkpoint commit already exists on main. Create your folder once, from a terminal:
+  `git -C D:/New_project/abra-travels worktree add D:/New_project/abra-wt-ca -b customer-app main`
+  Then work only inside `D:/New_project/abra-wt-ca`. Git does not copy ignored files, so copy `backend/.env.development` and the folder `backend/secrets` from the main folder into the same paths in yours (copy the files with the operating system; never open, print or paste their contents), then run `npm ci` in `backend` and `flutter pub get` in each Flutter app you touch.
+- Commit only on your branch, in small commits. Do not commit to main, do not push, do not reset or rebase anything you did not create. The coordinator merges your branch.
+- (The coordinator session is the exception: it works in the main folder on main and never creates a worktree.)
 - **Three files per feature and audience**: `<feature>_<app>_screen.dart` (models, state, API calls and ALL widgets inside), `<feature>_<app>.ts` (schema, DTOs, controller, module), `<feature>_<app>.service.ts` (logic). New code only; do not rewrite working files. Tests go in `test/` or `tests/` folders.
 - **Shared files belong to the coordinator**: `rbac/permissions/permission-catalog.ts`, `rbac/permissions/access-pages.ts`, `audit-logs/schemas/audit-log.schema.ts` (audit action list), `modules/domain-modules.ts`, `app.module.ts`, `config/environment.schema.ts`, everything in `packages/shared_*`, and `documentation/abra-master-plan.*`. If you need a change there, write it in your report under "Shared changes I need" with the exact lines; do not edit the file. (The only exception: adding new entries at the end of a list is allowed in your own branch, never reorder or remove, and list each one in your report.)
 - Do not run Prettier or ESLint `--fix` over folders you do not own.
