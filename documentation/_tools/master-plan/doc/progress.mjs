@@ -14,6 +14,9 @@ export const BUILT = [
   ['0', 'Feature flags (9 switches) and maintenance (5 scopes, message, window) enforced by one global guard', 'Built and tested', '31 unit and 15 end-to-end tests', 'feature-flags/flags_admin_manage*.ts'],
   ['0', 'Demo seed: 20 cities, 52 places, 6 bus types, 14 companies, 31 buses', 'Built, tested locally; NOT loaded into Atlas by decision', '18 unit tests; run for real on a local database and twice (adds nothing the second time). Decision of 13 October 2026: no sample data goes into Atlas; real data is created by testing through the apps. The seed stays a tool for throw-away local databases only', 'npm run seed:demo, backend/src/seed, backend/seed/demo-data.json'],
   ['0', '15 end-to-end tests that were failing before any of this work', 'Fixed', 'Cause: test operators had no active company record, which the login guard now requires. Test helper fixed; one test now checks the real data-scope protection', 'rbac/tests/rbac-e2e.harness.ts, authorization-isolation.e2e-spec.ts'],
+  ['0', 'Audit log page: list with the demo filters (search, person, sensitive only, action, dates), sort, one entry with before and after, download as CSV or Excel; operators see only their own entries and the Abra team as one name; admin app screen', 'Built and tested', '8 unit and 21 end-to-end tests; admin app 7 screen tests; checked on a local database only, not on Atlas, and not yet looked at in a browser next to the demo', 'audit-logs/audit_log_admin_manage*.ts, apps/admin_app/lib/features/audit/audit_admin_manage_screen.dart'],
+  ['0', 'Proof files: upload a picture, PDF or text note (5 per action, 600 KB each, real type read from the bytes), view in place or download; seen by Abra staff, the operator concerned, the uploader and the people an action names; other features attach proofs with ProofFilesService.attach inside their own transaction', 'Built and tested', '3 unit and 17 end-to-end tests with a real temporary storage folder; no screen yet: the proof box of each action is built with that action', 'files/files_core.ts, files/files_core.service.ts'],
+  ['0', 'Event router: one place that turns a business event into notifications (in-app, push, email and WhatsApp fallbacks), live updates and logged WhatsApp or email messages; rules for 32 events of Appendix B (trips, bookings, payments, refunds, SOS, support, settlements, driver reports); one notification per person per event; failed channels retried by the worker, what worked is not repeated; features add their own rules with EventRouter.addRules', 'Built and tested', '15 unit tests; the API and the worker start with it. No feature sends these events yet (bookings, trips and refunds come in Phases 2 to 5), so nothing reaches a phone until then. Onboarding and place requests keep their own handlers', 'notifications/event_router_core.ts, notifications/event_router_core.service.ts'],
   ['0', 'Phase 0 checklist (27 steps) run end to end over HTTP', 'All 27 pass', 'On a temporary local database with a throw-away admin, then deleted (step J, the sample data, is skipped on Atlas). Rerun on Atlas with your password', 'backend/scripts/phase0-checklist.mjs'],
 ];
 
@@ -22,10 +25,10 @@ export const PHASE1 = [
   ['1', 'Step 2: banner duplicate, archive and reorder; banners shown higher-order first with audience and colour style as in the demo; read-one routes; invitation edit and expiry', 'Built and tested (branch)', 'banners end-to-end 28 pass; invitations suite passes; admin app 144 tests pass', 'banners_admin_manage*, invitations_admin_manage*'],
   ['1', 'Step 3: server-side export (CSV and Excel) for 8 lists; import with template and dry run for cities and places', 'Built and tested (branch)', 'export 15 and import 10 end-to-end tests pass', 'catalogue-shared; exceljs added to package.json'],
   ['1', 'Step 4: amenities (add, switch on and off, bus forms use the active ones)', 'Built and tested (branch)', 'amenities 8 end-to-end tests pass; admin app 150 tests pass', 'modules/amenities/amenities_admin_manage*.ts'],
+  ['1', 'Step 5: place requests (operator asks, admin approves or rejects with a reason; approve creates a shared place; audited; notifications); places gain "Used for" and "Trips using it"; admin "Cities and places" page with three tabs; client Places page', 'Built and tested; merged into main', 'locations, catalogue-shared, amenities, trips, routes end-to-end pass; admin app 154 and client portal 20 tests pass; checked in a browser on a local database except the client "Request a place" window', 'modules/locations/places_admin_manage*.ts, places_client_manage*.ts'],
 ];
 
 export const PHASE1_REMAINING = [
-  'Step 5: place requests (operator asks, admin approves or rejects) and the three-tab Places page',
   'Step 6: operator detail page with tabs; suspend with reason and proof; reactivate; message the owner',
   'Step 7: payout mode and bank details with verification',
   'Step 8: company profile and bank page in the client portal',
@@ -37,9 +40,9 @@ export const PHASE1_REMAINING = [
 export const GAPS = [
   ['Real outside services', 'Razorpay, Google Maps, Groq, SMS, Firebase push and WhatsApp were only tested against a fake network. Keys are needed (Part 7).'],
   ['Atlas for the newer features', 'Messages, integration settings, assistant, feature flags, maintenance and live updates were tested on a local database. The checklist script can run them against Atlas with your password.'],
-  ['Event router and notification demo', 'The plan\'s Phase 0 goal "a notification travels from the backend to a phone and to the admin bell" is not shown yet: the notification and socket machinery exists and is tested, but no business event feeds it until bookings, trips and refunds exist.'],
-  ['Audit log page', 'The read endpoint exists. Filters, the detail view and export from the demo are still to build (Phase 7).'],
-  ['Proof files', 'The storage decision (existing files service, local in development, a bucket before staging) is recommended but not yet built into the proof boxes.'],
+  ['Event router and notification demo', 'The router is built and tested, but the plan\'s Phase 0 goal "a notification travels from the backend to a phone and to the admin bell" is not shown yet: no feature sends the routed events until bookings, trips and refunds exist (Phases 2 to 5). The notification screens of the four apps are not built yet.'],
+  ['Audit log page', 'Built (list, filters, entry, download, admin screen). The sensitive-action list and the action words are a first version: new actions must be added to both when a module starts auditing. The client portal has no audit page in its demo, so none was built; an operator reads its own trail only through the API.'],
+  ['Proof files', 'The service and API are built (`POST /files/proofs`, view and download). Proofs live in the local storage folder in development; a bucket is needed before staging (decision for you, Part 7). Unattached uploads are never cleaned up yet. Each action (trip cancel, refund reject, customer block...) must call `ProofFilesService.attach` and each app needs one shared proof box; both are built with those actions.'],
   ['Apple sign-in', 'The route exists (`POST /auth/apple`); not tried with a real Apple account.'],
   ['Flutter apps', 'No app calls any of the Phase 0 endpoints yet. The admin app is being wired to Phase 1 on its own branch.'],
   ['Assistant details', 'Answers arrive whole, not word by word. Feature tools (bookings, trips) are added with those features. Behaviour with the real Groq model, including attempts to break its rules, is untested.'],
@@ -54,14 +57,14 @@ export const ISSUES = [
   ['Atlas password', 'The database password was shown in a screenshot and in chat. It still needs resetting; then update backend/.env.development.'],
 ];
 
-export const TOTALS = 'After merging Phase 1 steps 0 to 4 into main (13 October 2026): unit tests 751 (750 pass; one queue test fails now and then); end-to-end 295 of 295 in 27 files (rbac, document types, catalogue-shared, banners, onboarding, amenities, system settings, messages, assistant, live updates, feature flags, password sign-in; the Redis-restart test left out); Dart permission parity passes. Phase 0 checklist: 27 of 27 on a local database; not yet run on Atlas.';
+export const TOTALS = 'On main with Phase 1 steps 0 to 5 and the three Phase 0 gaps (14 October 2026): unit tests 776 (775 pass; one queue test fails now and then); end-to-end 575 of 575 in 46 files (every suite except the Redis-restart test and the Super Admin bootstrap test); admin app 161 tests and analyzer clean; Dart permission parity passes. Phase 0 checklist: 27 of 27 on a local database; not yet run on Atlas.';
 
 export const PHASE0_CHECKLIST = [
   'Start Docker Desktop and wait for "running", then start the backend (`npm run start` in the backend folder) and open `http://localhost:4000/api/docs`.',
   '**A. Health:** `GET /health/ready` shows ready, MongoDB up, Redis up.',
   '**B. Sign in:** `POST /api/v1/auth/login` with `{ "identifier": "<Super Admin email>", "password": "...", "device": { "clientType": "MOBILE" } }` (use MOBILE so the refresh token is in the answer). Copy `accessToken` into Authorize. `GET /me` shows your name and `userType` STAFF inside `user`.',
   '**C. Access matrix:** `GET /access-matrix?audience=ADMIN` shows 38 pages, the Super Admin row locked and FULL. Create a role with `POST /access-matrix/roles`, set Trips to VIEW, try to change SUPER_ADMIN (must be refused with 403), then delete the test role.',
-  '**D. Audit:** `GET /audit-logs` shows created, access changed and deleted, each with who and why.',
+  '**D. Audit:** `GET /audit-logs` shows created, access changed and deleted, each with who and why, now with the words for the screen (`actorName`, `actionLabel`, `targetLabel`, `sensitive`). `GET /audit-logs/filters` lists the people and actions for the filters; `GET /audit-logs/export?format=csv` downloads the same list.',
   '**E. Messages:** `GET /admin/messages` is an empty list (correct until bookings exist).',
   '**F. Integrations:** `GET /settings/integrations` lists 7 cards. Set Maps to `osm`, test it. Save a test SMS secret: only "set" and the last four characters come back. Clear it.',
   '**G. Assistant:** `POST /assistant/chat` with "who am i?" answers with your role.',
@@ -90,7 +93,7 @@ export function progress(d) {
     'You run the Phase 0 checklist (Part 4) against Atlas, or tell Claude to run it with your password.',
     'No sample data is loaded into Atlas (your decision): the first real data is created through the apps while you test.',
     'You say "Phase 0 is good" and give the Phase 1 session the go for step 5.',
-    'The Phase 0 gaps are built one at a time after your yes: audit log page (filters, detail, export), proof files, the event router.',
+    'The Phase 0 gaps are built: audit log page, proof files and the event router. You test the audit log page in the admin app.',
     'You reset the Atlas password and supply the keys listed in Part 7 when each phase needs them.',
   ]);
 }
@@ -107,7 +110,7 @@ export function phase1Status(d) {
     ['2b', 'Admin screens for step 2; banner fields as in the demo (colour style, shown to, operator link, higher order first)', 'Done 13 Oct', '2001676, edbd087'],
     ['3', 'Server-side export of eight lists (CSV and Excel); import with template and dry run for cities and places', 'Done 13 Oct', '39e7ee4, fe15857'],
     ['4', 'Amenities as a managed list; Amenities card on the Bus types page', 'Done 13 Oct', '6f75cb4, 222913e'],
-    ['5', 'Place requests (backend, admin tab, client page)', 'Not started', ''],
+    ['5', 'Place requests (backend, admin tab, client page); admin page "Cities and places" with tabs Places, Cities, Operator requests; client Places page', 'Done 13 Oct', 'b15e122'],
     ['6', 'Operator detail with tabs; suspend with reason and proof; message owner', 'Not started', ''],
     ['7', 'Payout mode and bank details with verification', 'Not started', ''],
     ['8', 'Company profile and bank details (client portal)', 'Not started', ''],
@@ -133,7 +136,7 @@ export function phase1Status(d) {
     'An import saves the rows that are right and leaves out the others, saying why for each row; a file is never refused as a whole because of one bad row (only for missing columns, size or row count).',
     'Export and import controllers are registered before a module\'s other controllers, because those have `GET <list>/:id` routes.',
     'Tests that need the database run on the local Docker MongoDB in a throw-away database whose name ends in `_test`, not on Atlas.',
-    'Step 5 (reported 13 October 2026, not merged yet): on the Operator requests tab, View uses `GET /admin/place-requests/:id`, not `/catalogue/locations/:id` as Appendix D.9 shows. Place requests are never deleted; they are kept for the record.',
+    'Step 5: on the Operator requests tab, View uses `GET /admin/place-requests/:id`, not `/catalogue/locations/:id` as Appendix D.9 shows. Place requests are never deleted; they are kept for the record.',
   ]);
   d.p('**Where the real screens still differ from the demo**');
   d.ul([

@@ -364,6 +364,11 @@ export const AUDIT_PERMISSIONS = definePermissions('audit', {
     description: 'View the audit trail within the data scope.',
     grantableTo: PLATFORM_AND_OPERATOR,
   },
+  export: {
+    name: 'Export audit log',
+    description: 'Download the audit trail, within the data scope, as CSV or Excel.',
+    grantableTo: PLATFORM_AND_OPERATOR,
+  },
 });
 
 /** Every permission of the platform. A new module's group is added to this object. */

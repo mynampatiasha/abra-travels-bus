@@ -706,6 +706,31 @@ abstract final class AdminStrings {
   static const opdVerifySave = 'opdVerifySave';
   static const opdBankMarkedVerified = 'opdBankMarkedVerified';
   static const opdBankMarkedFailed = 'opdBankMarkedFailed';
+  static const navAudit = 'navAudit';
+  static const hintAudit = 'hintAudit';
+  static const auditSearch = 'auditSearch';
+  static const auditFilterPerson = 'auditFilterPerson';
+  static const auditFilterType = 'auditFilterType';
+  static const auditTypeSensitive = 'auditTypeSensitive';
+  static const auditFilterAction = 'auditFilterAction';
+  static const auditColWhen = 'auditColWhen';
+  static const auditColWho = 'auditColWho';
+  static const auditColAction = 'auditColAction';
+  static const auditColTarget = 'auditColTarget';
+  static const auditColIp = 'auditColIp';
+  static const auditSortWhen = 'auditSortWhen';
+  static const auditSensitive = 'auditSensitive';
+  static const auditEntryTitle = 'auditEntryTitle';
+  static const auditFieldRole = 'auditFieldRole';
+  static const auditReason = 'auditReason';
+  static const auditChange = 'auditChange';
+  static const auditBefore = 'auditBefore';
+  static const auditAfter = 'auditAfter';
+  static const auditNothingChanged = 'auditNothingChanged';
+  static const auditViewTable = 'auditViewTable';
+  static const auditViewList = 'auditViewList';
+  static const auditEmptyTitle = 'auditEmptyTitle';
+  static const auditEmptyMessage = 'auditEmptyMessage';
   static const Set<String> all = <String>{
     appName,
     signInTitle,
@@ -1495,5 +1520,30 @@ abstract final class AdminStrings {
     opdVerifySave,
     opdBankMarkedVerified,
     opdBankMarkedFailed,
+    navAudit,
+    hintAudit,
+    auditSearch,
+    auditFilterPerson,
+    auditFilterType,
+    auditTypeSensitive,
+    auditFilterAction,
+    auditColWhen,
+    auditColWho,
+    auditColAction,
+    auditColTarget,
+    auditColIp,
+    auditSortWhen,
+    auditSensitive,
+    auditEntryTitle,
+    auditFieldRole,
+    auditReason,
+    auditChange,
+    auditBefore,
+    auditAfter,
+    auditNothingChanged,
+    auditViewTable,
+    auditViewList,
+    auditEmptyTitle,
+    auditEmptyMessage,
   };
 }

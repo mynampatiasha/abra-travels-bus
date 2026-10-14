@@ -39,6 +39,9 @@ abstract final class AdminRoutes {
   /// requests in one page. `/cities` and `/locations` still open on their own.
   static const places = '/places';
 
+  /// The audit log (demo page `audit`).
+  static const audit = '/audit';
+
   /// Query parameter that carries the section to return to after the
   /// session check or sign-in.
   static const fromParameter = 'from';
@@ -62,6 +65,7 @@ abstract final class AdminRoutes {
     trips: PermissionKeys.tripsRead,
     banners: PermissionKeys.bannersRead,
     places: PermissionKeys.catalogueRead,
+    audit: PermissionKeys.auditRead,
   };
 
   /// Sections in the order they are listed.
@@ -80,6 +84,7 @@ abstract final class AdminRoutes {
     documentTypes,
     kycConfiguration,
     banners,
+    audit,
     settings,
   ];
 }

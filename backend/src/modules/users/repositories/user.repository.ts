@@ -98,6 +98,38 @@ export class UserRepository {
     return result.matchedCount === 1;
   }
 
+  /** Ids of accounts whose name contains the text (at most 50), for searching by person. */
+  async findIdsByName(pattern: RegExp): Promise<Types.ObjectId[]> {
+    const found = await this.model
+      .find({ name: pattern }, { _id: 1 })
+      .limit(50)
+      .lean<Array<{ _id: Types.ObjectId }>>()
+      .exec();
+    return found.map((user) => user._id);
+  }
+
+  /** Active accounts with these ids and how to reach them (notifications and messages). */
+  findContacts(
+    ids: readonly Types.ObjectId[],
+  ): Promise<Array<{ _id: Types.ObjectId; name?: string; email?: string; phone?: string }>> {
+    if (ids.length === 0) return Promise.resolve([]);
+    return this.model
+      .find({ _id: { $in: ids }, status: 'ACTIVE' }, { name: 1, email: 1, phone: 1 })
+      .lean<Array<{ _id: Types.ObjectId; name?: string; email?: string; phone?: string }>>()
+      .exec();
+  }
+
+  /** Names and kinds of the accounts with these ids, in one query. Nothing else is read. */
+  findNames(
+    ids: readonly Types.ObjectId[],
+  ): Promise<Array<{ _id: Types.ObjectId; name?: string; userType: User['userType'] }>> {
+    if (ids.length === 0) return Promise.resolve([]);
+    return this.model
+      .find({ _id: { $in: ids } }, { name: 1, userType: 1 })
+      .lean<Array<{ _id: Types.ObjectId; name?: string; userType: User['userType'] }>>()
+      .exec();
+  }
+
   /**
    * A role's permissions changed: every holder's access tokens must stop working so the next
    * refresh carries the new access. Returns how many users hold the role.

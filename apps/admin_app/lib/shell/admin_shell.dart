@@ -110,6 +110,12 @@ class AdminSection {
       AdminStrings.hintBanners,
       Icons.view_carousel_outlined,
     ),
+    AdminRoutes.audit: AdminSection(
+      AdminRoutes.audit,
+      AdminStrings.navAudit,
+      AdminStrings.hintAudit,
+      Icons.history_outlined,
+    ),
     AdminRoutes.settings: AdminSection(
       AdminRoutes.settings,
       AdminStrings.navSettings,
