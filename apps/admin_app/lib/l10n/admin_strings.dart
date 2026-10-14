@@ -731,6 +731,11 @@ abstract final class AdminStrings {
   static const auditViewList = 'auditViewList';
   static const auditEmptyTitle = 'auditEmptyTitle';
   static const auditEmptyMessage = 'auditEmptyMessage';
+  static const navGroupOperators = 'navGroupOperators';
+  static const navGroupOperations = 'navGroupOperations';
+  static const navGroupCustomers = 'navGroupCustomers';
+  static const navGroupMarketing = 'navGroupMarketing';
+  static const navGroupSystem = 'navGroupSystem';
   static const Set<String> all = <String>{
     appName,
     signInTitle,
@@ -1545,5 +1550,10 @@ abstract final class AdminStrings {
     auditViewList,
     auditEmptyTitle,
     auditEmptyMessage,
+    navGroupOperators,
+    navGroupOperations,
+    navGroupCustomers,
+    navGroupMarketing,
+    navGroupSystem,
   };
 }

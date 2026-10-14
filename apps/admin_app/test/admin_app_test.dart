@@ -249,7 +249,7 @@ void main() {
       expect(locationOf(tester), AdminRoutes.trips);
       expect(find.byType(AdminShell), findsOneWidget);
       expect(find.text('Asha Admin'), findsOneWidget);
-      expect(find.text('All operators'), findsOneWidget);
+      expect(find.text('Super Admin'), findsOneWidget);
       // Tokens in secure storage only; nothing sensitive in the log
       expect(
         await app.secureStore.read(AuthTokenStore.accessTokenKey),
@@ -455,7 +455,7 @@ void main() {
       await app.pump(tester);
       expect(app.requestsTo('auth/login'), isEmpty);
       expect(find.byType(AdminShell), findsOneWidget);
-      expect(find.text('Your operator'), findsOneWidget);
+      expect(find.text('Operator Admin'), findsOneWidget);
     });
 
     testWidgets('when the server ends the session the user is returned to '
@@ -520,14 +520,14 @@ void main() {
       await app.pump(tester);
       return [
         for (final label in [
-          'Trips',
-          'Buses',
-          'Routes',
-          'Locations',
           'Operators',
           'Cities and places',
           'Cities',
-          'Bus types',
+          'Locations',
+          'Bus types and amenities',
+          'Buses',
+          'Trips',
+          'Routes',
         ])
           if (navItem(label).evaluate().isNotEmpty) label,
       ];
@@ -536,12 +536,12 @@ void main() {
     testWidgets('Super Admin and Admin see every section', (tester) async {
       // Cities and Locations are tabs of "Cities and places" for them
       const all = [
-        'Trips',
-        'Buses',
-        'Routes',
         'Operators',
         'Cities and places',
-        'Bus types',
+        'Bus types and amenities',
+        'Buses',
+        'Trips',
+        'Routes',
       ];
       expect(await sectionsFor(tester, Persona.superAdmin), all);
       expect(await sectionsFor(tester, Persona.admin), all);
@@ -550,28 +550,28 @@ void main() {
     testWidgets('Operator Admin and Operator Manager do not see the platform '
         'catalogue', (tester) async {
       expect(await sectionsFor(tester, Persona.operatorAdmin), [
-        'Trips',
-        'Buses',
-        'Routes',
-        'Locations',
         'Operators',
-        'Bus types',
+        'Locations',
+        'Bus types and amenities',
+        'Buses',
+        'Trips',
+        'Routes',
       ]);
       expect(await sectionsFor(tester, Persona.operatorManager), [
-        'Trips',
-        'Buses',
-        'Routes',
         'Locations',
-        'Bus types',
+        'Bus types and amenities',
+        'Buses',
+        'Trips',
+        'Routes',
       ]);
     });
 
     testWidgets('support staff see only what they can read', (tester) async {
       expect(await sectionsFor(tester, Persona.support), [
-        'Trips',
-        'Buses',
         'Operators',
-        'Bus types',
+        'Bus types and amenities',
+        'Buses',
+        'Trips',
       ]);
     });
 

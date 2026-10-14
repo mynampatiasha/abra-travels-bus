@@ -6,10 +6,12 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_authentication/shared_authentication.dart';
 import 'package:shared_localization/shared_localization.dart';
 import 'package:shared_notifications/shared_notifications.dart';
+import 'package:shared_permissions/shared_permissions.dart';
 import 'package:shared_theme/shared_theme.dart';
 import 'package:shared_ui/shared_ui.dart';
 
 import '../app/providers.dart';
+import '../features/catalogue/catalogue_repository.dart';
 import '../l10n/admin_strings.dart';
 import '../routing/admin_route_guard.dart';
 import '../routing/admin_routes.dart';
@@ -54,7 +56,7 @@ class AdminSection {
       AdminRoutes.operators,
       AdminStrings.navOperators,
       AdminStrings.hintOperators,
-      Icons.business_outlined,
+      Icons.work_outline,
     ),
     AdminRoutes.places: AdminSection(
       AdminRoutes.places,
@@ -84,7 +86,7 @@ class AdminSection {
       AdminRoutes.kycConfiguration,
       AdminStrings.navKycConfiguration,
       AdminStrings.hintKycConfiguration,
-      Icons.rule_folder_outlined,
+      Icons.tune,
     ),
     AdminRoutes.customers: AdminSection(
       AdminRoutes.customers,
@@ -96,13 +98,13 @@ class AdminSection {
       AdminRoutes.invitations,
       AdminStrings.navInvitations,
       AdminStrings.hintInvitations,
-      Icons.mark_email_read_outlined,
+      Icons.mail_outline,
     ),
     AdminRoutes.reviews: AdminSection(
       AdminRoutes.reviews,
       AdminStrings.navReviews,
       AdminStrings.hintReviews,
-      Icons.fact_check_outlined,
+      Icons.verified_user_outlined,
     ),
     AdminRoutes.banners: AdminSection(
       AdminRoutes.banners,
@@ -124,9 +126,38 @@ class AdminSection {
     ),
   };
 
-  /// Sections listed under "Content" (what customers see in the app) rather
-  /// than under "Catalogue".
-  static const Set<String> contentPaths = <String>{AdminRoutes.banners};
+  /// The menu groups of the demo, in its order, with the sections each holds.
+  static const List<(String, List<String>)> groups = <(String, List<String>)>[
+    (
+      AdminStrings.navGroupOperators,
+      <String>[
+        AdminRoutes.invitations,
+        AdminRoutes.reviews,
+        AdminRoutes.operators,
+      ],
+    ),
+    (
+      AdminStrings.navCatalogue,
+      <String>[
+        AdminRoutes.places,
+        AdminRoutes.cities,
+        AdminRoutes.locations,
+        AdminRoutes.busTypes,
+        AdminRoutes.documentTypes,
+        AdminRoutes.kycConfiguration,
+      ],
+    ),
+    (
+      AdminStrings.navGroupOperations,
+      <String>[AdminRoutes.buses, AdminRoutes.trips, AdminRoutes.routes],
+    ),
+    (AdminStrings.navGroupCustomers, <String>[AdminRoutes.customers]),
+    (AdminStrings.navGroupMarketing, <String>[AdminRoutes.banners]),
+    (
+      AdminStrings.navGroupSystem,
+      <String>[AdminRoutes.settings, AdminRoutes.audit],
+    ),
+  ];
 
   /// Cities and Locations are tabs of "Cities and places"; they are listed
   /// on their own only for someone who cannot open that page.
@@ -145,6 +176,40 @@ class AdminSection {
           byPath[path]!,
     ];
   }
+}
+
+/// How many onboarding files wait for review (the red count of "KYC reviews").
+final reviewsWaitingProvider = FutureProvider.autoDispose<int>((ref) async {
+  final page = await ref
+      .watch(catalogueRepositoryProvider)
+      .list(
+        const ResourceQuery(
+          'onboarding/submissions',
+          pageSize: 1,
+          filters: <String, String>{'status': 'PENDING'},
+        ),
+      );
+  return page.total;
+});
+
+/// How many place requests wait for a decision (the count of "Cities and places").
+final placeRequestsWaitingProvider = FutureProvider.autoDispose<int>((
+  ref,
+) async {
+  final data = await ref
+      .watch(catalogueRepositoryProvider)
+      .get('admin/place-requests/pending-count');
+  return (data['pending'] as num? ?? 0).toInt();
+});
+
+/// "SUPER_ADMIN" as "Super Admin".
+String roleLabel(Iterable<String> roleKeys) {
+  final key = roleKeys.isEmpty ? '' : roleKeys.first;
+  return key
+      .split('_')
+      .where((word) => word.isNotEmpty)
+      .map((word) => word[0] + word.substring(1).toLowerCase())
+      .join(' ');
 }
 
 /// Frame of the management app: a navy side navigation with the sections
@@ -222,28 +287,15 @@ class AdminShell extends ConsumerWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          if (current != null && breakpoint.isTabletOrWider)
-            Text(
-              l10n.text(current.hintKey),
-              style: textTheme.bodySmall,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
         ],
       ),
       actions: <Widget>[
-        if (breakpoint.isTabletOrWider)
+        if (breakpoint.isTabletOrWider &&
+            roleLabel(access.permissions.roleKeys).isNotEmpty)
           Center(
             child: AbraStatusBadge(
-              label: l10n.text(
-                access.hasPlatformScope
-                    ? AdminStrings.navScopePlatform
-                    : AdminStrings.navScopeOperator,
-              ),
+              label: roleLabel(access.permissions.roleKeys),
               tone: AbraStatusTone.info,
-              icon: access.hasPlatformScope
-                  ? Icons.public
-                  : Icons.business_outlined,
             ),
           ),
         const SizedBox(width: AbraSpacing.sm),
@@ -374,8 +426,8 @@ class _NotificationLifecycleState
   }
 }
 
-/// The navy navigation: product mark, then the sections.
-class _SideNavigation extends StatelessWidget {
+/// The navy navigation: product mark, then the sections in the demo's groups.
+class _SideNavigation extends ConsumerWidget {
   const _SideNavigation({
     required this.sections,
     required this.currentPath,
@@ -387,13 +439,22 @@ class _SideNavigation extends StatelessWidget {
   final ValueChanged<AdminSection> onSelect;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AbraLocalizations.of(context);
     final textTheme = Theme.of(context).textTheme;
+    final access = ref.watch(accessProvider);
+    int? badgeOf(AdminSection section) => switch (section.path) {
+      AdminRoutes.reviews => ref.watch(reviewsWaitingProvider).value,
+      AdminRoutes.places =>
+        access.can(PermissionKeys.catalogueRead)
+            ? ref.watch(placeRequestsWaitingProvider).value
+            : null,
+      _ => null,
+    };
     Widget heading(String key) => Padding(
       padding: const EdgeInsets.fromLTRB(
         AbraSpacing.md,
-        AbraSpacing.sm,
+        AbraSpacing.md,
         AbraSpacing.md,
         AbraSpacing.sm,
       ),
@@ -410,11 +471,9 @@ class _SideNavigation extends StatelessWidget {
     Widget item(AdminSection section) => _NavItem(
       section: section,
       isSelected: section.path == currentPath,
+      badge: badgeOf(section),
       onTap: () => onSelect(section),
     );
-    final content = sections
-        .where((section) => AdminSection.contentPaths.contains(section.path))
-        .toList();
     return Material(
       color: AbraColors.navy,
       child: Column(
@@ -440,14 +499,15 @@ class _SideNavigation extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.all(AbraSpacing.md),
                 children: <Widget>[
-                  heading(AdminStrings.navCatalogue),
-                  for (final section in sections)
-                    if (!content.contains(section)) item(section),
-                  if (content.isNotEmpty) ...<Widget>[
-                    const SizedBox(height: AbraSpacing.md),
-                    heading(AdminStrings.navContent),
-                    for (final section in content) item(section),
-                  ],
+                  for (final group in AdminSection.groups)
+                    if (sections.any(
+                      (s) => group.$2.contains(s.path),
+                    )) ...<Widget>[
+                      heading(group.$1),
+                      for (final path in group.$2)
+                        for (final section in sections)
+                          if (section.path == path) item(section),
+                    ],
                 ],
               ),
             ),
@@ -463,11 +523,15 @@ class _NavItem extends StatelessWidget {
     required this.section,
     required this.isSelected,
     required this.onTap,
+    this.badge,
   });
 
   final AdminSection section;
   final bool isSelected;
   final VoidCallback onTap;
+
+  /// How many things wait here; nothing is shown for none.
+  final int? badge;
 
   @override
   Widget build(BuildContext context) {
@@ -506,6 +570,25 @@ class _NavItem extends StatelessWidget {
               fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
             ),
           ),
+          trailing: (badge ?? 0) > 0
+              ? Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AbraColors.danger,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '$badge',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AbraColors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                )
+              : null,
           onTap: onTap,
         ),
       ),

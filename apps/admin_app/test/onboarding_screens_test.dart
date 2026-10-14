@@ -50,7 +50,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byType(AdminShell),
-          matching: find.widgetWithText(ListTile, 'Reviews'),
+          matching: find.widgetWithText(ListTile, 'KYC reviews'),
         ),
         findsOneWidget,
       );
@@ -59,7 +59,7 @@ void main() {
     testWidgets('does not offer them to read-only staff', (tester) async {
       await openAs(tester, FakeBackend(Persona.support), AdminRoutes.trips);
       expect(find.widgetWithText(ListTile, 'Invitations'), findsNothing);
-      expect(find.widgetWithText(ListTile, 'Reviews'), findsNothing);
+      expect(find.widgetWithText(ListTile, 'KYC reviews'), findsNothing);
       await open(tester, AdminRoutes.reviews);
       expect(find.text('Alpha Lines'), findsNothing);
     });
