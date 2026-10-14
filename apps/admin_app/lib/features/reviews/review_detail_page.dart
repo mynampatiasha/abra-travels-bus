@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_localization/shared_localization.dart';
 import 'package:shared_models/shared_models.dart';
+import 'package:shared_network/shared_network.dart';
 import 'package:shared_theme/shared_theme.dart';
 import 'package:shared_ui/shared_ui.dart';
 
+import '../../app/providers.dart';
 import '../../core/async_value_view.dart';
 import '../../core/browser_files.dart';
 import '../../core/failure_text.dart';
@@ -328,6 +330,13 @@ class _ReviewBodyState extends ConsumerState<_ReviewBody> {
                                   AdminStrings.revStatusDraft,
                             ),
                             tone: submissionTone(status),
+                          ),
+                          // Every step of this file (Phase 1 step 9)
+                          TextButton.icon(
+                            onPressed: () =>
+                                showKycFileHistory(context, '${view['id']}'),
+                            icon: const Icon(Icons.history, size: 18),
+                            label: const Text('History'),
                           ),
                         ],
                       ),
@@ -734,3 +743,86 @@ class _TwoColumns extends StatelessWidget {
     },
   );
 }
+
+/// "10/10/2026, 2:37 pm" in India time.
+String _indiaTime(Object? iso) {
+  final at = DateTime.tryParse('${iso ?? ''}');
+  if (at == null) return '';
+  final t = at.toUtc().add(const Duration(hours: 5, minutes: 30));
+  final hour = t.hour % 12 == 0 ? 12 : t.hour % 12;
+  return '${dateOf(t.toIso8601String().replaceFirst('Z', ''))}, '
+      '$hour:${t.minute.toString().padLeft(2, '0')} ${t.hour < 12 ? 'am' : 'pm'}';
+}
+
+/// The steps of a KYC file (`GET onboarding/submissions/<id>/history`).
+final kycFileHistoryProvider = FutureProvider.autoDispose
+    .family<List<JsonMap>, String>(
+      (ref, id) async =>
+          (await ref
+                  .watch(appDependenciesProvider)
+                  .apiClient
+                  .get('onboarding/submissions/$id/history'))
+              .decodeList((json) => json),
+    );
+
+/// The History window of the demo: what happened, who did it and when.
+Future<void> showKycFileHistory(
+  BuildContext context,
+  String id,
+) => showDialog<void>(
+  context: context,
+  builder: (context) => AlertDialog(
+    title: const Text('History'),
+    content: SizedBox(
+      width: 460,
+      child: Consumer(
+        builder: (context, ref, _) => AsyncValueView<List<JsonMap>>(
+          value: ref.watch(kycFileHistoryProvider(id)),
+          onRetry: () => ref.invalidate(kycFileHistoryProvider(id)),
+          data: (context, entries) => SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                for (final entry in entries)
+                  ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      switch ('${entry['action']}') {
+                        'APPROVED' || 'DOCUMENT_APPROVED' => Icons.check_circle,
+                        'REJECTED' || 'DOCUMENT_REJECTED' => Icons.cancel,
+                        _ => Icons.radio_button_checked,
+                      },
+                      color: switch ('${entry['action']}') {
+                        'APPROVED' || 'DOCUMENT_APPROVED' => AbraColors.teal,
+                        'REJECTED' || 'DOCUMENT_REJECTED' => AbraColors.danger,
+                        _ => AbraColors.blue,
+                      },
+                    ),
+                    title: Text(
+                      '${entry['label']}'
+                      '${entry['documentName'] == null ? '' : ': ${entry['documentName']}'}',
+                    ),
+                    subtitle: Text(
+                      <String>[
+                        if (entry['by'] != null) '${entry['by']}',
+                        _indiaTime(entry['at']),
+                        if (entry['note'] != null) '${entry['note']}',
+                      ].join(' · '),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+    actions: <Widget>[
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('Close'),
+      ),
+    ],
+  ),
+);

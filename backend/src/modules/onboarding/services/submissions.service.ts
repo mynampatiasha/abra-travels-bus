@@ -89,6 +89,11 @@ export class SubmissionsService {
     if (bus.status !== 'PENDING_APPROVAL') {
       throw wrongState('This bus does not need approval.');
     }
+    // Bus KYC starts only once Abra has approved the company (Phase 1 step 9)
+    const operator = await this.operators.getById(bus.operatorId.toHexString());
+    if (operator.status !== 'ACTIVE') {
+      throw wrongState('Your company must be approved by Abra before you send bus documents.');
+    }
     try {
       const created = await this.transactions.run((session) =>
         this.submissions.insertOne(

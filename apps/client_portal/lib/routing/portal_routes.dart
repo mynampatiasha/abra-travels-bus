@@ -20,6 +20,10 @@ abstract final class PortalRoutes {
   /// The documents of the company or of one bus.
   static String onboardingOf(String id) => '$onboardingPrefix$id';
 
+  /// Bus KYC: the bus questions, then its documents (only for an approved company).
+  static const busKycPrefix = '/bus-kyc/';
+  static String busKycOf(String busId) => '$busKycPrefix$busId';
+
   /// Query parameter that carries where to return to after the session
   /// check or sign-in.
   static const fromParameter = 'from';
@@ -36,5 +40,7 @@ abstract final class PortalRoutes {
 
   /// The section a path belongs to: a document file belongs to the dashboard.
   static String sectionOf(String path) =>
-      path.startsWith(onboardingPrefix) ? dashboard : path;
+      path.startsWith(onboardingPrefix) || path.startsWith(busKycPrefix)
+      ? dashboard
+      : path;
 }

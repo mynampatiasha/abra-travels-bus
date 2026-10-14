@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_localization/shared_localization.dart';
 import 'package:shared_models/shared_models.dart';
 import 'package:shared_network/shared_network.dart';
@@ -10,6 +11,8 @@ import 'package:shared_ui/shared_ui.dart';
 import '../../app/providers.dart';
 import '../../core/async_value_view.dart';
 import '../../core/failure_text.dart';
+import '../../routing/portal_routes.dart';
+import '../onboarding/onboarding_page.dart';
 
 // The client portal Company profile page (demo page `company`): what customers
 // and Abra see about the company, and the bank account payouts go to
@@ -464,6 +467,501 @@ class _BankCardState extends ConsumerState<_BankCard>
           ).textTheme.bodySmall?.copyWith(color: AbraColors.textSecondary),
         ),
       ],
+    );
+  }
+}
+
+// ===== 3. BUS KYC AND HISTORY (Phase 1 step 9) =====
+
+/// The KYC file of one bus (`client/kyc/buses/<busId>`): made the first time,
+/// with the bus questions Abra set, if any.
+final busKycProvider = FutureProvider.autoDispose.family<JsonMap, String>(
+  (ref, busId) async =>
+      (await ref
+              .watch(appDependenciesProvider)
+              .apiClient
+              .get('client/kyc/buses/$busId'))
+          .decodeObject((json) => json),
+);
+
+/// What happened to a KYC file, oldest first.
+final kycHistoryProvider = FutureProvider.autoDispose
+    .family<List<JsonMap>, String>(
+      (ref, submissionId) async =>
+          (await ref
+                  .watch(appDependenciesProvider)
+                  .apiClient
+                  .get('onboarding/submissions/$submissionId/history'))
+              .decodeList((json) => json),
+    );
+
+const _months = <String>[
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', //
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+
+/// "10 Oct 2026, 2:37 pm" in India time.
+String indiaTime(Object? iso) {
+  final at = DateTime.tryParse('${iso ?? ''}');
+  if (at == null) return '';
+  final t = at.toUtc().add(const Duration(hours: 5, minutes: 30));
+  final hour = t.hour % 12 == 0 ? 12 : t.hour % 12;
+  final minute = t.minute.toString().padLeft(2, '0');
+  return '${t.day} ${_months[t.month - 1]} ${t.year}, $hour:$minute '
+      '${t.hour < 12 ? 'am' : 'pm'}';
+}
+
+/// The History window: every step of a KYC file with when and who.
+Future<void> showKycHistory(BuildContext context, String submissionId) =>
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('History'),
+        content: SizedBox(
+          width: 460,
+          child: Consumer(
+            builder: (context, ref, _) => AsyncValueView<List<JsonMap>>(
+              value: ref.watch(kycHistoryProvider(submissionId)),
+              onRetry: () => ref.invalidate(kycHistoryProvider(submissionId)),
+              data: (context, entries) => entries.isEmpty
+                  ? const Text('Nothing has happened yet.')
+                  : SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[
+                          for (final entry in entries)
+                            _HistoryLine(entry: entry),
+                        ],
+                      ),
+                    ),
+            ),
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+
+class _HistoryLine extends StatelessWidget {
+  const _HistoryLine({required this.entry});
+
+  final JsonMap entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final action = '${entry['action']}';
+    final color = switch (action) {
+      'APPROVED' || 'DOCUMENT_APPROVED' => AbraColors.teal,
+      'REJECTED' || 'DOCUMENT_REJECTED' => AbraColors.danger,
+      _ => AbraColors.blue,
+    };
+    final details = <String>[
+      if (entry['documentName'] != null) '${entry['documentName']}',
+      if (entry['by'] != null) 'by ${entry['by']}',
+      indiaTime(entry['at']),
+    ];
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AbraSpacing.md),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Container(
+            margin: const EdgeInsets.only(top: 5),
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: AbraSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  '${entry['label']}',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  details.join(' · '),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AbraColors.textSecondary,
+                  ),
+                ),
+                if (entry['note'] != null)
+                  Text(
+                    '${entry['note']}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AbraColors.danger,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Bus KYC: the bus questions (when Abra set any), then its documents, then
+/// the decision. After a rejection only the rejected documents can change.
+class BusKycScreen extends ConsumerStatefulWidget {
+  const BusKycScreen({required this.busId, super.key});
+
+  final String busId;
+
+  @override
+  ConsumerState<BusKycScreen> createState() => _BusKycScreenState();
+}
+
+class _BusKycScreenState extends ConsumerState<BusKycScreen> {
+  final Map<String, Object?> _answers = <String, Object?>{};
+  String? _loadedId;
+  bool _editing = false;
+  bool _busy = false;
+  String? _error;
+
+  Future<void> _save() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await ref
+          .read(appDependenciesProvider)
+          .apiClient
+          .put(
+            'client/kyc/buses/${widget.busId}',
+            body: <String, Object?>{'answers': _answers},
+          );
+      if (!mounted) return;
+      ref.invalidate(busKycProvider(widget.busId));
+      setState(() {
+        _busy = false;
+        _editing = false;
+      });
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = failureText(AbraLocalizations.of(context), error);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AbraLocalizations.of(context);
+    final value = ref.watch(busKycProvider(widget.busId));
+    return value.when(
+      loading: () => const AbraLoadingView(),
+      // "Your company must be approved first" and other refusals, in words
+      error: (error, _) => AbraStateView(
+        kind: AbraStateKind.empty,
+        title: 'Bus documents are not open yet',
+        message: failureText(l10n, error),
+        actionLabel: 'Back to dashboard',
+        onAction: () => context.go(PortalRoutes.dashboard),
+      ),
+      data: (view) {
+        final kyc = view['kyc'] is Map
+            ? asJsonMap(view['kyc']! as Map)
+            : <String, Object?>{};
+        final submissionId = '${view['submissionId']}';
+        final answered =
+            kyc['answers'] is Map && (kyc['answers']! as Map).isNotEmpty;
+        if (_loadedId != submissionId) {
+          _loadedId = submissionId;
+          _answers.clear();
+          if (answered) _answers.addAll(asJsonMap(kyc['answers']! as Map));
+          _editing = !answered;
+        }
+        final status = '${view['status']}';
+        final hasQuestions = view['hasQuestions'] == true;
+        final askQuestions = hasQuestions && status == 'DRAFT' && _editing;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            _BusKycHeader(
+              view: view,
+              step: askQuestions ? 1 : (status == 'PENDING' ? 3 : 2),
+              steps: hasQuestions ? 3 : 2,
+              onEditAnswers: hasQuestions && status == 'DRAFT' && !_editing
+                  ? () => setState(() => _editing = true)
+                  : null,
+            ),
+            Expanded(
+              child: askQuestions
+                  ? _BusQuestions(
+                      kyc: kyc,
+                      answers: _answers,
+                      busy: _busy,
+                      error: _error,
+                      onChanged: () => setState(() {}),
+                      onSave: _save,
+                    )
+                  : OnboardingPage(id: submissionId, embedded: true),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _BusKycHeader extends StatelessWidget {
+  const _BusKycHeader({
+    required this.view,
+    required this.step,
+    required this.steps,
+    this.onEditAnswers,
+  });
+
+  final JsonMap view;
+  final int step;
+  final int steps;
+  final VoidCallback? onEditAnswers;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final status = '${view['status']}';
+    final subtitle = switch (status) {
+      'APPROVED' => 'Verified. This bus can run trips.',
+      'PENDING' => 'Abra is reviewing the documents. You will be told here.',
+      'REJECTED' =>
+        'Some documents need fixing. Replace only the rejected ones, then '
+            'send them again. Accepted documents and your answers are locked.',
+      _ => 'Step $step of $steps',
+    };
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AbraSpacing.lg,
+        AbraSpacing.lg,
+        AbraSpacing.lg,
+        AbraSpacing.sm,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Text(
+            'Buses / Bus KYC',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: AbraColors.textSecondary,
+            ),
+          ),
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: AbraSpacing.md,
+            children: <Widget>[
+              Text(
+                'Bus ${view['registrationNumber']}'
+                '${view['busName'] == null ? '' : ' · ${view['busName']}'}',
+                style: theme.textTheme.headlineSmall,
+              ),
+              Wrap(
+                spacing: AbraSpacing.sm,
+                children: <Widget>[
+                  if (onEditAnswers != null)
+                    TextButton(
+                      onPressed: onEditAnswers,
+                      child: const Text('Edit answers'),
+                    ),
+                  AbraButton(
+                    label: 'History',
+                    icon: Icons.history,
+                    variant: AbraButtonVariant.secondary,
+                    onPressed: () =>
+                        showKycHistory(context, '${view['submissionId']}'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: AbraSpacing.xs),
+          Text(
+            subtitle,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: status == 'REJECTED'
+                  ? AbraColors.danger
+                  : AbraColors.textSecondary,
+            ),
+          ),
+          if (status == 'DRAFT') ...<Widget>[
+            const SizedBox(height: AbraSpacing.md),
+            Row(
+              children: <Widget>[
+                for (var i = 1; i <= steps; i++) ...<Widget>[
+                  if (i > 1) const SizedBox(width: AbraSpacing.xs + 2),
+                  Expanded(
+                    child: Container(
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: i < step
+                            ? AbraColors.blue
+                            : i == step
+                            ? AbraColors.skyBlue
+                            : AbraColors.border,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// The bus questions Abra set; the answers decide the documents.
+class _BusQuestions extends StatelessWidget {
+  const _BusQuestions({
+    required this.kyc,
+    required this.answers,
+    required this.busy,
+    required this.error,
+    required this.onChanged,
+    required this.onSave,
+  });
+
+  final JsonMap kyc;
+  final Map<String, Object?> answers;
+  final bool busy;
+  final String? error;
+  final VoidCallback onChanged;
+  final VoidCallback onSave;
+
+  bool _selected(JsonMap question, String value) =>
+      question['type'] == 'MULTI_CHOICE'
+      ? (answers['${question['key']}'] as List? ?? const <Object?>[]).contains(
+          value,
+        )
+      : answers['${question['key']}'] == value;
+
+  void _toggle(JsonMap question, String value, bool selected) {
+    final key = '${question['key']}';
+    if (question['type'] == 'MULTI_CHOICE') {
+      final values = List<String>.from(answers[key] as List? ?? <String>[]);
+      selected ? values.add(value) : values.remove(value);
+      answers[key] = values;
+    } else {
+      selected ? answers[key] = value : answers.remove(key);
+    }
+    onChanged();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final configuration = kyc['configuration'] is Map
+        ? asJsonMap(kyc['configuration']! as Map)
+        : <String, Object?>{};
+    final questions =
+        (configuration['questions'] as List? ?? const <Object?>[])
+            .whereType<Map<Object?, Object?>>()
+            .map(asJsonMap)
+            .where((q) => q['active'] == true && q['appliesTo'] == 'BUS')
+            .toList()
+          ..sort(
+            (a, b) => ((a['sortOrder'] as num?) ?? 0).compareTo(
+              (b['sortOrder'] as num?) ?? 0,
+            ),
+          );
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AbraSpacing.lg),
+      child: AbraCard(
+        padding: const EdgeInsets.all(AbraSpacing.xl),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Text(
+              'Answer these questions to see the documents this bus needs.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: AbraColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: AbraSpacing.lg),
+            for (final question in questions) ...<Widget>[
+              Text(
+                '${question['label']}'
+                '${question['required'] == true ? ' *' : ' (optional)'}',
+                style: theme.textTheme.titleSmall,
+              ),
+              if ('${question['help'] ?? ''}'.isNotEmpty)
+                Text(
+                  '${question['help']}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AbraColors.textSecondary,
+                  ),
+                ),
+              const SizedBox(height: AbraSpacing.sm),
+              Wrap(
+                spacing: AbraSpacing.sm,
+                runSpacing: AbraSpacing.sm,
+                children: <Widget>[
+                  for (final option
+                      in question['type'] == 'BOOLEAN'
+                          ? const <JsonMap>[
+                              <String, Object?>{
+                                'value': 'true',
+                                'label': 'Yes',
+                              },
+                              <String, Object?>{
+                                'value': 'false',
+                                'label': 'No',
+                              },
+                            ]
+                          : (question['options'] as List? ?? const <Object?>[])
+                                .whereType<Map<Object?, Object?>>()
+                                .map(asJsonMap))
+                    FilterChip(
+                      label: Text('${option['label']}'),
+                      showCheckmark: false,
+                      selectedColor: AbraColors.skyContainer,
+                      side: BorderSide(
+                        color: _selected(question, '${option['value']}')
+                            ? AbraColors.blue
+                            : AbraColors.border,
+                      ),
+                      selected: _selected(question, '${option['value']}'),
+                      onSelected: busy
+                          ? null
+                          : (selected) => _toggle(
+                              question,
+                              '${option['value']}',
+                              selected,
+                            ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: AbraSpacing.xl),
+            ],
+            if (error != null) ...<Widget>[
+              Text(error!, style: const TextStyle(color: AbraColors.danger)),
+              const SizedBox(height: AbraSpacing.md),
+            ],
+            Align(
+              alignment: Alignment.centerLeft,
+              child: AbraButton(
+                label: 'Save answers and see documents',
+                isLoading: busy,
+                onPressed: busy ? null : onSave,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

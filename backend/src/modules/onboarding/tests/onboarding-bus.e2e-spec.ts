@@ -205,11 +205,24 @@ describe('Onboarding e2e: buses', () => {
           { _id: new Types.ObjectId(pendingBus) },
           { $set: { status: 'PENDING_APPROVAL' } },
         );
-      const busFile = dataOf<SubmissionView>(
-        await call(pendingOwner, 'post', '/onboarding/submissions', { busId: pendingBus }).expect(
-          201,
-        ),
-      );
+      // Bus KYC starts only after the company is approved (Phase 1 step 9)
+      const early = await call(pendingOwner, 'post', '/onboarding/submissions', {
+        busId: pendingBus,
+      }).expect(409);
+      expect(JSON.stringify(early.body)).toContain('must be approved');
+      // A file made before that rule (or by an import) still cannot be approved early
+      const inserted = await context.connection.collection('onboarding_submissions').insertOne({
+        operatorId: new Types.ObjectId(pendingOwner.operatorId),
+        subjectType: 'BUS',
+        busId: new Types.ObjectId(pendingBus),
+        status: 'DRAFT',
+        documents: [],
+        submitCount: 0,
+        history: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      const busFile = { id: inserted.insertedId.toHexString() };
       await setDocument(pendingOwner, busFile.id, rcType.id, {
         fileIds: [await uploadFile(pendingOwner, rcType.id, PDF)],
         expiryDate: inDays(90),

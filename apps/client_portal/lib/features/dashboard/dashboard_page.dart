@@ -9,7 +9,6 @@ import 'package:shared_ui/shared_ui.dart';
 
 import '../../app/providers.dart';
 import '../../core/async_value_view.dart';
-import '../../core/failure_text.dart';
 import '../../l10n/portal_strings.dart';
 import '../../routing/portal_routes.dart';
 import '../onboarding/onboarding_repository.dart';
@@ -40,20 +39,9 @@ class _Dashboard extends ConsumerWidget {
     WidgetRef ref,
     JsonMap bus,
   ) async {
-    final l10n = AbraLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    final router = GoRouter.of(context);
-    try {
-      final existing = data.busFiles['${bus['id']}'];
-      final id =
-          existing?['id'] ??
-          (await ref
-              .read(onboardingRepositoryProvider)
-              .busFile('${bus['id']}'))['id'];
-      router.go(PortalRoutes.onboardingOf('$id'));
-    } on Object catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(failureText(l10n, error))));
-    }
+    // The bus KYC wizard makes the bus file the first time and explains when
+    // the company is not approved yet
+    GoRouter.of(context).go(PortalRoutes.busKycOf('${bus['id']}'));
   }
 
   @override
@@ -232,12 +220,7 @@ class _Dashboard extends ConsumerWidget {
                   final busId = await showAddBusDialog(context);
                   ref.invalidate(dashboardProvider);
                   if (busId != null && context.mounted) {
-                    final file = await ref
-                        .read(onboardingRepositoryProvider)
-                        .busFile(busId);
-                    if (context.mounted) {
-                      context.go(PortalRoutes.onboardingOf('${file['id']}'));
-                    }
+                    context.go(PortalRoutes.busKycOf(busId));
                   }
                 },
               ),

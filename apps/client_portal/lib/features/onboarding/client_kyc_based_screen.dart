@@ -11,6 +11,7 @@ import 'package:shared_ui/shared_ui.dart';
 
 import '../../app/providers.dart';
 import '../../core/failure_text.dart';
+import '../kyc/kyc_client_manage_screen.dart' show showKycHistory;
 import 'onboarding_page.dart';
 import 'onboarding_repository.dart';
 
@@ -463,6 +464,14 @@ class _ClientKycBasedScreenState extends ConsumerState<ClientKycBasedScreen> {
                             onPressed: () => setState(() => _editing = true),
                             child: const Text('Edit answers'),
                           ),
+                        TextButton.icon(
+                          onPressed: () => showKycHistory(
+                            context,
+                            '${view['submissionId']}',
+                          ),
+                          icon: const Icon(Icons.history, size: 18),
+                          label: const Text('History'),
+                        ),
                       ],
                     ),
                   ],

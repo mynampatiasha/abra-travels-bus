@@ -96,6 +96,11 @@ final portalRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) =>
                 OnboardingPage(id: state.pathParameters['id']!),
           ),
+          GoRoute(
+            path: '${PortalRoutes.busKycPrefix}:busId',
+            builder: (context, state) =>
+                BusKycScreen(busId: state.pathParameters['busId']!),
+          ),
         ],
       ),
     ],
