@@ -37,6 +37,7 @@ import { ApiClientsModule } from './api-clients/api-clients.module';
 import { PartnerWebhooksModule } from './partner-webhooks/partner-webhooks.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { NotificationTemplatesModule } from './notification-templates/notification-templates.module';
+import { EventRouterModule } from './notifications/event_router_core';
 import { WhatsappModule } from './whatsapp/whatsapp.module';
 import { MessagesModule } from './messages/messages_admin_manage';
 import { RealtimeModule } from './realtime/live_updates_channel';
@@ -50,6 +51,7 @@ import { OffersModule } from './offers/offers.module';
 import { ContentModule } from './content/content.module';
 import { PopularRoutesModule } from './popular-routes/popular-routes.module';
 import { TranslationsModule } from './translations/translations.module';
+import { AuditLogsAdminModule } from './audit-logs/audit_log_admin_manage';
 import { AuditLogsModule } from './audit-logs/audit-logs.module';
 import { FilesModule } from './files/files.module';
 import { SystemSettingsModule } from './system-settings/system-settings.module';
@@ -120,6 +122,7 @@ export const DOMAIN_MODULES = [
   TranslationsModule,
   // Platform
   AuditLogsModule,
+  AuditLogsAdminModule,
   FilesModule,
   SystemSettingsModule,
   FeatureFlagsModule,
@@ -128,4 +131,5 @@ export const DOMAIN_MODULES = [
   CatalogueSharedModule,
   AmenitiesModule,
   PlaceRequestsModule,
+  EventRouterModule,
 ];

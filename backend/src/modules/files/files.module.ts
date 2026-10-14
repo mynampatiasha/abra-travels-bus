@@ -6,6 +6,13 @@ import { DocumentTypesModule } from '../document-types/document-types.module';
 import { OperatorsModule } from '../operators/operators.module';
 import { RbacModule } from '../rbac/rbac.module';
 import { FilesController } from './controllers/files.controller';
+import { ProofFilesController } from './files_core';
+import {
+  PROOF_FILE_MODEL,
+  ProofFileRepository,
+  ProofFilesService,
+  proofFileSchema,
+} from './files_core.service';
 import { StoredFileRepository } from './repositories/stored-file.repository';
 import { STORED_FILE_MODEL, storedFileSchema } from './schemas/stored-file.schema';
 import { FilesService } from './services/files.service';
@@ -37,17 +44,22 @@ export function createFileStorage(config: AppConfigService): FileStorage {
  */
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: STORED_FILE_MODEL, schema: storedFileSchema }]),
+    MongooseModule.forFeature([
+      { name: STORED_FILE_MODEL, schema: storedFileSchema },
+      { name: PROOF_FILE_MODEL, schema: proofFileSchema },
+    ]),
     RbacModule,
     DocumentTypesModule,
     OperatorsModule,
   ],
-  controllers: [FilesController],
+  controllers: [FilesController, ProofFilesController],
   providers: [
     StoredFileRepository,
     FilesService,
+    ProofFileRepository,
+    ProofFilesService,
     { provide: FILE_STORAGE, inject: [AppConfigService], useFactory: createFileStorage },
   ],
-  exports: [FilesService, MongooseModule],
+  exports: [FilesService, ProofFilesService, MongooseModule],
 })
 export class FilesModule {}

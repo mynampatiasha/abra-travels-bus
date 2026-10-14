@@ -147,6 +147,21 @@ export class UsersService {
     return this.repository.applyAuthorizationChange(id, change, session);
   }
 
+  /** Active accounts with these ids and how to reach them, for notifications and messages. */
+  findContacts(ids: readonly Types.ObjectId[]) {
+    return this.repository.findContacts(ids);
+  }
+
+  /** Accounts whose name contains the text, for searching a list by person. */
+  findIdsByName(pattern: RegExp) {
+    return this.repository.findIdsByName(pattern);
+  }
+
+  /** Names and kinds of accounts, for screens that show who did something. */
+  findNames(ids: readonly Types.ObjectId[]) {
+    return this.repository.findNames(ids);
+  }
+
   bumpPermissionVersionForRoles(
     roleIds: readonly Types.ObjectId[],
     session: ClientSession,

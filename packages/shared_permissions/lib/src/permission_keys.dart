@@ -60,6 +60,7 @@ abstract final class PermissionKeys {
   static const settingsRead = 'settings.read';
   static const settingsUpdate = 'settings.update';
   static const auditRead = 'audit.read';
+  static const auditExport = 'audit.export';
   static const catalogueDelete = 'catalogue.delete';
   static const catalogueExport = 'catalogue.export';
   static const documentsDelete = 'documents.delete';
@@ -128,6 +129,7 @@ abstract final class PermissionKeys {
     settingsRead,
     settingsUpdate,
     auditRead,
+    auditExport,
     catalogueDelete,
     catalogueExport,
     documentsDelete,

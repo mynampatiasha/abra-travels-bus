@@ -37,4 +37,17 @@ export class AuditLogRepository extends ScopedRepository<AuditLog> {
   ): Promise<StoredDocument<AuditLog>[]> {
     return this.findMany(filter, { sort: { at: -1 }, ...page });
   }
+
+  /** Same as [search], with the order chosen by the caller (`_id` keeps equal times stable). */
+  searchSorted(
+    filter: QueryFilter<AuditLog>,
+    options: { sort: Record<string, 1 | -1>; skip: number; limit: number },
+  ): Promise<StoredDocument<AuditLog>[]> {
+    return this.findMany(filter, options);
+  }
+
+  /** The distinct values of one field among the entries the caller may read (scope applied). */
+  async distinctInScope<T>(field: 'actor.userId' | 'action'): Promise<T[]> {
+    return (await this.model.distinct(field, await this.scopedFilter({}))) as T[];
+  }
 }

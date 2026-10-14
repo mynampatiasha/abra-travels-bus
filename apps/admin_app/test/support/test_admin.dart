@@ -302,6 +302,7 @@ class FakeBackend {
       case 'me/permissions':
         return FakeResponse.ok(persona.permissionsJson);
     }
+    if (path.startsWith('audit-logs')) return _audit(request);
     if (path.startsWith('catalogue/')) return _catalogue(request);
     // The admin lists (`admin/banners`) behave like the catalogue ones.
     if (path.startsWith('admin/')) return _catalogue(request);
@@ -312,6 +313,66 @@ class FakeBackend {
     if (path.startsWith('notifications')) return _notifications(request);
     if (path.startsWith('onboarding/')) return _onboarding(request);
     return FakeResponse.error(404, 'RESOURCE_NOT_FOUND');
+  }
+
+  /// The audit log: entries are records with the words the page shows
+  /// (`actorName`, `actionLabel`, `sensitive`...).
+  FakeResponse _audit(RecordedRequest request) {
+    if (!persona.permissions.contains('audit.read')) {
+      return FakeResponse.error(403, 'PERMISSION_DENIED');
+    }
+    final address = Uri.parse(request.path);
+    final query = <String, Object?>{
+      ...request.options.queryParameters,
+      ...address.queryParameters,
+    };
+    final all = of('audit-logs');
+    if (address.path == 'audit-logs/filters') {
+      return FakeResponse.ok(<String, Object?>{
+        'people': <JsonMap>[
+          for (final name in {for (final e in all) '${e['actorName']}'})
+            <String, Object?>{'id': 'person-$name', 'name': name},
+        ],
+        'actions': <JsonMap>[
+          for (final e in {for (final e in all) '${e['action']}': e}.values)
+            <String, Object?>{
+              'key': e['action'],
+              'label': e['actionLabel'],
+              'sensitive': e['sensitive'] == true,
+            },
+        ],
+      });
+    }
+    final term = '${query['search'] ?? ''}'.toLowerCase();
+    var items =
+        all.where((entry) {
+          if (query['personId'] != null &&
+              'person-${entry['actorName']}' != query['personId']) {
+            return false;
+          }
+          if (query['type'] == 'sensitive' && entry['sensitive'] != true) {
+            return false;
+          }
+          if (query['action'] != null && entry['action'] != query['action']) {
+            return false;
+          }
+          return term.isEmpty ||
+              '${entry['actorName']} ${entry['actionLabel']} ${entry['targetLabel']}'
+                  .toLowerCase()
+                  .contains(term);
+        }).toList()..sort(
+          (a, b) => query['sort'] == 'oldest'
+              ? '${a['at']}'.compareTo('${b['at']}')
+              : '${b['at']}'.compareTo('${a['at']}'),
+        );
+    final page = (query['page'] as int?) ?? 1;
+    final size = (query['pageSize'] as int?) ?? 15;
+    final total = items.length;
+    items = items.skip((page - 1) * size).take(size).toList();
+    return FakeResponse.ok(
+      items,
+      meta: <String, Object?>{'page': page, 'pageSize': size, 'total': total},
+    );
   }
 
   FakeResponse _kycConfiguration(RecordedRequest request) {

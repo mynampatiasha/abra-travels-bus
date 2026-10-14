@@ -5,6 +5,7 @@ import 'package:shared_theme/shared_theme.dart';
 import 'package:shared_ui/shared_ui.dart';
 
 import '../app/providers.dart';
+import '../features/audit/audit_admin_manage_screen.dart';
 import '../features/auth/access_gate_screen.dart';
 import '../features/auth/sign_in_screen.dart';
 import '../features/banners/admin_banners_manage.dart';
@@ -50,6 +51,7 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
     AdminRoutes.trips: TripsPage(),
     AdminRoutes.banners: AdminBannersPage(),
     AdminRoutes.places: PlacesAdminManageScreen(),
+    AdminRoutes.audit: AuditAdminManageScreen(),
   };
 
   final router = GoRouter(
