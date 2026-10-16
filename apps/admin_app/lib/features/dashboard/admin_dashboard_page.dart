@@ -79,7 +79,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Exported dashboard data to CSV'),
+                            content: Text('Not connected yet'),
                             behavior: SnackBarBehavior.floating,
                           ),
                         );
@@ -282,57 +282,20 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: AbraSpacing.sm),
-                  for (final item in const [
-                    ('Super Admin', 'Approved KYC submission for Kaveri Express', '12 min ago'),
-                    ('Admin', 'Updated commission rule CR-3 to 12%', '45 min ago'),
-                    ('Support', 'Acknowledged SOS alert SOS-2001', '1 hour ago'),
-                    ('Accounts', 'Generated settlements for Cycle 1 Oct - 7 Oct', '3 hours ago'),
-                  ])
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: <Widget>[
-                          Expanded(child: Row(
-                            children: <Widget>[
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(
-                                  color: AbraColors.blue,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: AbraSpacing.md),
-                              Text(
-                                '${item.$1}: ',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  color: isDark ? const Color(0xFFE6EEF5) : AbraColors.textPrimary,
-                                ),
-                              ),
-                              Flexible(child: Text(
-                                item.$2,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: isDark ? const Color(0xFF9FB6C9) : AbraColors.textSecondary,
-                                ),
-                              )),
-                            ],
-                          )),
-                          const SizedBox(width: AbraSpacing.sm),
-                          Text(
-                            item.$3,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isDark ? const Color(0xFF9FB6C9) : AbraColors.textSecondary,
-                            ),
-                          ),
-                        ],
+                  const SizedBox(height: AbraSpacing.md),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: AbraSpacing.md),
+                    child: Center(
+                      child: Text(
+                        'Not connected yet',
+                        style: TextStyle(
+                          color: isDark ? const Color(0xFF9FB6C9) : AbraColors.textSecondary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
+                  ),
                 ],
               ),
             ),
