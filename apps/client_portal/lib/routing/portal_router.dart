@@ -18,10 +18,12 @@ import '../features/dashboard/client_dashboard_screen.dart';
 import '../features/earnings/client_earnings_screen.dart';
 import '../features/fares/client_fares_screen.dart';
 import '../features/kyc/client_kyc_verification_screen.dart';
+import '../features/kyc/kyc_client_manage_screen.dart';
+import '../features/onboarding/onboarding_page.dart';
 import '../features/live/client_live_tracking_screen.dart';
-import '../features/notifications/client_notifications_screen.dart';
+import '../features/notifications/client_notification_screen.dart';
 import '../features/offers/client_offers_screen.dart';
-import '../features/places/client_places_screen.dart';
+import '../features/places/places_client_manage_screen.dart';
 import '../features/routes/client_routes_screen.dart';
 import '../features/schedules/client_schedules_screen.dart';
 import '../features/staff/client_staff_roles_screen.dart';
@@ -67,7 +69,7 @@ final portalRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(path: PortalRoutes.driverReports, builder: (_, __) => const ClientDriverReportsScreen()),
           GoRoute(path: PortalRoutes.driverRules, builder: (_, __) => const ClientDriverRulesScreen()),
           GoRoute(path: PortalRoutes.routes, builder: (_, __) => const ClientRoutesScreen()),
-          GoRoute(path: PortalRoutes.places, builder: (_, __) => const ClientPlacesScreen()),
+          GoRoute(path: PortalRoutes.places, builder: (_, __) => const PlacesClientManageScreen()),
           GoRoute(path: PortalRoutes.fares, builder: (_, __) => const ClientFaresScreen()),
           GoRoute(path: PortalRoutes.schedules, builder: (_, __) => const ClientSchedulesScreen()),
           GoRoute(path: PortalRoutes.trips, builder: (_, __) => const ClientTripsScreen()),
@@ -76,11 +78,11 @@ final portalRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(path: PortalRoutes.earnings, builder: (_, __) => const ClientEarningsScreen()),
           GoRoute(path: PortalRoutes.commission, builder: (_, __) => const ClientCommissionScreen()),
           GoRoute(path: PortalRoutes.liveTracking, builder: (_, __) => const ClientLiveTrackingScreen()),
-          GoRoute(path: PortalRoutes.notifications, builder: (_, __) => const ClientNotificationsScreen()),
+          GoRoute(path: PortalRoutes.notifications, builder: (_, __) => const ClientNotificationScreen()),
           GoRoute(path: PortalRoutes.staffRoles, builder: (_, __) => const ClientStaffRolesScreen()),
           GoRoute(path: PortalRoutes.company, builder: (_, __) => const ClientCompanyProfileScreen()),
-          GoRoute(path: '${PortalRoutes.onboardingPrefix}:id', builder: (_, __) => const ClientKycVerificationScreen()),
-          GoRoute(path: '${PortalRoutes.busKycPrefix}:busId', builder: (_, __) => const ClientBusesScreen()),
+          GoRoute(path: '${PortalRoutes.onboardingPrefix}:id', builder: (_, state) => OnboardingPage(id: state.pathParameters['id'] ?? '')),
+          GoRoute(path: '${PortalRoutes.busKycPrefix}:busId', builder: (_, state) => BusKycScreen(busId: state.pathParameters['busId'] ?? '')),
         ],
       ),
     ],

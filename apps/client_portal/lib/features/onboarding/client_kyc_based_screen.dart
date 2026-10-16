@@ -115,7 +115,11 @@ class _ClientKycBasedScreenState extends ConsumerState<ClientKycBasedScreen> {
             _company.text = '${view['companyName'] ?? ''}';
             final saved = kyc['answers'];
             if (saved is Map) _answers.addAll(asJsonMap(saved));
-            _introduced = kyc['introductionAcceptedAt'] != null;
+            final status = '${view['status']}';
+            _introduced = kyc['introductionAcceptedAt'] != null ||
+                view['introductionAcceptedAt'] != null ||
+                status == 'PENDING' ||
+                status == 'APPROVED';
             _editing = !_introduced;
           }
           final status = '${view['status']}';

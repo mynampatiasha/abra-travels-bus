@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_theme/shared_theme.dart';
 import '../app/providers.dart';
-import '../core/mock/abra_mock_db.dart';
 import '../routing/portal_routes.dart';
 
 const _navGroups = [
@@ -78,28 +77,8 @@ class PortalShell extends ConsumerStatefulWidget {
 
 class _PortalShellState extends ConsumerState<PortalShell> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
-  String _currentRole = 'Owner';
 
-  @override
-  void initState() {
-    super.initState();
-    _currentRole = kCurrentRole;
-    kCurrentRoleNotifier.addListener(_onRoleChanged);
-  }
-
-  @override
-  void dispose() {
-    kCurrentRoleNotifier.removeListener(_onRoleChanged);
-    super.dispose();
-  }
-
-  void _onRoleChanged() {
-    if (mounted && _currentRole != kCurrentRole) {
-      setState(() => _currentRole = kCurrentRole);
-    }
-  }
-
-  int get _notifCount => kMockNotifications.where((n) => n['read'] == false).length;
+  int get _notifCount => 0;
 
   String get _activeSection {
     final p = widget.currentPath;
@@ -349,7 +328,7 @@ class _PortalShellState extends ConsumerState<PortalShell> {
                 borderRadius: BorderRadius.circular(99),
               ),
               child: Text(
-                _currentRole,
+                ref.watch(accessProvider).user != null ? 'Operator Staff' : 'Partner',
                 style: const TextStyle(
                   color: AbraColors.deepBlue,
                   fontWeight: FontWeight.w800,
@@ -422,9 +401,9 @@ class _PortalShellState extends ConsumerState<PortalShell> {
   Widget _buildAccountMenu(BuildContext context) {
     final access = ref.watch(accessProvider);
     final user = access.user;
-    final userName = user?.name ?? 'Ramesh Kumar';
-    final userEmail = user?.email ?? 'ramesh@kaveriexpress.in';
-    final userRole = _currentRole;
+    final userName = user?.name ?? 'Partner Staff';
+    final userEmail = user?.email ?? '';
+    const userRole = 'Operator Staff';
 
     return PopupMenuButton<String>(
       tooltip: 'Account',
@@ -601,58 +580,15 @@ class _PortalShellState extends ConsumerState<PortalShell> {
                       ),
                     ),
                     const Divider(height: 1, color: AbraColors.divider),
-                    ...kMockNotifications.take(4).map((n) {
-                      final isRead = n['read'] == true;
-                      return InkWell(
-                        onTap: () {
-                          Navigator.pop(ctx);
-                          setState(() => n['read'] = true);
-                          final go = n['go'] as String?;
-                          if (go == 'buses') context.go(PortalRoutes.buses);
-                          if (go == 'bookings') context.go(PortalRoutes.bookings);
-                          if (go == 'earnings') context.go(PortalRoutes.earnings);
-                          if (go == 'kyc') context.go(PortalRoutes.kycVerification);
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                width: 8,
-                                height: 8,
-                                margin: const EdgeInsets.only(top: 5, right: 10),
-                                decoration: BoxDecoration(
-                                  color: isRead ? Colors.transparent : AbraColors.blue,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '${n['t']}',
-                                      style: TextStyle(
-                                        fontWeight: isRead ? FontWeight.w500 : FontWeight.w700,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '${n['b']}',
-                                      style: const TextStyle(fontSize: 12, color: AbraColors.textSecondary),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                      child: Center(
+                        child: Text(
+                          'No new notifications',
+                          style: TextStyle(color: AbraColors.textSecondary, fontSize: 13),
                         ),
-                      );
-                    }),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -748,41 +684,6 @@ class _GlobalSearchDialogState extends State<_GlobalSearchDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final q = _query.trim().toLowerCase();
-
-    final matchedBookings = kMockBookings.where((b) {
-      if (q.isEmpty) return false;
-      return '${b['pnr']}'.toLowerCase().contains(q) ||
-          '${b['customer']}'.toLowerCase().contains(q) ||
-          '${b['route']}'.toLowerCase().contains(q);
-    }).toList();
-
-    final matchedTrips = kMockTrips.where((t) {
-      if (q.isEmpty) return false;
-      return '${t['route']}'.toLowerCase().contains(q) ||
-          '${t['bus']}'.toLowerCase().contains(q) ||
-          '${t['driver']}'.toLowerCase().contains(q);
-    }).toList();
-
-    final matchedBuses = kMockBuses.where((b) {
-      if (q.isEmpty) return false;
-      return '${b['reg']}'.toLowerCase().contains(q) ||
-          '${b['name']}'.toLowerCase().contains(q) ||
-          '${b['type']}'.toLowerCase().contains(q);
-    }).toList();
-
-    final matchedCrew = kMockCrew.where((c) {
-      if (q.isEmpty) return false;
-      return '${c['name']}'.toLowerCase().contains(q) ||
-          '${c['phone']}'.toLowerCase().contains(q) ||
-          '${c['role']}'.toLowerCase().contains(q);
-    }).toList();
-
-    final hasResults = matchedBookings.isNotEmpty ||
-        matchedTrips.isNotEmpty ||
-        matchedBuses.isNotEmpty ||
-        matchedCrew.isNotEmpty;
-
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AbraRadius.lg)),
       child: Container(
@@ -841,105 +742,14 @@ class _GlobalSearchDialogState extends State<_GlobalSearchDialog> {
                         ],
                       ),
                     )
-                  : !hasResults
-                      ? Center(
-                          child: Text('No results found for "$_query"',
-                              style: const TextStyle(color: AbraColors.textSecondary)),
-                        )
-                      : ListView(
-                          children: [
-                            if (matchedBookings.isNotEmpty) ...[
-                              _searchSectionHeader('Bookings'),
-                              ...matchedBookings.map((b) => _searchTile(
-                                    icon: Icons.confirmation_number_outlined,
-                                    title: '${b['pnr']} · ${b['customer']}',
-                                    subtitle: '${b['route']} · ${b['seatCount']} seat(s)',
-                                    onTap: () {
-                                      Navigator.pop(context);
-                                      context.go(PortalRoutes.bookings);
-                                    },
-                                  )),
-                            ],
-                            if (matchedTrips.isNotEmpty) ...[
-                              _searchSectionHeader('Trips'),
-                              ...matchedTrips.map((t) => _searchTile(
-                                    icon: Icons.directions_outlined,
-                                    title: '${t['route']}',
-                                    subtitle: 'Bus: ${t['bus']} · Driver: ${t['driver']}',
-                                    onTap: () {
-                                      Navigator.pop(context);
-                                      context.go(PortalRoutes.trips);
-                                    },
-                                  )),
-                            ],
-                            if (matchedBuses.isNotEmpty) ...[
-                              _searchSectionHeader('Buses'),
-                              ...matchedBuses.map((b) => _searchTile(
-                                    icon: Icons.directions_bus_outlined,
-                                    title: '${b['reg']} (${b['name']})',
-                                    subtitle: '${b['type']} · ${b['seats']} seats · Status: ${b['status']}',
-                                    onTap: () {
-                                      Navigator.pop(context);
-                                      context.go(PortalRoutes.buses);
-                                    },
-                                  )),
-                            ],
-                            if (matchedCrew.isNotEmpty) ...[
-                              _searchSectionHeader('Crew & Staff'),
-                              ...matchedCrew.map((c) => _searchTile(
-                                    icon: Icons.person_outline,
-                                    title: '${c['name']} (${c['role']})',
-                                    subtitle: 'Phone: ${c['phone']} · Status: ${c['status']}',
-                                    onTap: () {
-                                      Navigator.pop(context);
-                                      context.go(PortalRoutes.crew);
-                                    },
-                                  )),
-                            ],
-                          ],
-                        ),
+                  : Center(
+                      child: Text('No results found for "$_query"',
+                          style: const TextStyle(color: AbraColors.textSecondary)),
+                    ),
             ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _searchSectionHeader(String label) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 12, 8, 4),
-      child: Text(
-        label.toUpperCase(),
-        style: const TextStyle(
-          color: AbraColors.textSecondary,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.8,
-        ),
-      ),
-    );
-  }
-
-  Widget _searchTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      dense: true,
-      leading: Container(
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          color: AbraColors.skyContainer,
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Icon(icon, size: 18, color: AbraColors.deepBlue),
-      ),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-      subtitle: Text(subtitle, style: const TextStyle(fontSize: 12, color: AbraColors.textSecondary)),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 12, color: AbraColors.textSecondary),
-      onTap: onTap,
     );
   }
 }

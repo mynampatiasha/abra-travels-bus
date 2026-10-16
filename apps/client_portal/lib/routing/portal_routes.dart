@@ -30,8 +30,8 @@ abstract final class PortalRoutes {
   static const company = '/company';
   static const onboardingPrefix = '/onboarding/';
   static const busKycPrefix = '/bus-kyc/';
-  static String onboardingOf(String id) => '';
-  static String busKycOf(String busId) => '';
+  static String onboardingOf(String id) => '$onboardingPrefix$id';
+  static String busKycOf(String busId) => '$busKycPrefix$busId';
 
   static const fromParameter = 'from';
 }
