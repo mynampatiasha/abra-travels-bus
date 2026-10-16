@@ -48,7 +48,7 @@ void main() {
       expect(find.text('Welcome to Abra Travels'), findsOneWidget);
       await open(tester, '/dashboard');
       expect(locationOf(tester), '/kyc');
-      expect(find.text('My company'), findsNothing);
+      expect(find.text('Bookings today'), findsNothing);
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );

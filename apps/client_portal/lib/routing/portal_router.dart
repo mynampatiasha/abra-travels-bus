@@ -5,6 +5,7 @@ import 'package:shared_ui/shared_ui.dart';
 
 import '../app/providers.dart';
 import '../features/accept_invite/accept_invite_screen.dart';
+import '../features/auth/access_gate_screen.dart';
 import '../features/auth/sign_in_screen.dart';
 import '../features/bookings/client_bookings_screen.dart';
 import '../features/buses/client_buses_screen.dart';
@@ -17,12 +18,11 @@ import '../features/crew/client_driver_rules_screen.dart';
 import '../features/dashboard/client_dashboard_screen.dart';
 import '../features/earnings/client_earnings_screen.dart';
 import '../features/fares/client_fares_screen.dart';
-import '../features/kyc/client_kyc_verification_screen.dart';
 import '../features/kyc/kyc_client_manage_screen.dart';
-import '../features/onboarding/onboarding_page.dart';
 import '../features/live/client_live_tracking_screen.dart';
 import '../features/notifications/client_notification_screen.dart';
 import '../features/offers/client_offers_screen.dart';
+import '../features/onboarding/onboarding_page.dart';
 import '../features/places/places_client_manage_screen.dart';
 import '../features/routes/client_routes_screen.dart';
 import '../features/schedules/client_schedules_screen.dart';
@@ -35,11 +35,11 @@ import 'portal_routes.dart';
 final portalRouterProvider = Provider<GoRouter>((ref) {
   final accessChanges = _ChangeSignal();
   ref
-    ..listen(accessProvider, (_, _) => accessChanges.notify())
+    ..listen(accessProvider, (previous, next) => accessChanges.notify())
     ..onDispose(accessChanges.dispose);
 
   final router = GoRouter(
-    initialLocation: PortalRoutes.dashboard,
+    initialLocation: PortalRoutes.splash,
     refreshListenable: accessChanges,
     redirect: (context, state) => PortalRouteGuard.redirect(
       access: ref.read(accessProvider),
@@ -49,40 +49,153 @@ final portalRouterProvider = Provider<GoRouter>((ref) {
     errorBuilder: (context, state) =>
         const Scaffold(body: AbraStateView(kind: AbraStateKind.notFound)),
     routes: <RouteBase>[
-      GoRoute(path: PortalRoutes.splash, redirect: (_, __) => PortalRoutes.dashboard),
-      GoRoute(path: PortalRoutes.signIn, builder: (_, __) => const SignInScreen()),
+      GoRoute(
+        path: PortalRoutes.splash,
+        builder: (context, state) => const StartupScreen(),
+      ),
+      GoRoute(
+        path: PortalRoutes.signIn,
+        builder: (context, state) => const SignInScreen(),
+      ),
       GoRoute(
         path: PortalRoutes.acceptInvite,
-        builder: (_, state) => AcceptInviteScreen(token: state.uri.queryParameters['token']),
+        builder: (context, state) =>
+            AcceptInviteScreen(token: state.uri.queryParameters['token']),
       ),
-      GoRoute(path: PortalRoutes.home, redirect: (_, __) => PortalRoutes.dashboard),
+      GoRoute(
+        path: PortalRoutes.home,
+        builder: (context, state) => const AccessGateScreen(),
+      ),
       ShellRoute(
         builder: (context, state, child) =>
             PortalShell(currentPath: state.uri.path, child: child),
         routes: <RouteBase>[
-          GoRoute(path: PortalRoutes.dashboard, builder: (_, __) => const ClientDashboardScreen()),
-          GoRoute(path: PortalRoutes.kycVerification, builder: (_, __) => const ClientKycVerificationScreen()),
-          GoRoute(path: PortalRoutes.companyProfile, builder: (_, __) => const ClientCompanyProfileScreen()),
-          GoRoute(path: PortalRoutes.buses, builder: (_, __) => const ClientBusesScreen()),
-          GoRoute(path: PortalRoutes.seatLayouts, builder: (_, __) => const ClientSeatLayoutScreen()),
-          GoRoute(path: PortalRoutes.crew, builder: (_, __) => const ClientCrewScreen()),
-          GoRoute(path: PortalRoutes.driverReports, builder: (_, __) => const ClientDriverReportsScreen()),
-          GoRoute(path: PortalRoutes.driverRules, builder: (_, __) => const ClientDriverRulesScreen()),
-          GoRoute(path: PortalRoutes.routes, builder: (_, __) => const ClientRoutesScreen()),
-          GoRoute(path: PortalRoutes.places, builder: (_, __) => const PlacesClientManageScreen()),
-          GoRoute(path: PortalRoutes.fares, builder: (_, __) => const ClientFaresScreen()),
-          GoRoute(path: PortalRoutes.schedules, builder: (_, __) => const ClientSchedulesScreen()),
-          GoRoute(path: PortalRoutes.trips, builder: (_, __) => const ClientTripsScreen()),
-          GoRoute(path: PortalRoutes.bookings, builder: (_, __) => const ClientBookingsScreen()),
-          GoRoute(path: PortalRoutes.offers, builder: (_, __) => const ClientOffersScreen()),
-          GoRoute(path: PortalRoutes.earnings, builder: (_, __) => const ClientEarningsScreen()),
-          GoRoute(path: PortalRoutes.commission, builder: (_, __) => const ClientCommissionScreen()),
-          GoRoute(path: PortalRoutes.liveTracking, builder: (_, __) => const ClientLiveTrackingScreen()),
-          GoRoute(path: PortalRoutes.notifications, builder: (_, __) => const ClientNotificationScreen()),
-          GoRoute(path: PortalRoutes.staffRoles, builder: (_, __) => const ClientStaffRolesScreen()),
-          GoRoute(path: PortalRoutes.company, builder: (_, __) => const ClientCompanyProfileScreen()),
-          GoRoute(path: '${PortalRoutes.onboardingPrefix}:id', builder: (_, state) => OnboardingPage(id: state.pathParameters['id'] ?? '')),
-          GoRoute(path: '${PortalRoutes.busKycPrefix}:busId', builder: (_, state) => BusKycScreen(busId: state.pathParameters['busId'] ?? '')),
+          GoRoute(
+            path: '/notifications',
+            builder: (context, state) => const ClientNotificationScreen(),
+          ),
+          GoRoute(
+            path: '/kyc',
+            builder: (context, state) => const ClientKycVerificationScreen(),
+          ),
+          GoRoute(
+            path: PortalRoutes.dashboard,
+            builder: (context, state) => const ClientDashboardScreen(),
+          ),
+          GoRoute(
+            path: PortalRoutes.places,
+            builder: (context, state) => Consumer(
+              builder: (context, ref, child) =>
+                  PortalRouteGuard.canOpen(
+                    ref.watch(accessProvider),
+                    PortalRoutes.places,
+                  )
+                  ? const PlacesClientManageScreen()
+                  : const AbraStateView(kind: AbraStateKind.forbidden),
+            ),
+          ),
+          GoRoute(
+            path: PortalRoutes.company,
+            builder: (context, state) => Consumer(
+              builder: (context, ref, child) =>
+                  PortalRouteGuard.canOpen(
+                    ref.watch(accessProvider),
+                    PortalRoutes.company,
+                  )
+                  ? const ClientCompanyProfileScreen()
+                  : const AbraStateView(kind: AbraStateKind.forbidden),
+            ),
+          ),
+          GoRoute(
+            path: PortalRoutes.companyProfile,
+            builder: (context, state) => Consumer(
+              builder: (context, ref, child) =>
+                  PortalRouteGuard.canOpen(
+                    ref.watch(accessProvider),
+                    PortalRoutes.company,
+                  )
+                  ? const ClientCompanyProfileScreen()
+                  : const AbraStateView(kind: AbraStateKind.forbidden),
+            ),
+          ),
+          GoRoute(
+            path: PortalRoutes.kycVerification,
+            builder: (context, state) => const ClientKycVerificationScreen(),
+          ),
+          GoRoute(
+            path: PortalRoutes.buses,
+            builder: (context, state) => const ClientBusesScreen(),
+          ),
+          GoRoute(
+            path: PortalRoutes.seatLayouts,
+            builder: (context, state) => const ClientSeatLayoutScreen(),
+          ),
+          GoRoute(
+            path: PortalRoutes.crew,
+            builder: (context, state) => const ClientCrewScreen(),
+          ),
+          GoRoute(
+            path: PortalRoutes.driverReports,
+            builder: (context, state) => const ClientDriverReportsScreen(),
+          ),
+          GoRoute(
+            path: PortalRoutes.driverRules,
+            builder: (context, state) => const ClientDriverRulesScreen(),
+          ),
+          GoRoute(
+            path: PortalRoutes.routes,
+            builder: (context, state) => const ClientRoutesScreen(),
+          ),
+          GoRoute(
+            path: PortalRoutes.fares,
+            builder: (context, state) => const ClientFaresScreen(),
+          ),
+          GoRoute(
+            path: PortalRoutes.schedules,
+            builder: (context, state) => const ClientSchedulesScreen(),
+          ),
+          GoRoute(
+            path: PortalRoutes.trips,
+            builder: (context, state) => const ClientTripsScreen(),
+          ),
+          GoRoute(
+            path: PortalRoutes.bookings,
+            builder: (context, state) => const ClientBookingsScreen(),
+          ),
+          GoRoute(
+            path: PortalRoutes.offers,
+            builder: (context, state) => const ClientOffersScreen(),
+          ),
+          GoRoute(
+            path: PortalRoutes.earnings,
+            builder: (context, state) => const ClientEarningsScreen(),
+          ),
+          GoRoute(
+            path: PortalRoutes.commission,
+            builder: (context, state) => const ClientCommissionScreen(),
+          ),
+          GoRoute(
+            path: PortalRoutes.liveTracking,
+            builder: (context, state) => const ClientLiveTrackingScreen(),
+          ),
+          GoRoute(
+            path: PortalRoutes.notifications,
+            builder: (context, state) => const ClientNotificationScreen(),
+          ),
+          GoRoute(
+            path: PortalRoutes.staffRoles,
+            builder: (context, state) => const ClientStaffRolesScreen(),
+          ),
+          GoRoute(
+            path: '${PortalRoutes.onboardingPrefix}:id',
+            builder: (context, state) =>
+                OnboardingPage(id: state.pathParameters['id'] ?? ''),
+          ),
+          GoRoute(
+            path: '${PortalRoutes.busKycPrefix}:busId',
+            builder: (context, state) =>
+                BusKycScreen(busId: state.pathParameters['busId'] ?? ''),
+          ),
         ],
       ),
     ],

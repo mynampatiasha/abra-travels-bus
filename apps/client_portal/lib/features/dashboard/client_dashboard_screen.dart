@@ -49,12 +49,17 @@ class ClientDashboardScreen extends ConsumerWidget {
       ),
       data: (data) {
         final company = data.company;
-        final companyName = company?['name']?.toString() ?? 'Partner Fleet';
+        final companyName = company?['companyName']?.toString() ??
+            company?['name']?.toString() ??
+            'Partner Fleet';
         final owner = user?.name ?? 'Partner';
         final firstName = owner.split(' ').first;
-        final isVerified = access.kycApproved;
+        final isVerified = access.kycApproved || company?['status'] == 'APPROVED';
 
-        final activeBuses = data.buses.where((b) => b['status'] == 'ACTIVE').length.toString();
+        final activeBuses = data.buses
+            .where((b) => b['status'] == 'ACTIVE')
+            .length
+            .toString();
 
         // Unbuilt Group A metrics displayed as "Not connected yet"
         const bookingsToday = 'Not connected yet';
@@ -70,19 +75,38 @@ class ClientDashboardScreen extends ConsumerWidget {
         if (!isVerified) {
           alerts.add({
             'tone': 'warning',
-            'msg': 'KYC verification is required before your trips can be published for booking.',
+            'msg':
+                'KYC verification is required before your trips can be published for booking.',
             'route': PortalRoutes.kycVerification,
           });
         }
         for (final b in data.buses) {
-          final ins = DateTime.tryParse(b['insuranceExpiry']?.toString() ?? b['insExp']?.toString() ?? '');
-          if (ins != null && ins.difference(DateTime.now()).inDays < 30) {
+          if (b['status'] == 'PENDING_APPROVAL') {
             alerts.add({
-              'tone': 'danger',
-              'msg': 'Bus ${b['registrationNumber'] ?? b['reg']} insurance expires within 30 days',
+              'tone': 'warning',
+              'msg':
+                  'Bus ${b['name'] ?? b['registrationNumber']} waiting for Abra approval',
               'route': PortalRoutes.buses,
             });
           }
+          final ins = DateTime.tryParse(
+            b['insuranceExpiry']?.toString() ?? b['insExp']?.toString() ?? '',
+          );
+          if (ins != null && ins.difference(DateTime.now()).inDays < 30) {
+            alerts.add({
+              'tone': 'danger',
+              'msg':
+                  'Bus ${b['registrationNumber'] ?? b['reg']} insurance expires within 30 days',
+              'route': PortalRoutes.buses,
+            });
+          }
+        }
+        if (data.buses.isEmpty) {
+          alerts.add({
+            'tone': 'info',
+            'msg': 'No buses yet. Add your first bus to start selling seats.',
+            'route': PortalRoutes.buses,
+          });
         }
 
         // Chart data
@@ -177,7 +201,7 @@ class ClientDashboardScreen extends ConsumerWidget {
                   isHighlighted: true,
                   onTap: () => context.go(PortalRoutes.earnings),
                 ),
-                PortalKpiCard(
+                const PortalKpiCard(
                   icon: Icons.bar_chart_outlined,
                   value: avgOccupancy,
                   label: 'Average occupancy',

@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_authentication/shared_authentication.dart';
@@ -13,7 +12,6 @@ import 'package:shared_ui/shared_ui.dart';
 import '../../app/providers.dart';
 import '../../core/failure_text.dart';
 import '../../l10n/portal_strings.dart';
-import '../../routing/portal_routes.dart';
 import 'sign_in_controller.dart';
 
 /// Shown while the stored session is checked; offers a retry when the
@@ -88,15 +86,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     await _controller.verify(
       code: _useRecovery ? null : value,
       recoveryCode: _useRecovery ? value : null,
-    );
-  }
-
-  void _handleSocialSignIn(BuildContext context, String provider) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$provider sign-in is managed by your organization credentials. Please sign in with your registered email and password.'),
-        backgroundColor: AbraColors.deepBlue,
-      ),
     );
   }
 
@@ -209,11 +198,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               onPressed: _submitPassword,
             ),
             const SizedBox(height: AbraSpacing.md),
-            Row(
+            const Row(
               children: [
                 Expanded(child: Divider(color: AbraColors.divider)),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: EdgeInsets.symmetric(horizontal: 12),
                   child: Text(
                     'OR',
                     style: TextStyle(

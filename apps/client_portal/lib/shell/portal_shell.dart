@@ -12,7 +12,7 @@ const _navGroups = [
   ]),
   _NavGroup('COMPANY', [
     _NavItem('KYC verification', PortalRoutes.kycVerification, Icons.verified_user_outlined),
-    _NavItem('Company profile', PortalRoutes.companyProfile, Icons.business_outlined),
+    _NavItem('Company details', PortalRoutes.companyProfile, Icons.business_outlined),
   ]),
   _NavGroup('FLEET', [
     _NavItem('Buses', PortalRoutes.buses, Icons.directions_bus_outlined),
@@ -128,10 +128,10 @@ class _PortalShellState extends ConsumerState<PortalShell> {
       color: AbraColors.navy,
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 20, 16, 0),
             child: Row(
-              children: const [
+              children: [
                 Icon(Icons.directions_bus_filled, color: Colors.white, size: 24),
                 SizedBox(width: 10),
                 Expanded(
@@ -298,8 +298,8 @@ class _PortalShellState extends ConsumerState<PortalShell> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Row(
-                  children: const [
+                child: const Row(
+                  children: [
                     Icon(Icons.search, color: AbraColors.textSecondary, size: 16),
                     SizedBox(width: 8),
                     Expanded(
@@ -410,7 +410,7 @@ class _PortalShellState extends ConsumerState<PortalShell> {
       offset: const Offset(0, 48),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AbraRadius.lg),
-        side: BorderSide(color: AbraColors.border),
+        side: const BorderSide(color: AbraColors.border),
       ),
       icon: Container(
         width: 32,
@@ -470,13 +470,13 @@ class _PortalShellState extends ConsumerState<PortalShell> {
               const SizedBox(height: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: AbraColors.skyContainer,
-                  borderRadius: BorderRadius.circular(99),
+                  borderRadius: BorderRadius.all(Radius.circular(99)),
                 ),
-                child: Text(
+                child: const Text(
                   userRole,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     color: AbraColors.deepBlue,
@@ -731,10 +731,10 @@ class _GlobalSearchDialogState extends State<_GlobalSearchDialog> {
             const Divider(),
             Expanded(
               child: _query.isEmpty
-                  ? Center(
+                  ? const Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
+                        children: [
                           Icon(Icons.manage_search, size: 48, color: AbraColors.textSecondary),
                           SizedBox(height: 8),
                           Text('Type to search across bookings, trips, buses & crew',

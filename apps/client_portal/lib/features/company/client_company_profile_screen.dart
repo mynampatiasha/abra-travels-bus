@@ -10,476 +10,466 @@ import 'package:shared_ui/shared_ui.dart';
 import '../../app/providers.dart';
 import '../../core/async_value_view.dart';
 import '../../core/failure_text.dart';
-import '../../core/widgets/portal_info_banner.dart';
-import '../../core/widgets/portal_section_title.dart';
 
-final clientCompanyProvider = FutureProvider.autoDispose<JsonMap>(
-  (ref) async => (await ref.watch(appDependenciesProvider).apiClient.get('client/company'))
-      .decodeObject((json) => json),
+/// The client portal Company profile page (demo page `company`): what customers
+/// and Abra see about the company, and the bank account payouts go to
+/// (`client/company`). Abra verifies the bank account; the payout mode is set by
+/// Abra and only shown here.
+
+final companyProvider = FutureProvider.autoDispose<JsonMap>(
+  (ref) async =>
+      (await ref.watch(appDependenciesProvider).apiClient.get('client/company'))
+          .decodeObject((json) => json),
 );
 
+// Keep clientCompanyProvider as an alias in case of references
+final clientCompanyProvider = companyProvider;
+
 final _emailPattern = RegExp(r'^\S+@\S+\.\S+$');
-final _gstinPattern = RegExp(r'^\d{2}[A-Za-z]{5}\d{4}[A-Za-z][A-Za-z0-9]Z[A-Za-z0-9]$');
+final _gstinPattern = RegExp(
+  r'^\d{2}[A-Za-z]{5}\d{4}[A-Za-z][A-Za-z0-9]Z[A-Za-z0-9]$',
+);
 final _accountPattern = RegExp(r'^\d{6,18}$');
 final _ifscPattern = RegExp(r'^[A-Za-z]{4}0[A-Za-z0-9]{6}$');
 
+String? _required(String? value) =>
+    (value ?? '').trim().isEmpty ? 'Required' : null;
+
+/// Single screen for "Company profile" with the demo layout and real backend calls.
 class ClientCompanyProfileScreen extends ConsumerWidget {
   const ClientCompanyProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return AsyncValueView<JsonMap>(
-      value: ref.watch(clientCompanyProvider),
-      onRetry: () => ref.invalidate(clientCompanyProvider),
-      data: (context, company) => _ClientCompanyProfileContent(company: company),
-    );
-  }
+  Widget build(BuildContext context, WidgetRef ref) => AsyncValueView<JsonMap>(
+    value: ref.watch(companyProvider),
+    onRetry: () => ref.invalidate(companyProvider),
+    data: (context, company) => _CompanyProfileBody(company: company),
+  );
 }
 
-class _ClientCompanyProfileContent extends ConsumerStatefulWidget {
-  const _ClientCompanyProfileContent({required this.company});
+class _CompanyProfileBody extends ConsumerWidget {
+  const _CompanyProfileBody({required this.company});
 
   final JsonMap company;
 
   @override
-  ConsumerState<_ClientCompanyProfileContent> createState() => _ClientCompanyProfileContentState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final canEdit = ref
+        .watch(accessProvider)
+        .can(PermissionKeys.operatorsUpdate);
+    final isPhone = AbraBreakpoint.of(context) == AbraBreakpoint.phone;
+    final profile = _ProfileCard(company: company, canEdit: canEdit);
+    final bank = _BankCard(company: company, canEdit: canEdit);
+
+    return ListView(
+      padding: EdgeInsets.all(isPhone ? AbraSpacing.md : AbraSpacing.lg),
+      children: <Widget>[
+        Text(
+          'Company profile',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: AbraSpacing.xs),
+        Text(
+          'Details customers and Abra see.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: AbraColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: AbraSpacing.lg),
+        if (isPhone) ...<Widget>[
+          profile,
+          const SizedBox(height: AbraSpacing.md),
+          bank,
+        ] else
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Expanded(child: profile),
+              const SizedBox(width: AbraSpacing.lg),
+              Expanded(child: bank),
+            ],
+          ),
+      ],
+    );
+  }
 }
 
-class _ClientCompanyProfileContentState extends ConsumerState<_ClientCompanyProfileContent> {
-  final _profileForm = GlobalKey<FormState>();
-  final _bankForm = GlobalKey<FormState>();
+/// A card with header and content.
+class _Section extends StatelessWidget {
+  const _Section({required this.title, required this.children});
 
-  late final TextEditingController _nameCtrl;
-  late final TextEditingController _ownerCtrl;
-  late final TextEditingController _emailCtrl;
-  late final TextEditingController _phoneCtrl;
-  late final TextEditingController _cityCtrl;
-  late final TextEditingController _gstCtrl;
+  final String title;
+  final List<Widget> children;
 
-  late final TextEditingController _bankHolderCtrl;
-  late final TextEditingController _bankAccCtrl;
-  late final TextEditingController _bankIfscCtrl;
+  @override
+  Widget build(BuildContext context) => AbraCard(
+    child: Padding(
+      padding: const EdgeInsets.all(AbraSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: AbraSpacing.md),
+          ...children,
+        ],
+      ),
+    ),
+  );
+}
 
-  bool _isSavingProfile = false;
-  bool _isSavingBank = false;
-  String? _successMessage;
-  String? _errorMessage;
+mixin _SaveState<T extends StatefulWidget> on State<T> {
+  var saving = false;
+  String? failure;
+  String? done;
+
+  Future<void> run(
+    WidgetRef ref,
+    Future<void> Function() action,
+    String message,
+  ) async {
+    final l10n = AbraLocalizations.of(context);
+    setState(() {
+      saving = true;
+      failure = null;
+      done = null;
+    });
+    try {
+      await action();
+      ref.invalidate(companyProvider);
+      if (mounted) setState(() => done = message);
+    } on Object catch (error) {
+      if (mounted) setState(() => failure = failureText(l10n, error));
+    } finally {
+      if (mounted) setState(() => saving = false);
+    }
+  }
+
+  Widget feedback() => failure != null
+      ? Semantics(
+          liveRegion: true,
+          child: Text(
+            failure!,
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+        )
+      : done != null
+      ? Semantics(
+          liveRegion: true,
+          child: Text(
+            done!,
+            style: const TextStyle(color: AbraColors.tealDark),
+          ),
+        )
+      : const SizedBox.shrink();
+}
+
+class _ProfileCard extends ConsumerStatefulWidget {
+  const _ProfileCard({required this.company, required this.canEdit});
+
+  final JsonMap company;
+  final bool canEdit;
+
+  @override
+  ConsumerState<_ProfileCard> createState() => _ProfileCardState();
+}
+
+class _ProfileCardState extends ConsumerState<_ProfileCard>
+    with _SaveState<_ProfileCard> {
+  final _form = GlobalKey<FormState>();
+  late final _name = _controller('companyName');
+  late final _owner = _controller('ownerName');
+  late final _email = _controller('email');
+  late final _phone = _controller('supportPhone');
+  late final _city = _controller('city');
+  late final _gstin = _controller('gstin');
+
+  TextEditingController _controller(String key) =>
+      TextEditingController(text: '${widget.company[key] ?? ''}');
+
+  @override
+  void dispose() {
+    for (final controller in <TextEditingController>[
+      _name,
+      _owner,
+      _email,
+      _phone,
+      _city,
+      _gstin,
+    ]) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (!(_form.currentState?.validate() ?? false)) return;
+    await run(ref, () async {
+      await ref
+          .read(appDependenciesProvider)
+          .apiClient
+          .put(
+            'client/company',
+            body: <String, Object?>{
+              'companyName': _name.text.trim(),
+              'ownerName': _owner.text.trim(),
+              'email': _email.text.trim(),
+              'supportPhone': _phone.text.trim(),
+              'city': _city.text.trim(),
+              'gstin': _gstin.text.trim(),
+            },
+          );
+    }, 'Saved');
+  }
+
+  Widget _field(
+    String label,
+    TextEditingController controller, {
+    String? Function(String?)? validator,
+    TextInputType? keyboard,
+  }) => TextFormField(
+    controller: controller,
+    enabled: widget.canEdit && !saving,
+    keyboardType: keyboard,
+    decoration: InputDecoration(labelText: label),
+    validator: validator,
+  );
+
+  @override
+  Widget build(BuildContext context) => _Section(
+    title: 'Company',
+    children: <Widget>[
+      Form(
+        key: _form,
+        child: Wrap(
+          runSpacing: AbraSpacing.md,
+          children:
+              <Widget>[
+                    _field('Company name *', _name, validator: _required),
+                    _field('Owner name *', _owner, validator: _required),
+                    _field(
+                      'Email *',
+                      _email,
+                      keyboard: TextInputType.emailAddress,
+                      validator: (value) =>
+                          _emailPattern.hasMatch((value ?? '').trim())
+                          ? null
+                          : 'Enter a valid email',
+                    ),
+                    _field(
+                      'Support phone',
+                      _phone,
+                      keyboard: TextInputType.phone,
+                    ),
+                    _field('City', _city),
+                    _field(
+                      'GSTIN',
+                      _gstin,
+                      validator: (value) =>
+                          (value ?? '').trim().isEmpty ||
+                                  _gstinPattern.hasMatch(value!.trim())
+                              ? null
+                              : 'Looks wrong, for example 36ABCDE1234F1Z5',
+                    ),
+                  ]
+                  .map(
+                    (field) => SizedBox(width: double.infinity, child: field),
+                  )
+                  .toList(),
+        ),
+      ),
+      const SizedBox(height: AbraSpacing.md),
+      feedback(),
+      if (widget.canEdit)
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: AbraButton(
+            label: 'Save',
+            icon: Icons.check,
+            onPressed: saving ? null : _save,
+          ),
+        ),
+    ],
+  );
+}
+
+class _BankCard extends ConsumerStatefulWidget {
+  const _BankCard({required this.company, required this.canEdit});
+
+  final JsonMap company;
+  final bool canEdit;
+
+  @override
+  ConsumerState<_BankCard> createState() => _BankCardState();
+}
+
+class _BankCardState extends ConsumerState<_BankCard>
+    with _SaveState<_BankCard> {
+  final _form = GlobalKey<FormState>();
+  late final _holder = TextEditingController(
+    text: '${_bank?['holderName'] ?? ''}',
+  );
+  final _account = TextEditingController();
+  late final _ifsc = TextEditingController(text: '${_bank?['ifsc'] ?? ''}');
 
   JsonMap? get _bank => widget.company['bank'] is Map
       ? asJsonMap(widget.company['bank'] as Map)
       : null;
 
   @override
-  void initState() {
-    super.initState();
-    final c = widget.company;
-    _nameCtrl = TextEditingController(text: '${c['companyName'] ?? ''}');
-    _ownerCtrl = TextEditingController(text: '${c['ownerName'] ?? ''}');
-    _emailCtrl = TextEditingController(text: '${c['email'] ?? ''}');
-    _phoneCtrl = TextEditingController(text: '${c['supportPhone'] ?? ''}');
-    _cityCtrl = TextEditingController(text: '${c['city'] ?? ''}');
-    _gstCtrl = TextEditingController(text: '${c['gstin'] ?? ''}');
-
-    final bank = _bank;
-    _bankHolderCtrl = TextEditingController(text: '${bank?['holderName'] ?? ''}');
-    _bankAccCtrl = TextEditingController();
-    _bankIfscCtrl = TextEditingController(text: '${bank?['ifsc'] ?? ''}');
-  }
-
-  @override
   void dispose() {
-    _nameCtrl.dispose();
-    _ownerCtrl.dispose();
-    _emailCtrl.dispose();
-    _phoneCtrl.dispose();
-    _cityCtrl.dispose();
-    _gstCtrl.dispose();
-    _bankHolderCtrl.dispose();
-    _bankAccCtrl.dispose();
-    _bankIfscCtrl.dispose();
+    _holder.dispose();
+    _account.dispose();
+    _ifsc.dispose();
     super.dispose();
   }
 
-  Future<void> _saveProfile() async {
-    if (!(_profileForm.currentState?.validate() ?? false)) return;
-    setState(() {
-      _isSavingProfile = true;
-      _errorMessage = null;
-      _successMessage = null;
-    });
-    try {
-      await ref.read(appDependenciesProvider).apiClient.put(
-        'client/company',
-        body: <String, Object?>{
-          'companyName': _nameCtrl.text.trim(),
-          'ownerName': _ownerCtrl.text.trim(),
-          'email': _emailCtrl.text.trim(),
-          'supportPhone': _phoneCtrl.text.trim(),
-          'city': _cityCtrl.text.trim(),
-          'gstin': _gstCtrl.text.trim(),
-        },
-      );
-      ref.invalidate(clientCompanyProvider);
-      if (mounted) {
-        setState(() {
-          _isSavingProfile = false;
-          _successMessage = 'Company details updated successfully.';
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Saved profile details')),
-        );
-      }
-    } on Object catch (e) {
-      if (mounted) {
-        setState(() {
-          _isSavingProfile = false;
-          _errorMessage = failureText(AbraLocalizations.of(context), e);
-        });
-      }
-    }
-  }
-
-  Future<void> _saveBank() async {
-    if (!(_bankForm.currentState?.validate() ?? false)) return;
-    setState(() {
-      _isSavingBank = true;
-      _errorMessage = null;
-      _successMessage = null;
-    });
-    try {
-      await ref.read(appDependenciesProvider).apiClient.put(
-        'client/company/bank',
-        body: <String, Object?>{
-          'holderName': _bankHolderCtrl.text.trim(),
-          'accountNumber': _bankAccCtrl.text.trim(),
-          'ifsc': _bankIfscCtrl.text.trim().toUpperCase(),
-        },
-      );
-      _bankAccCtrl.clear();
-      ref.invalidate(clientCompanyProvider);
-      if (mounted) {
-        setState(() {
-          _isSavingBank = false;
-          _successMessage = 'Bank account saved. Abra will verify the account.';
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Bank details submitted for verification')),
-        );
-      }
-    } on Object catch (e) {
-      if (mounted) {
-        setState(() {
-          _isSavingBank = false;
-          _errorMessage = failureText(AbraLocalizations.of(context), e);
-        });
-      }
-    }
+  Future<void> _save() async {
+    if (!(_form.currentState?.validate() ?? false)) return;
+    await run(ref, () async {
+      await ref
+          .read(appDependenciesProvider)
+          .apiClient
+          .put(
+            'client/company/bank',
+            body: <String, Object?>{
+              'holderName': _holder.text.trim(),
+              'accountNumber': _account.text.trim(),
+              'ifsc': _ifsc.text.trim().toUpperCase(),
+            },
+          );
+      _account.clear();
+    }, 'Saved. Abra will verify the account.');
   }
 
   @override
   Widget build(BuildContext context) {
-    final canEdit = ref.watch(accessProvider).can(PermissionKeys.operatorsUpdate);
     final bank = _bank;
     final status = '${bank?['status'] ?? 'PENDING'}';
     final note = '${bank?['note'] ?? ''}';
-    final isAuto = widget.company['payoutMode'] == 'AUTO_SPLIT';
+    final auto = widget.company['payoutMode'] == 'AUTO_SPLIT';
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AbraSpacing.xxl),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const PortalSectionTitle(
-            title: 'Company profile',
-            subtitle: 'Your public and payout details',
-            breadcrumbs: ['Company', 'Profile'],
+    return _Section(
+      title: 'Bank account for payouts',
+      children: <Widget>[
+        Container(
+          padding: const EdgeInsets.all(AbraSpacing.md),
+          decoration: BoxDecoration(
+            color: AbraColors.orangeContainer,
+            borderRadius: BorderRadius.circular(AbraRadius.md),
           ),
-          const SizedBox(height: AbraSpacing.xl),
-          if (_successMessage != null) ...[
-            PortalInfoBanner(
-              message: _successMessage!,
-              tone: PortalBannerTone.success,
-              icon: Icons.check_circle_outline,
-            ),
-            const SizedBox(height: AbraSpacing.lg),
-          ],
-          if (_errorMessage != null) ...[
-            PortalInfoBanner(
-              message: _errorMessage!,
-              tone: PortalBannerTone.warning,
-              icon: Icons.error_outline,
-            ),
-            const SizedBox(height: AbraSpacing.lg),
-          ],
-          _card(
-            context,
-            title: 'Company information',
-            child: Form(
-              key: _profileForm,
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _field(
-                          'Company name *',
-                          _nameCtrl,
-                          enabled: canEdit && !_isSavingProfile,
-                          validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-                        ),
-                      ),
-                      const SizedBox(width: AbraSpacing.md),
-                      Expanded(
-                        child: _field(
-                          'Owner name *',
-                          _ownerCtrl,
-                          enabled: canEdit && !_isSavingProfile,
-                          validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AbraSpacing.md),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _field(
-                          'Contact email *',
-                          _emailCtrl,
-                          enabled: canEdit && !_isSavingProfile,
-                          keyboard: TextInputType.emailAddress,
-                          validator: (v) => _emailPattern.hasMatch((v ?? '').trim()) ? null : 'Enter a valid email',
-                        ),
-                      ),
-                      const SizedBox(width: AbraSpacing.md),
-                      Expanded(
-                        child: _field(
-                          'Contact phone',
-                          _phoneCtrl,
-                          enabled: canEdit && !_isSavingProfile,
-                          keyboard: TextInputType.phone,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AbraSpacing.md),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _field(
-                          'Headquarters city',
-                          _cityCtrl,
-                          enabled: canEdit && !_isSavingProfile,
-                        ),
-                      ),
-                      const SizedBox(width: AbraSpacing.md),
-                      Expanded(
-                        child: _field(
-                          'GSTIN',
-                          _gstCtrl,
-                          enabled: canEdit && !_isSavingProfile,
-                          validator: (v) => (v == null || v.trim().isEmpty || _gstinPattern.hasMatch(v.trim()))
-                              ? null
-                              : 'Looks wrong, e.g. 36ABCDE1234F1Z5',
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AbraSpacing.lg),
-                  if (canEdit)
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: FilledButton(
-                        style: FilledButton.styleFrom(backgroundColor: AbraColors.blue),
-                        onPressed: _isSavingProfile ? null : _saveProfile,
-                        child: _isSavingProfile
-                            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                            : const Text('Save details'),
-                      ),
-                    ),
-                ],
-              ),
-            ),
+          child: const Text(
+            'Changing the bank account pauses payouts until Abra verifies it.',
+            style: TextStyle(color: AbraColors.textPrimary),
           ),
-          const SizedBox(height: AbraSpacing.xl),
-          _card(
-            context,
-            title: 'Payout bank account',
-            child: Form(
-              key: _bankForm,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(AbraSpacing.md),
-                    decoration: BoxDecoration(
-                      color: AbraColors.orangeContainer,
-                      borderRadius: BorderRadius.circular(AbraRadius.md),
-                    ),
-                    child: const Text(
-                      'Changing the bank account pauses payouts until Abra verifies it.',
-                      style: TextStyle(color: AbraColors.textPrimary),
-                    ),
-                  ),
-                  const SizedBox(height: AbraSpacing.md),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _field(
-                          'Account holder *',
-                          _bankHolderCtrl,
-                          enabled: canEdit && !_isSavingBank,
-                          validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-                        ),
-                      ),
-                      const SizedBox(width: AbraSpacing.md),
-                      Expanded(
-                        child: _field(
-                          'Account number *',
-                          _bankAccCtrl,
-                          enabled: canEdit && !_isSavingBank,
-                          keyboard: TextInputType.number,
-                          helperText: bank == null
-                              ? null
-                              : 'Saved: XXXXXX${bank['accountLast4']}. Type number again to change.',
-                          validator: (v) => _accountPattern.hasMatch((v ?? '').trim()) ? null : 'Enter 6 to 18 digits',
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AbraSpacing.md),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: _field(
-                          'IFSC code *',
-                          _bankIfscCtrl,
-                          enabled: canEdit && !_isSavingBank,
-                          validator: (v) => _ifscPattern.hasMatch((v ?? '').trim().toUpperCase())
-                              ? null
-                              : 'Looks wrong, e.g. HDFC0001234',
-                        ),
-                      ),
-                      const SizedBox(width: AbraSpacing.md),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 20),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  const Text('Verification status: ', style: TextStyle(fontSize: 12, color: AbraColors.textSecondary)),
-                                  AbraStatusBadge(
-                                    label: bank == null
-                                        ? 'Not added'
-                                        : switch (status) {
-                                            'VERIFIED' => 'Verified',
-                                            'FAILED' => 'Failed',
-                                            _ => 'Pending',
-                                          },
-                                    tone: bank == null
-                                        ? AbraStatusTone.neutral
-                                        : switch (status) {
-                                            'VERIFIED' => AbraStatusTone.success,
-                                            'FAILED' => AbraStatusTone.danger,
-                                            _ => AbraStatusTone.warning,
-                                          },
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Settlement mode: ${isAuto ? 'Automatic (Razorpay Route)' : 'Manual settlement'}',
-                                style: const TextStyle(color: AbraColors.tealDark, fontWeight: FontWeight.w600, fontSize: 13),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (note.isNotEmpty) ...[
-                    const SizedBox(height: AbraSpacing.sm),
-                    Text(
-                      'Abra could not verify it: $note',
-                      style: const TextStyle(color: AbraColors.danger, fontSize: 13),
-                    ),
-                  ],
-                  const SizedBox(height: AbraSpacing.lg),
-                  if (canEdit)
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: FilledButton(
-                        style: FilledButton.styleFrom(backgroundColor: AbraColors.blue),
-                        onPressed: _isSavingBank ? null : _saveBank,
-                        child: _isSavingBank
-                            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                            : const Text('Save bank details'),
-                      ),
-                    ),
-                ],
+        ),
+        const SizedBox(height: AbraSpacing.md),
+        Form(
+          key: _form,
+          child: Column(
+            children: <Widget>[
+              TextFormField(
+                controller: _holder,
+                enabled: widget.canEdit && !saving,
+                decoration: const InputDecoration(labelText: 'Account holder'),
+                validator: _required,
               ),
+              const SizedBox(height: AbraSpacing.md),
+              TextFormField(
+                controller: _account,
+                enabled: widget.canEdit && !saving,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Account number',
+                  helperText: bank == null
+                      ? null
+                      : 'Saved: XXXXXX${bank['accountLast4']}. Type the number again to change it.',
+                ),
+                validator: (value) =>
+                    _accountPattern.hasMatch((value ?? '').trim())
+                    ? null
+                    : 'Enter 6 to 18 digits',
+              ),
+              const SizedBox(height: AbraSpacing.md),
+              TextFormField(
+                controller: _ifsc,
+                enabled: widget.canEdit && !saving,
+                textCapitalization: TextCapitalization.characters,
+                decoration: const InputDecoration(labelText: 'IFSC'),
+                validator: (value) =>
+                    _ifscPattern.hasMatch((value ?? '').trim())
+                    ? null
+                    : 'Looks wrong, for example HDFC0001234',
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AbraSpacing.md),
+        Wrap(
+          spacing: AbraSpacing.md,
+          runSpacing: AbraSpacing.sm,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: <Widget>[
+            const Text('Status'),
+            AbraStatusBadge(
+              label: bank == null
+                  ? 'Not added'
+                  : switch (status) {
+                      'VERIFIED' => 'Verified',
+                      'FAILED' => 'Failed',
+                      _ => 'Pending',
+                    },
+              tone: bank == null
+                  ? AbraStatusTone.neutral
+                  : switch (status) {
+                      'VERIFIED' => AbraStatusTone.success,
+                      'FAILED' => AbraStatusTone.danger,
+                      _ => AbraStatusTone.warning,
+                    },
             ),
+          ],
+        ),
+        if (note.isNotEmpty) ...<Widget>[
+          const SizedBox(height: AbraSpacing.sm),
+          Text(
+            'Abra could not verify it: $note',
+            style: const TextStyle(color: AbraColors.danger),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _card(BuildContext context, {required String title, required Widget child}) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AbraSpacing.lg),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AbraRadius.lg),
-        border: Border.all(color: AbraColors.border),
-        boxShadow: AbraShadows.soft,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-          const SizedBox(height: AbraSpacing.lg),
-          child,
-        ],
-      ),
-    );
-  }
-
-  Widget _field(
-    String label,
-    TextEditingController ctrl, {
-    bool enabled = true,
-    TextInputType? keyboard,
-    String? helperText,
-    String? Function(String?)? validator,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: AbraColors.textSecondary)),
-        const SizedBox(height: 4),
-        TextFormField(
-          controller: ctrl,
-          enabled: enabled,
-          keyboardType: keyboard,
-          validator: validator,
-          decoration: InputDecoration(
-            helperText: helperText,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AbraRadius.md),
-              borderSide: const BorderSide(color: AbraColors.border),
+        const SizedBox(height: AbraSpacing.md),
+        feedback(),
+        if (widget.canEdit)
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: AbraButton(
+              label: 'Save bank details',
+              icon: Icons.check,
+              onPressed: saving ? null : _save,
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            isDense: true,
           ),
+        const SizedBox(height: AbraSpacing.md),
+        Text.rich(
+          TextSpan(
+            text: 'Payout mode: ',
+            children: <InlineSpan>[
+              TextSpan(
+                text: auto ? 'Automatic (Razorpay Route)' : 'Manual settlement',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              const TextSpan(text: ', set by Abra.'),
+            ],
+          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AbraColors.textSecondary),
         ),
       ],
     );
   }
 }
-
