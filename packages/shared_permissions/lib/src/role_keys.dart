@@ -1,4 +1,4 @@
-/// Keys of the twelve system roles
+/// Keys of the thirteen system roles
 /// (`backend/src/modules/rbac/roles/system-roles.ts`).
 ///
 /// Prefer permission checks: a role only says which permissions a user
@@ -8,6 +8,7 @@ abstract final class RoleKeys {
   static const superAdmin = 'SUPER_ADMIN';
   static const admin = 'ADMIN';
   static const support = 'SUPPORT';
+  static const accounts = 'ACCOUNTS';
   static const operatorAdmin = 'OPERATOR_ADMIN';
   static const operatorManager = 'OPERATOR_MANAGER';
   static const bookingStaff = 'BOOKING_STAFF';
@@ -22,6 +23,7 @@ abstract final class RoleKeys {
     superAdmin,
     admin,
     support,
+    accounts,
     operatorAdmin,
     operatorManager,
     bookingStaff,
