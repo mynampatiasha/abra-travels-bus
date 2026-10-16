@@ -1154,8 +1154,9 @@ class _CommissionAdminManageScreenState
                 context,
               ).textTheme.bodySmall?.copyWith(color: AbraColors.textSecondary),
             ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
+            // A Wrap, so on a phone Next drops below instead of overflowing
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 AbraButton(
                   label: l10n.text(AdminStrings.commPrevious),
@@ -1715,6 +1716,7 @@ class _DefaultDialogState extends State<_DefaultDialog> {
           children: [
             if (_error != null) _ErrorText(_error!),
             DropdownButtonFormField<String>(
+              isExpanded: true,
               initialValue: _mode,
               decoration: InputDecoration(
                 labelText: l10n.text(AdminStrings.commType),
@@ -1941,6 +1943,7 @@ class _RuleDialogState extends State<_RuleDialog> {
             children: [
               if (_error != null) _ErrorText(_error!),
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 initialValue: _scope,
                 decoration: InputDecoration(
                   labelText: l10n.text(AdminStrings.commAppliesTo),
@@ -2001,6 +2004,7 @@ class _RuleDialogState extends State<_RuleDialog> {
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<String>(
+                      isExpanded: true,
                       initialValue: _mode,
                       decoration: InputDecoration(
                         labelText: l10n.text(AdminStrings.commType),

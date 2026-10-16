@@ -20,7 +20,7 @@ export const REDIS_CLIENT = Symbol('REDIS_CLIENT');
         const logger = new Logger('Redis');
         const client = new Redis(config.get('REDIS_URL'), {
           connectionName: 'abra-travels-backend',
-          maxRetriesPerRequest: null,
+          maxRetriesPerRequest: 3,
           enableOfflineQueue: false,
           lazyConnect: false,
         });

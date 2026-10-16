@@ -803,10 +803,11 @@ class _NotificationBellWithMenuState extends State<_NotificationBellWithMenu> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
-              const Text(
+              const Flexible(child: Text(
                 'Notifications',
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
-              ),
+              )),
               TextButton(
                 onPressed: () {
                   setState(() => _unreadCount = 0);
@@ -1136,12 +1137,15 @@ class _SideNavigation extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Column(
+                // Expanded so the name shortens instead of overflowing a narrow menu
+                const Expanded(child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     Text(
                       'Abra Travels',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w800,
@@ -1151,6 +1155,8 @@ class _SideNavigation extends StatelessWidget {
                     ),
                     Text(
                       'Admin portal',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: Color(0xFF9FB6C9),
                         fontSize: 12,
@@ -1158,7 +1164,7 @@ class _SideNavigation extends StatelessWidget {
                       ),
                     ),
                   ],
-                ),
+                )),
               ],
             ),
           ),
