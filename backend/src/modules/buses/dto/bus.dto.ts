@@ -13,6 +13,8 @@ const fields = {
     .refine((list) => new Set(list).size === list.length, 'must not repeat an amenity'),
   /** Seats and berths sold on this bus. */
   seatCapacity: z.number().int().min(1).max(100),
+  insuranceExpiryDate: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).optional(),
+  seatLayoutType: z.string().trim().min(2).max(40).optional(),
 };
 
 export class CreateBusDto extends createZodDto(
@@ -35,17 +37,42 @@ export class UpdateBusDto extends createZodDto(
     busTypeId: fields.busTypeId.optional(),
     amenities: fields.amenities.optional(),
     seatCapacity: fields.seatCapacity.optional(),
+    insuranceExpiryDate: fields.insuranceExpiryDate,
+    seatLayoutType: fields.seatLayoutType,
   }),
 ) {}
 
 export class BusListQueryDto extends createZodDto(
   z.object({
+    query: z.string().trim().max(100).optional(),
     operatorId: objectIdString.optional(),
+    busTypeId: objectIdString.optional(),
     status: z.enum(BUS_STATUSES).optional(),
+    expiredInsurance: z
+      .enum(['true', 'false'])
+      .optional()
+      .transform((val) => (val ? val === 'true' : undefined)),
     ...pagingShape,
   }),
 ) {}
 
 export class ChangeBusStatusDto extends createZodDto(
   z.object({ status: z.enum(MANUAL_BUS_STATUSES), reason: changeReason.optional() }),
+) {}
+
+export class BulkMaintenanceDto extends createZodDto(
+  z.object({
+    busIds: z.array(objectIdString).min(1).max(100),
+    reason: changeReason.optional(),
+  }),
+) {}
+
+export class SaveSeatLayoutDto extends createZodDto(
+  z.object({
+    name: z.string().trim().min(1).max(80).default('Main Layout'),
+    layoutType: z.string().trim().min(2).max(40).default('2+2 Seater'),
+    decks: z.number().int().min(1).max(2).default(1),
+    map: z.array(z.string().min(1).max(20)).min(1).max(30),
+    upperDeckMap: z.array(z.string().min(1).max(20)).max(30).optional(),
+  }),
 ) {}

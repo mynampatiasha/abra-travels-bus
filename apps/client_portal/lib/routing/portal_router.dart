@@ -7,8 +7,7 @@ import '../app/providers.dart';
 import '../features/accept_invite/accept_invite_screen.dart';
 import '../features/auth/sign_in_screen.dart';
 import '../features/bookings/client_bookings_screen.dart';
-import '../features/buses/client_buses_screen.dart';
-import '../features/buses/client_seat_layout_screen.dart';
+import '../features/buses/buses_client_manage_screen.dart';
 import '../features/commission/client_commission_screen.dart';
 import '../features/company/client_company_profile_screen.dart';
 import '../features/crew/client_crew_screen.dart';
@@ -18,6 +17,7 @@ import '../features/dashboard/client_dashboard_screen.dart';
 import '../features/earnings/client_earnings_screen.dart';
 import '../features/fares/client_fares_screen.dart';
 import '../features/kyc/client_kyc_verification_screen.dart';
+import '../features/kyc/kyc_client_manage_screen.dart';
 import '../features/live/client_live_tracking_screen.dart';
 import '../features/notifications/client_notifications_screen.dart';
 import '../features/offers/client_offers_screen.dart';
@@ -61,8 +61,8 @@ final portalRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(path: PortalRoutes.dashboard, builder: (_, __) => const ClientDashboardScreen()),
           GoRoute(path: PortalRoutes.kycVerification, builder: (_, __) => const ClientKycVerificationScreen()),
           GoRoute(path: PortalRoutes.companyProfile, builder: (_, __) => const ClientCompanyProfileScreen()),
-          GoRoute(path: PortalRoutes.buses, builder: (_, __) => const ClientBusesScreen()),
-          GoRoute(path: PortalRoutes.seatLayouts, builder: (_, __) => const ClientSeatLayoutScreen()),
+          GoRoute(path: PortalRoutes.buses, builder: (_, __) => const BusesClientManageScreen(initialTab: 0)),
+          GoRoute(path: PortalRoutes.seatLayouts, builder: (_, __) => const BusesClientManageScreen(initialTab: 1)),
           GoRoute(path: PortalRoutes.crew, builder: (_, __) => const ClientCrewScreen()),
           GoRoute(path: PortalRoutes.driverReports, builder: (_, __) => const ClientDriverReportsScreen()),
           GoRoute(path: PortalRoutes.driverRules, builder: (_, __) => const ClientDriverRulesScreen()),
@@ -80,7 +80,7 @@ final portalRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(path: PortalRoutes.staffRoles, builder: (_, __) => const ClientStaffRolesScreen()),
           GoRoute(path: PortalRoutes.company, builder: (_, __) => const ClientCompanyProfileScreen()),
           GoRoute(path: '${PortalRoutes.onboardingPrefix}:id', builder: (_, __) => const ClientKycVerificationScreen()),
-          GoRoute(path: '${PortalRoutes.busKycPrefix}:busId', builder: (_, __) => const ClientBusesScreen()),
+          GoRoute(path: '${PortalRoutes.busKycPrefix}:busId', builder: (_, state) => BusKycScreen(busId: state.pathParameters['busId'] ?? '')),
         ],
       ),
     ],

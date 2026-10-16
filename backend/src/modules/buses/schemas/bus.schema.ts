@@ -1,4 +1,5 @@
 import { Schema, type Types } from 'mongoose';
+import { softDeletePlugin } from '../../../database/soft-delete.plugin';
 
 export const BUS_MODEL = 'Bus';
 
@@ -50,6 +51,9 @@ export interface Bus {
   seatCapacity?: number;
   /** Seat layout version used for new trips (seat inventory module). */
   activeSeatLayoutVersionId?: Types.ObjectId;
+  insuranceExpiryDate?: Date;
+  seatLayoutType?: string;
+  statusReason?: string;
   status: BusStatus;
   createdAt?: Date;
   updatedAt?: Date;
@@ -71,10 +75,14 @@ export const busSchema = new Schema<Bus>(
     amenities: { type: [String], match: /^[A-Z][A-Z0-9_]{1,39}$/, default: [] },
     seatCapacity: { type: Number, min: 1, max: 100, validate: Number.isInteger },
     activeSeatLayoutVersionId: { type: Schema.Types.ObjectId },
+    insuranceExpiryDate: { type: Date },
+    seatLayoutType: { type: String, trim: true, maxlength: 40, default: '2+2 Seater' },
+    statusReason: { type: String, trim: true, maxlength: 500 },
     status: { type: String, enum: BUS_STATUSES, required: true, default: 'ACTIVE' },
   },
   { collection: 'buses', timestamps: true, versionKey: false },
 );
 
+busSchema.plugin(softDeletePlugin);
 busSchema.index({ registrationNumber: 1 }, { unique: true });
 busSchema.index({ operatorId: 1, status: 1 });

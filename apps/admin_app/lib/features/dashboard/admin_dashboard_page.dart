@@ -294,34 +294,44 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: <Widget>[
-                          Expanded(child: Row(
-                            children: <Widget>[
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(
-                                  color: AbraColors.blue,
-                                  shape: BoxShape.circle,
+                          Expanded(
+                            child: Row(
+                              children: <Widget>[
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: const BoxDecoration(
+                                    color: AbraColors.blue,
+                                    shape: BoxShape.circle,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: AbraSpacing.md),
-                              Text(
-                                '${item.$1}: ',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  color: isDark ? const Color(0xFFE6EEF5) : AbraColors.textPrimary,
+                                const SizedBox(width: AbraSpacing.sm),
+                                Expanded(
+                                  child: Text.rich(
+                                    TextSpan(
+                                      children: [
+                                        TextSpan(
+                                          text: '${item.$1}: ',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            color: isDark ? const Color(0xFFE6EEF5) : AbraColors.textPrimary,
+                                          ),
+                                        ),
+                                        TextSpan(
+                                          text: item.$2,
+                                          style: TextStyle(
+                                            color: isDark ? const Color(0xFF9FB6C9) : AbraColors.textSecondary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
-                              ),
-                              Flexible(child: Text(
-                                item.$2,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: isDark ? const Color(0xFF9FB6C9) : AbraColors.textSecondary,
-                                ),
-                              )),
-                            ],
-                          )),
+                              ],
+                            ),
+                          ),
                           const SizedBox(width: AbraSpacing.sm),
                           Text(
                             item.$3,

@@ -9,8 +9,8 @@ import '../features/audit/audit_admin_manage_screen.dart';
 import '../features/auth/access_gate_screen.dart';
 import '../features/auth/sign_in_screen.dart';
 import '../features/banners/admin_banners_manage.dart';
+import '../features/buses/buses_admin_manage_screen.dart';
 import '../features/catalogue/pages/bus_types_page.dart';
-import '../features/catalogue/pages/buses_page.dart';
 import '../features/catalogue/pages/cities_page.dart';
 import '../features/catalogue/pages/document_types_page.dart';
 import '../features/catalogue/pages/locations_page.dart';
@@ -83,7 +83,7 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
     AdminRoutes.kycConfiguration: const AdminKycConfigurationPage(),
 
     // 5. Operations
-    AdminRoutes.buses: const BusesPage(),
+    AdminRoutes.buses: const BusesAdminManageScreen(),
     AdminRoutes.trips: const AdminTripsPage(),
     AdminRoutes.inventory: const AdminInventoryPage(),
     AdminRoutes.tracking: const AdminTrackingPage(),
