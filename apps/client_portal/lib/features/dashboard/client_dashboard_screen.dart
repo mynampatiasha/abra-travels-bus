@@ -1,84 +1,122 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_theme/shared_theme.dart';
 
-import '../../core/mock/abra_mock_db.dart';
+import '../../app/providers.dart';
 import '../../core/widgets/portal_kpi_card.dart';
 import '../../routing/portal_routes.dart';
+import '../onboarding/onboarding_repository.dart';
 
-class ClientDashboardScreen extends StatelessWidget {
+class ClientDashboardScreen extends ConsumerWidget {
   const ClientDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final me = kMockMe;
-    final owner = me['owner'] as String? ?? 'Ramesh Kumar';
-    final firstName = owner.split(' ').first;
-    final companyName = me['name'] as String? ?? 'Kaveri Express';
+  Widget build(BuildContext context, WidgetRef ref) {
+    final access = ref.watch(accessProvider);
+    final user = access.user;
+    final dashboardAsync = ref.watch(dashboardProvider);
 
-    // Dynamic metrics
-    final bookingsToday = kMockBookings.where((b) {
-      final at = DateTime.tryParse(b['at'] as String? ?? '');
-      if (at == null) return false;
-      final now = DateTime.now();
-      return at.year == now.year && at.month == now.month && at.day == now.day;
-    }).length.toString();
+    return dashboardAsync.when(
+      loading: () => const Center(
+        child: Padding(
+          padding: EdgeInsets.all(48.0),
+          child: CircularProgressIndicator(color: AbraColors.blue),
+        ),
+      ),
+      error: (err, _) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: AbraColors.danger),
+              const SizedBox(height: 12),
+              const Text('Could not load dashboard information',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+              const SizedBox(height: 8),
+              Text('$err', style: const TextStyle(color: AbraColors.textSecondary, fontSize: 13)),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () => ref.invalidate(dashboardProvider),
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      ),
+      data: (data) {
+        final company = data.company;
+        final companyName = company?['companyName']?.toString() ??
+            company?['name']?.toString() ??
+            'Partner Fleet';
+        final owner = user?.name ?? 'Partner';
+        final firstName = owner.split(' ').first;
+        final isVerified = access.kycApproved || company?['status'] == 'APPROVED';
 
-    final earnings = kMockEarnings;
-    final last7 = earnings.length >= 7 ? earnings.skip(earnings.length - 7).toList() : earnings;
-    final earnings7dPaise = last7.fold<int>(0, (sum, e) => sum + (e['net'] as int));
-    final earnings7d = formatRs(earnings7dPaise);
+        final activeBuses = data.buses
+            .where((b) => b['status'] == 'ACTIVE')
+            .length
+            .toString();
 
-    final avgOccupancy = kMockTrips.isEmpty
-        ? '0%'
-        : '${(kMockTrips.fold<int>(0, (acc, t) => acc + (t['booked'] as int? ?? 0)) / (kMockTrips.fold<int>(0, (acc, t) => acc + (t['seats'] as int? ?? 1))) * 100).round()}%';
-    final upcomingTrips = kMockTrips.where((t) => t['status'] == 'SCHEDULED' || t['status'] == 'IN_TRANSIT').length.toString();
-    final activeBuses = kMockBuses.where((b) => b['status'] == 'ACTIVE').length.toString();
-    final busesLiveNow = kMockLive.length.toString();
-    final driversOnDuty = kMockCrew.where((c) => c['role'] == 'DRIVER' && c['status'] == 'ACTIVE').length.toString();
-    final customerRating = me['rating']?.toString() ?? '-';
+        // Unbuilt Group A metrics displayed as "Not connected yet"
+        const bookingsToday = 'Not connected yet';
+        const earnings7d = 'Not connected yet';
+        const avgOccupancy = 'Not connected yet';
+        const upcomingTrips = 'Not connected yet';
+        const busesLiveNow = 'Not connected yet';
+        const driversOnDuty = 'Not connected yet';
+        final customerRating = company?['rating']?.toString() ?? '—';
 
-    // Attention alerts
-    final alerts = <Map<String, dynamic>>[];
-    for (final b in kMockBuses) {
-      final ins = DateTime.tryParse(b['insExp'] as String? ?? '');
-      if (ins != null && ins.difference(DateTime.now()).inDays < 30) {
-        alerts.add({
-          'tone': 'danger',
-          'msg': 'Bus ${b['reg']} insurance expires within 30 days',
-          'route': PortalRoutes.buses,
-        });
-      }
-    }
+        // Attention alerts
+        final alerts = <Map<String, dynamic>>[];
+        if (!isVerified) {
+          alerts.add({
+            'tone': 'warning',
+            'msg':
+                'KYC verification is required before your trips can be published for booking.',
+            'route': PortalRoutes.kycVerification,
+          });
+        }
+        for (final b in data.buses) {
+          if (b['status'] == 'PENDING_APPROVAL') {
+            alerts.add({
+              'tone': 'warning',
+              'msg':
+                  'Bus ${b['name'] ?? b['registrationNumber']} waiting for Abra approval',
+              'route': PortalRoutes.buses,
+            });
+          }
+          final ins = DateTime.tryParse(
+            b['insuranceExpiry']?.toString() ?? b['insExp']?.toString() ?? '',
+          );
+          if (ins != null && ins.difference(DateTime.now()).inDays < 30) {
+            alerts.add({
+              'tone': 'danger',
+              'msg':
+                  'Bus ${b['registrationNumber'] ?? b['reg']} insurance expires within 30 days',
+              'route': PortalRoutes.buses,
+            });
+          }
+        }
+        if (data.buses.isEmpty) {
+          alerts.add({
+            'tone': 'info',
+            'msg': 'No buses yet. Add your first bus to start selling seats.',
+            'route': PortalRoutes.buses,
+          });
+        }
 
-    // Chart data (last 14 days)
-    final last14 = earnings.length >= 14 ? earnings.skip(earnings.length - 14).toList() : earnings;
-    final bookingSpots = last14.asMap().entries.map((e) =>
-      FlSpot(e.key.toDouble(), (e.value['bookings'] as int).toDouble())
-    ).toList();
-
-    final earningSpots = last14.asMap().entries.map((e) =>
-      FlSpot(e.key.toDouble(), (e.value['net'] as int) / 10000)
-    ).toList();
-
-    final confirmed = kMockBookings.where((b) => b['status'] == 'CONFIRMED').length;
-    final completed = kMockBookings.where((b) => b['status'] == 'COMPLETED').length;
-    final cancelled = kMockBookings.where((b) => b['status'] == 'CANCELLED').length;
-    final totalBookings = confirmed + completed + cancelled;
-
-    // Occupancy by route
-    final occData = <MapEntry<String, int>>[];
-    for (final t in kMockTrips) {
-      final r = t['route'] as String? ?? '';
-      if (r.isNotEmpty && !occData.any((e) => e.key == r)) {
-        final rTrips = kMockTrips.where((x) => x['route'] == r);
-        final booked = rTrips.fold<int>(0, (a, b) => a + (b['booked'] as int? ?? 0));
-        final seats = rTrips.fold<int>(0, (a, b) => a + (b['seats'] as int? ?? 1));
-        final pct = seats > 0 ? (booked / seats * 100).round() : 0;
-        occData.add(MapEntry(r, pct));
-      }
-    }
+        // Chart data
+        final bookingSpots = <FlSpot>[];
+        final earningSpots = <FlSpot>[];
+        const confirmed = 0;
+        const completed = 0;
+        const cancelled = 0;
+        const totalBookings = 0;
+        final occData = <MapEntry<String, int>>[];
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -163,7 +201,7 @@ class ClientDashboardScreen extends StatelessWidget {
                   isHighlighted: true,
                   onTap: () => context.go(PortalRoutes.earnings),
                 ),
-                PortalKpiCard(
+                const PortalKpiCard(
                   icon: Icons.bar_chart_outlined,
                   value: avgOccupancy,
                   label: 'Average occupancy',
@@ -336,7 +374,9 @@ class ClientDashboardScreen extends StatelessWidget {
         );
       },
     );
-  }
+  },
+);
+}
 
   Widget _chartCard(BuildContext context, String title, Widget chart) {
     return Container(

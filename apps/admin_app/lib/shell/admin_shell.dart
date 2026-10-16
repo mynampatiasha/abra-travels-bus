@@ -111,7 +111,7 @@ abstract final class AdminNavigationRegistry {
         AdminSection(
           path: AdminRoutes.commission,
           title: 'Commission',
-          hint: 'Set what Abra earns on each booking',
+          hint: 'Set what Abra earns on each booking. Operators can see it but not change it.',
           icon: Icons.percent_outlined,
         ),
         AdminSection(
@@ -473,6 +473,8 @@ class _AdminShellState extends ConsumerState<AdminShell> {
     final navGroups = AdminNavigationRegistry.visibleGroups(access);
     final breakpoint = AbraBreakpoint.of(context);
     final isWide = breakpoint == AbraBreakpoint.desktop;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isExtraWide = screenWidth >= 1200;
     final current = AdminNavigationRegistry.byPath[AdminRoutes.sectionOf(widget.currentPath)];
     final userName = access.user?.name ?? 'Admin User';
 
@@ -491,6 +493,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
       foregroundColor: isDark ? const Color(0xFFE6EEF5) : AbraColors.navy,
       surfaceTintColor: Colors.transparent,
       scrolledUnderElevation: 0,
+      centerTitle: false,
       toolbarHeight: 68,
       titleSpacing: isWide ? AbraSpacing.xl : 0,
       shape: Border(
@@ -511,7 +514,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          if (current != null && breakpoint.isTabletOrWider)
+          if (current != null && isExtraWide)
             Text(
               current.hint,
               style: theme.textTheme.bodySmall?.copyWith(
@@ -523,8 +526,8 @@ class _AdminShellState extends ConsumerState<AdminShell> {
         ],
       ),
       actions: <Widget>[
-        // Global Search Pill
-        if (breakpoint.isTabletOrWider)
+        // Global Search Pill or Icon
+        if (isExtraWide)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: InkWell(
@@ -575,11 +578,17 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                 ),
               ),
             ),
+          )
+        else
+          IconButton(
+            icon: const Icon(Icons.search, size: 20),
+            tooltip: 'Search (Ctrl+K)',
+            onPressed: _openGlobalSearch,
           ),
-        const SizedBox(width: AbraSpacing.md),
+        if (isExtraWide) const SizedBox(width: AbraSpacing.md),
 
         // Role Chip
-        if (breakpoint.isTabletOrWider)
+        if (isExtraWide)
           Center(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -609,10 +618,10 @@ class _AdminShellState extends ConsumerState<AdminShell> {
           onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
         ),
 
-        // Notification Bell with unread dot & dropdown popover
-        _NotificationBellWithMenu(
-          onOpenInbox: () => context.go('/notifications'),
-          onSelectRoute: (route) => context.go(route),
+        // Real notifications from NotificationCenter
+        NotificationBell(
+          center: ref.watch(notificationCenterProvider),
+          onOpen: _openNotification,
         ),
 
         // Account Dropdown Menu
@@ -624,7 +633,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: AbraSpacing.xs),
-            child: _UserChip(name: userName, showName: breakpoint.isTabletOrWider),
+            child: _UserChip(name: userName, showName: isWide),
           ),
           itemBuilder: (context) => <PopupMenuEntry<String>>[
             PopupMenuItem<String>(
@@ -653,7 +662,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                 children: <Widget>[
                   Icon(Icons.admin_panel_settings_outlined, size: 18),
                   SizedBox(width: 8),
-                  Text('Staff and roles'),
+                  Expanded(child: Text('Staff and roles')),
                 ],
               ),
             ),
@@ -663,7 +672,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                 children: <Widget>[
                   Icon(Icons.security_outlined, size: 18),
                   SizedBox(width: 8),
-                  Text('Two-step verification'),
+                  Expanded(child: Text('Two-step verification')),
                 ],
               ),
             ),
@@ -674,7 +683,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                 children: <Widget>[
                   Icon(Icons.logout, size: 18, color: AbraColors.danger),
                   SizedBox(width: 8),
-                  Text('Sign out', style: TextStyle(color: AbraColors.danger)),
+                  Expanded(child: Text('Sign out', style: TextStyle(color: AbraColors.danger))),
                 ],
               ),
             ),
@@ -744,132 +753,6 @@ class _AdminShellState extends ConsumerState<AdminShell> {
   }
 }
 
-/// Notification Bell with unread counter dot and quick popover preview.
-class _NotificationBellWithMenu extends StatefulWidget {
-  const _NotificationBellWithMenu({
-    required this.onOpenInbox,
-    required this.onSelectRoute,
-  });
-
-  final VoidCallback onOpenInbox;
-  final ValueChanged<String> onSelectRoute;
-
-  @override
-  State<_NotificationBellWithMenu> createState() => _NotificationBellWithMenuState();
-}
-
-class _NotificationBellWithMenuState extends State<_NotificationBellWithMenu> {
-  int _unreadCount = 3;
-
-  @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<String>(
-      tooltip: 'Notifications',
-      offset: const Offset(0, 52),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(14)),
-      ),
-      icon: Stack(
-        clipBehavior: Clip.none,
-        children: <Widget>[
-          const Icon(Icons.notifications_outlined, size: 22),
-          if (_unreadCount > 0)
-            Positioned(
-              right: -4,
-              top: -4,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFEF4444),
-                  borderRadius: BorderRadius.all(Radius.circular(99)),
-                ),
-                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                child: Text(
-                  '$_unreadCount',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w800,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
-        ],
-      ),
-      itemBuilder: (context) => <PopupMenuEntry<String>>[
-        PopupMenuItem<String>(
-          enabled: false,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: <Widget>[
-              const Flexible(child: Text(
-                'Notifications',
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
-              )),
-              TextButton(
-                onPressed: () {
-                  setState(() => _unreadCount = 0);
-                  Navigator.of(context).pop();
-                },
-                child: const Text('Mark all read', style: TextStyle(fontSize: 12)),
-              ),
-            ],
-          ),
-        ),
-        const PopupMenuDivider(),
-        const PopupMenuItem<String>(
-          value: AdminRoutes.reviews,
-          child: ListTile(
-            dense: true,
-            leading: Icon(Icons.verified_user_outlined, color: AbraColors.deepBlue),
-            title: Text('New KYC submission', style: TextStyle(fontWeight: FontWeight.w700)),
-            subtitle: Text('New Horizon Travels submitted documents'),
-          ),
-        ),
-        const PopupMenuItem<String>(
-          value: AdminRoutes.places,
-          child: ListTile(
-            dense: true,
-            leading: Icon(Icons.place_outlined, color: AbraColors.deepBlue),
-            title: Text('Place request', style: TextStyle(fontWeight: FontWeight.w700)),
-            subtitle: Text('Kaveri Express requested Hosur Bus Stand'),
-          ),
-        ),
-        const PopupMenuItem<String>(
-          value: AdminRoutes.sos,
-          child: ListTile(
-            dense: true,
-            leading: Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444)),
-            title: Text('SOS from Divya Iyer', style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFB91C1C))),
-            subtitle: Text('Needs assistance on Hyderabad to Bengaluru'),
-          ),
-        ),
-        const PopupMenuDivider(),
-        PopupMenuItem<String>(
-          value: 'inbox',
-          child: Center(
-            child: TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                widget.onOpenInbox();
-              },
-              child: const Text('View all notifications'),
-            ),
-          ),
-        ),
-      ],
-      onSelected: (value) {
-        if (value == 'inbox') {
-          widget.onOpenInbox();
-        } else {
-          widget.onSelectRoute(value);
-        }
-      },
-    );
-  }
-}
 
 /// Global Search Dialog modal searching PNR, operator, bus, customer, trip and ticket.
 class _GlobalSearchDialog extends StatefulWidget {
@@ -1172,38 +1055,40 @@ class _SideNavigation extends StatelessWidget {
 
           // 11 Groups List
           Expanded(
-            child: ListView.builder(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-              itemCount: groups.length,
-              itemBuilder: (context, groupIndex) {
-                final group = groups[groupIndex];
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 14, 12, 4),
-                      child: Text(
-                        group.title.toUpperCase(),
-                        style: const TextStyle(
-                          color: Color(0xFF8FA9BF),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.8,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  for (final group in groups)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 14, 12, 4),
+                          child: Text(
+                            group.title.toUpperCase(),
+                            style: const TextStyle(
+                              color: Color(0xFF8FA9BF),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
                         ),
-                      ),
+                        for (final section in group.sections)
+                          _NavItem(
+                            section: section,
+                            isSelected: section.path == activeSection,
+                            badgeCount: section.badgeKey != null
+                                ? (badgeCounts[section.badgeKey] ?? 0)
+                                : 0,
+                            onTap: () => onSelect(section),
+                          ),
+                      ],
                     ),
-                    for (final section in group.sections)
-                      _NavItem(
-                        section: section,
-                        isSelected: section.path == activeSection,
-                        badgeCount: section.badgeKey != null
-                            ? (badgeCounts[section.badgeKey] ?? 0)
-                            : 0,
-                        onTap: () => onSelect(section),
-                      ),
-                  ],
-                );
-              },
+                ],
+              ),
             ),
           ),
         ],

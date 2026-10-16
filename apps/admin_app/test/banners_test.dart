@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'package:admin_app/features/banners/admin_banners_api.dart';
 import 'package:admin_app/features/banners/admin_banners_manage.dart';
 import 'package:admin_app/routing/admin_routes.dart';
-import 'package:admin_app/shell/admin_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_network/shared_network.dart';
@@ -13,8 +12,10 @@ import 'package:shared_ui/shared_ui.dart';
 import 'support/test_admin.dart';
 
 Finder navItem(String label) => find.descendant(
-  of: find.byType(AdminShell),
-  matching: find.widgetWithText(ListTile, label),
+  of: find.byWidgetPredicate(
+    (w) => w.runtimeType.toString() == '_SideNavigation',
+  ),
+  matching: find.text(label),
 );
 
 Future<void> tapOn(WidgetTester tester, Finder finder) async {

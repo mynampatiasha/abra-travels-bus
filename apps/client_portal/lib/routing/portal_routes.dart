@@ -1,3 +1,5 @@
+import 'package:shared_permissions/shared_permissions.dart';
+
 abstract final class PortalRoutes {
   static const splash = '/splash';
   static const signIn = '/sign-in';
@@ -30,8 +32,29 @@ abstract final class PortalRoutes {
   static const company = '/company';
   static const onboardingPrefix = '/onboarding/';
   static const busKycPrefix = '/bus-kyc/';
-  static String onboardingOf(String id) => '';
-  static String busKycOf(String busId) => '';
+  static String onboardingOf(String id) => '$onboardingPrefix$id';
+  static String busKycOf(String busId) => '$busKycPrefix$busId';
 
   static const fromParameter = 'from';
+
+  static const Map<String, String> requiredPermission = <String, String>{
+    dashboard: PermissionKeys.documentsView,
+    places: PermissionKeys.routesRead,
+    company: PermissionKeys.operatorsRead,
+    companyProfile: PermissionKeys.operatorsRead,
+    kycVerification: PermissionKeys.documentsView,
+  };
+
+  static const List<String> sections = <String>[
+    dashboard,
+    places,
+    company,
+    companyProfile,
+    kycVerification,
+  ];
+
+  static String sectionOf(String path) =>
+      path.startsWith(onboardingPrefix) || path.startsWith(busKycPrefix)
+          ? dashboard
+          : path;
 }

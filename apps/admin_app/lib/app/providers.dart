@@ -154,7 +154,11 @@ class AccessController extends Notifier<AccessState> {
         permissions: permissions,
         user: user,
       ),
-      onFailure: (failure) => demoAdminAccessState(),
+      onFailure: (failure) => AccessState(
+        AccessLevel.failed,
+        user: user,
+        failure: failure,
+      ),
     );
   }
 
@@ -189,12 +193,6 @@ class StartupController extends Notifier<AppFailure?> {
     state = null;
     final result = await ref.read(sessionManagerProvider).restore();
     if (!ref.mounted) return;
-    if (result.isFailure) {
-      // In offline / standalone preview without a running backend server,
-      // seamlessly load the demo session so the user directly accesses the portal!
-      ref.read(accessProvider.notifier).enterDemoSession();
-      return;
-    }
     state = result.failureOrNull;
   }
 }
