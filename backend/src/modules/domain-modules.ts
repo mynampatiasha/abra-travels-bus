@@ -60,6 +60,7 @@ import { SystemSettingsModule } from './system-settings/system-settings.module';
 import { FeatureFlagsModule } from './feature-flags/flags_admin_manage';
 import { ReportsModule } from './reports/reports.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { StaffAdminManageModule } from './rbac/staff_admin_manage';
 
 /**
  * Every domain module of the modular monolith, grouped as in architecture.md �5.
@@ -136,4 +137,5 @@ export const DOMAIN_MODULES = [
   OperatorsAdminModule,
   CompanyClientModule,
   EventRouterModule,
+  StaffAdminManageModule,
 ];

@@ -61,6 +61,16 @@ export const AUDIT_ACTIONS = [
   'commission.rule.deleted',
   'commission.rule.restored',
   'commission.default.changed',
+  'staff.invited',
+  'staff.invitation-resent',
+  'staff.updated',
+  'staff.deactivated',
+  'staff.activated',
+  'staff.session.revoked',
+  'portal-user.invited',
+  'portal-user.updated',
+  'portal-user.deactivated',
+  'portal-user.activated',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
