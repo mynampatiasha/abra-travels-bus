@@ -27,10 +27,12 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            // Page Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.end,
+            // Page Header: the range chips wrap under the title when there is no room beside it
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.end,
+              spacing: AbraSpacing.md,
+              runSpacing: AbraSpacing.md,
               children: <Widget>[
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -265,14 +267,15 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: <Widget>[
-                      Text(
+                      Flexible(child: Text(
                         'Latest activity',
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
                           color: isDark ? const Color(0xFFE6EEF5) : AbraColors.navy,
                         ),
-                      ),
+                      )),
                       TextButton(
                         onPressed: () => context.go(AdminRoutes.audit),
                         child: const Text('View full audit log'),
@@ -291,7 +294,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: <Widget>[
-                          Row(
+                          Expanded(child: Row(
                             children: <Widget>[
                               Container(
                                 width: 8,
@@ -309,14 +312,17 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                                   color: isDark ? const Color(0xFFE6EEF5) : AbraColors.textPrimary,
                                 ),
                               ),
-                              Text(
+                              Flexible(child: Text(
                                 item.$2,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   color: isDark ? const Color(0xFF9FB6C9) : AbraColors.textSecondary,
                                 ),
-                              ),
+                              )),
                             ],
-                          ),
+                          )),
+                          const SizedBox(width: AbraSpacing.sm),
                           Text(
                             item.$3,
                             style: TextStyle(

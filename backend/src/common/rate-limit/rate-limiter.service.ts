@@ -28,8 +28,6 @@ const HIT_SCRIPT = [
  */
 @Injectable()
 export class RateLimiterService {
-  private readonly memoryStore = new Map<string, { count: number; expiresAt: number; value?: string }>();
-
   constructor(
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
     private readonly config: AppConfigService,
@@ -41,61 +39,40 @@ export class RateLimiterService {
 
   /** Counts one hit against `limit` per `windowSeconds`. */
   async hit(key: string, limit: number, windowSeconds: number): Promise<RateLimitDecision> {
-    try {
-      const [count, ttl] = await (this.redis.eval(
-        HIT_SCRIPT,
-        1,
-        key,
-        windowSeconds,
-      ) as Promise<[number, number]>);
-      return { allowed: count <= limit, count, retryAfterSeconds: Math.max(ttl, 1) };
-    } catch {
-      const now = Date.now();
-      const entry = this.memoryStore.get(key);
-      if (!entry || entry.expiresAt <= now) {
-        this.memoryStore.set(key, { count: 1, expiresAt: now + windowSeconds * 1000 });
-        return { allowed: true, count: 1, retryAfterSeconds: windowSeconds };
-      }
-      entry.count += 1;
-      const ttl = Math.max(1, Math.ceil((entry.expiresAt - now) / 1000));
-      return { allowed: entry.count <= limit, count: entry.count, retryAfterSeconds: ttl };
-    }
+    const [count, ttl] = await this.guarded(
+      () => this.redis.eval(HIT_SCRIPT, 1, key, windowSeconds) as Promise<[number, number]>,
+    );
+    return { allowed: count <= limit, count, retryAfterSeconds: Math.max(ttl, 1) };
   }
 
   /** Remaining lifetime of a key in seconds; 0 when it does not exist. */
   async secondsRemaining(key: string): Promise<number> {
-    try {
-      const ttl = await this.redis.ttl(key);
-      return ttl > 0 ? ttl : 0;
-    } catch {
-      const now = Date.now();
-      const entry = this.memoryStore.get(key);
-      if (!entry || entry.expiresAt <= now) return 0;
-      return Math.max(0, Math.ceil((entry.expiresAt - now) / 1000));
-    }
+    const ttl = await this.guarded(() => this.redis.ttl(key));
+    return ttl > 0 ? ttl : 0;
   }
 
   /** Sets a flag that expires by itself. With `onlyIfAbsent`, returns false if it already existed. */
   async setFlag(key: string, seconds: number, onlyIfAbsent = false): Promise<boolean> {
-    try {
-      const reply = await (onlyIfAbsent
+    const reply = await this.guarded(() =>
+      onlyIfAbsent
         ? this.redis.set(key, '1', 'EX', seconds, 'NX')
-        : this.redis.set(key, '1', 'EX', seconds));
-      return reply === 'OK';
-    } catch {
-      const now = Date.now();
-      const entry = this.memoryStore.get(key);
-      if (onlyIfAbsent && entry && entry.expiresAt > now) return false;
-      this.memoryStore.set(key, { count: 1, expiresAt: now + seconds * 1000, value: '1' });
-      return true;
-    }
+        : this.redis.set(key, '1', 'EX', seconds),
+    );
+    return reply === 'OK';
   }
 
   async clear(...keys: string[]): Promise<void> {
+    if (keys.length > 0) await this.guarded(() => this.redis.del(...keys));
+  }
+
+  private async guarded<T>(command: () => Promise<T>): Promise<T> {
     try {
-      if (keys.length > 0) await this.redis.del(...keys);
+      return await command();
     } catch {
-      for (const k of keys) this.memoryStore.delete(k);
+      throw new ApiException(
+        'SERVICE_UNAVAILABLE',
+        'The service is temporarily unavailable. Please try again shortly.',
+      );
     }
   }
 }
