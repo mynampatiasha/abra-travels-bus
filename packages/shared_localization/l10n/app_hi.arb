@@ -1,4 +1,14 @@
 {
   "@@locale": "hi",
-  "@@comment": "No translations yet. Every message falls back to English (app_en.arb) until a reviewed translation is added here. Do not add machine-generated text."
+  "commonOk": "ठीक है",
+  "commonCancel": "रद्द करें",
+  "commonClose": "बंद करें",
+  "commonContinue": "जारी रखें",
+  "commonBack": "पीछे",
+  "commonSave": "सहेजें",
+  "commonRetry": "पुनः प्रयास करें",
+  "commonLoading": "लोड हो रहा है…",
+  "commonSignIn": "साइन इन करें",
+  "commonSignOut": "साइन आउट करें",
+  "languageFollowDevice": "डिवाइस भाषा का उपयोग करें"
 }

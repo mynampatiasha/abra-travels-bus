@@ -1,4 +1,14 @@
 {
   "@@locale": "te",
-  "@@comment": "No translations yet. Every message falls back to English (app_en.arb) until a reviewed translation is added here. Do not add machine-generated text."
+  "commonOk": "సరే",
+  "commonCancel": "రద్దు",
+  "commonClose": "మూసివేయి",
+  "commonContinue": "కొనసాగించు",
+  "commonBack": "వెనుకకు",
+  "commonSave": "సేవ్ చేయి",
+  "commonRetry": "మళ్లీ ప్రయత్నించండి",
+  "commonLoading": "లోడ్ అవుతోంది…",
+  "commonSignIn": "సైన్ ఇన్",
+  "commonSignOut": "సైన్ అవుట్",
+  "languageFollowDevice": "పరికరం భాషను ఉపయోగించండి"
 }

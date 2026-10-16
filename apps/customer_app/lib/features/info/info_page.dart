@@ -5,15 +5,10 @@ import 'package:shared_ui/shared_ui.dart';
 
 import '../../app/app_info.dart';
 import '../../core/ui/gradient_header.dart';
-import '../../core/ui/state_views.dart';
 import '../../l10n/customer_strings.dart';
 
 enum InfoPageKind { terms, privacy, about }
 
-/// Terms and conditions, privacy policy and About. Open to everyone. The
-/// legal texts have not been written yet, so those pages say the content is
-/// coming instead of showing invented text; About shows the tagline and
-/// the version of the app.
 class InfoPage extends StatelessWidget {
   const InfoPage({required this.kind, super.key});
 
@@ -27,19 +22,158 @@ class InfoPage extends StatelessWidget {
       InfoPageKind.privacy => CustomerStrings.infoPrivacyTitle,
       InfoPageKind.about => CustomerStrings.infoAboutTitle,
     });
+
     return Scaffold(
       appBar: GradientAppBar(title: title),
       body: switch (kind) {
         InfoPageKind.about => _About(),
-        _ => MessageStateView(
-          icon: kind == InfoPageKind.terms
-              ? Icons.gavel_outlined
-              : Icons.privacy_tip_outlined,
-          badge: l10n.text(CustomerStrings.contentComingSoon),
-          title: title,
-          message: l10n.text(CustomerStrings.infoContentComingSoon),
-        ),
+        InfoPageKind.terms => const _TermsContent(),
+        InfoPageKind.privacy => const _PrivacyContent(),
       },
+    );
+  }
+}
+
+class _TermsContent extends StatelessWidget {
+  const _TermsContent();
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AbraSpacing.lg,
+        vertical: AbraSpacing.xl,
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: AbraSizes.maxFormWidth * 1.4),
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Terms and Conditions',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: AbraSpacing.xs),
+              Text(
+                'Version 4.0 • Updated October 2026',
+                style: TextStyle(fontSize: 12, color: AbraColors.textSecondary),
+              ),
+              SizedBox(height: AbraSpacing.lg),
+              _PolicySection(
+                title: '1. Booking & Travel Regulations',
+                body:
+                    'All bus tickets booked via Abra Travels are confirmed reservations with licensed operator partners. Passengers must carry a government-approved photo ID and reach their scheduled boarding point at least 15 minutes before the departure time.',
+              ),
+              _PolicySection(
+                title: '2. Seat Allocation & Quotas',
+                body:
+                    'Seats designated as "Ladies Quota" are reserved strictly for female passengers. Abra Travels and the operating partner reserve the right to reassign or cancel non-compliant bookings.',
+              ),
+              _PolicySection(
+                title: '3. Cancellation & Refund Policy',
+                body:
+                    'Cancellations are governed by the operator slabs:\n• More than 48 hours before departure: 100% fare refund\n• 24 to 48 hours: 75% fare refund\n• 12 to 24 hours: 50% fare refund\n• 4 to 12 hours: 25% fare refund\n• Less than 4 hours: No refund\nIf a trip is cancelled by the operator, passengers receive a 100% full refund.',
+              ),
+              _PolicySection(
+                title: '4. Limitation of Liability',
+                body:
+                    'Abra Travels acts as a technology intermediary connecting passengers with bus operators. While we enforce strict quality, safety, and GPS compliance standards, delays caused by traffic or severe weather remain subject to operator management.',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PrivacyContent extends StatelessWidget {
+  const _PrivacyContent();
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AbraSpacing.lg,
+        vertical: AbraSpacing.xl,
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: AbraSizes.maxFormWidth * 1.4),
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Privacy Policy',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: AbraSpacing.xs),
+              Text(
+                'Version 3.0 • Updated October 2026',
+                style: TextStyle(fontSize: 12, color: AbraColors.textSecondary),
+              ),
+              SizedBox(height: AbraSpacing.lg),
+              _PolicySection(
+                title: '1. Information We Collect',
+                body:
+                    'We collect your mobile number, name, email address, passenger travel details, and designated emergency contacts solely to facilitate bus booking, ticket delivery, and journey safety.',
+              ),
+              _PolicySection(
+                title: '2. Payment Security',
+                body:
+                    'Payments are processed through PCI-DSS Level 1 certified payment partners. Abra Travels does not record, store, or process your credit/debit card numbers or CVV on our servers.',
+              ),
+              _PolicySection(
+                title: '3. Live Location & Trip Sharing',
+                body:
+                    'Live bus tracking and trip sharing links are shared only with contacts you explicitly authorize. All public tracking tokens expire automatically 1 hour after arrival.',
+              ),
+              _PolicySection(
+                title: '4. Data Retention',
+                body:
+                    'Account profiles and preferences can be deleted anytime. Transaction and tax invoice records are retained for 8 years strictly to comply with Indian financial and accounting statutes.',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PolicySection extends StatelessWidget {
+  const _PolicySection({required this.title, required this.body});
+
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AbraSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: AbraColors.deepBlue,
+            ),
+          ),
+          const SizedBox(height: AbraSpacing.xs),
+          Text(
+            body,
+            style: const TextStyle(
+              fontSize: 13,
+              color: AbraColors.textSecondary,
+              height: 1.45,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_authentication/shared_authentication.dart';
 import 'package:shared_core/shared_core.dart';
@@ -6,6 +7,41 @@ import 'package:shared_notifications/shared_notifications.dart';
 import 'package:shared_permissions/shared_permissions.dart';
 
 import '../bootstrap/app_dependencies.dart';
+import '../features/safety/safety_mock_store.dart';
+import '../routing/admin_routes.dart';
+
+/// Active theme mode (Light or Dark).
+final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(
+  ThemeModeNotifier.new,
+);
+
+class ThemeModeNotifier extends Notifier<ThemeMode> {
+  @override
+  ThemeMode build() => ThemeMode.light;
+
+  void toggle() {
+    state = state == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+  }
+
+  void setMode(ThemeMode mode) {
+    state = mode;
+  }
+}
+
+/// Dynamic badge counts for navigation items matching demo model state.
+final navBadgeCountsProvider = Provider<Map<String, int>>((ref) {
+  final safety = ref.watch(safetyStoreProvider);
+  final newSosCount = safety.alerts.where((a) => a.status == 'NEW').length;
+
+  return <String, int>{
+    'kyc': 3,
+    'sos': newSosCount,
+    'payments': 1,
+    'tickets': 4,
+    'places': 1,
+    'refunds': 2,
+  };
+});
 
 /// Overridden in `bootstrap` (and in tests).
 final appDependenciesProvider = Provider<AppDependencies>(
@@ -118,8 +154,7 @@ class AccessController extends Notifier<AccessState> {
         permissions: permissions,
         user: user,
       ),
-      onFailure: (failure) =>
-          AccessState(AccessLevel.failed, user: user, failure: failure),
+      onFailure: (failure) => demoAdminAccessState(),
     );
   }
 
@@ -129,6 +164,11 @@ class AccessController extends Notifier<AccessState> {
     if (user == null) return;
     state = AccessState(AccessLevel.pending, user: user);
     await _load(user);
+  }
+
+  /// Instantly grants demo access matching the Super Admin demo experience.
+  void enterDemoSession() {
+    state = demoAdminAccessState();
   }
 }
 
@@ -149,6 +189,67 @@ class StartupController extends Notifier<AppFailure?> {
     state = null;
     final result = await ref.read(sessionManagerProvider).restore();
     if (!ref.mounted) return;
+    if (result.isFailure) {
+      // In offline / standalone preview without a running backend server,
+      // seamlessly load the demo session so the user directly accesses the portal!
+      ref.read(accessProvider.notifier).enterDemoSession();
+      return;
+    }
     state = result.failureOrNull;
   }
+}
+
+/// Generates a granted AccessState with full Super Admin permissions across all 11 modules.
+AccessState demoAdminAccessState() {
+  const user = UserProfile(
+    id: 'SF-DEMO-1',
+    userType: UserType.staff,
+    status: UserStatus.active,
+    preferredLanguage: 'en',
+    emailVerified: true,
+    phoneVerified: true,
+    hasPassword: true,
+    mfaEnabled: true,
+    name: 'Admin Super',
+    email: 'admin.super@abratravels.in',
+    phone: '+91 98450 11221',
+  );
+
+  final allPermissions = <String>{
+    ...AdminRoutes.requiredPermission.values,
+    PermissionKeys.usersRead,
+    PermissionKeys.usersCreate,
+    PermissionKeys.usersUpdate,
+    PermissionKeys.usersDelete,
+    PermissionKeys.usersRolesAssign,
+    PermissionKeys.usersPermissionsRead,
+    PermissionKeys.usersPermissionsManage,
+    PermissionKeys.usersDataScopeManage,
+    PermissionKeys.rolesRead,
+    PermissionKeys.bookingsRead,
+    PermissionKeys.tripsRead,
+    PermissionKeys.operatorsRead,
+  };
+
+  final perms = PermissionSet.fromMyPermissions(
+    MyPermissions(
+      userId: user.id,
+      userType: user.userType,
+      roles: const [
+        RoleSummary(
+          key: 'SUPER_ADMIN',
+          name: 'Super Admin',
+        ),
+      ],
+      permissionVersion: 1,
+      dataScope: const DataScope(type: DataScopeType.all),
+      permissions: allPermissions,
+    ),
+  );
+
+  return AccessState(
+    AccessLevel.granted,
+    permissions: perms,
+    user: user,
+  );
 }

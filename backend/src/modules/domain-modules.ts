@@ -32,7 +32,7 @@ import { CheckInModule } from './check-in/check-in.module';
 import { PaymentsModule } from './payments/payments.module';
 import { RefundsModule } from './refunds/refunds.module';
 import { ReconciliationModule } from './reconciliation/reconciliation.module';
-import { CommissionsModule } from './commissions/commissions.module';
+import { CommissionsModule } from './commissions/commission_admin_manage';
 import { SettlementsModule } from './settlements/settlements.module';
 import { PartnersModule } from './partners/partners.module';
 import { ApiClientsModule } from './api-clients/api-clients.module';

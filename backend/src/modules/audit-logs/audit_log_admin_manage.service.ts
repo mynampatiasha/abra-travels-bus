@@ -68,6 +68,13 @@ export const AUDIT_ACTION_LABELS: Readonly<Record<AuditAction, string>> = {
   'operator.bank-failed': 'Marked bank details as failed',
   'operator.profile-updated': 'Changed the company profile',
   'operator.bank-changed': 'Changed bank details',
+  'commission.rule.created': 'Created a commission rule',
+  'commission.rule.versioned': 'Saved a new version of a commission rule',
+  'commission.rule.activated': 'Activated a commission rule',
+  'commission.rule.deactivated': 'Deactivated a commission rule',
+  'commission.rule.deleted': 'Deleted a commission rule',
+  'commission.rule.restored': 'Restored a deleted commission rule',
+  'commission.default.changed': 'Changed the default commission',
 };
 
 /**
@@ -80,6 +87,13 @@ export const SENSITIVE_ACTIONS: ReadonlySet<AuditAction> = new Set<AuditAction>(
   'operator.bank-verified',
   'operator.bank-failed',
   'operator.bank-changed',
+  'commission.rule.created',
+  'commission.rule.versioned',
+  'commission.rule.activated',
+  'commission.rule.deactivated',
+  'commission.rule.deleted',
+  'commission.rule.restored',
+  'commission.default.changed',
   'user.roles.changed',
   'user.permission-override.set',
   'user.permission-override.removed',

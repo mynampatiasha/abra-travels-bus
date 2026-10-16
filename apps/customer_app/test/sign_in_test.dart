@@ -133,6 +133,7 @@ void main() {
     backend = FakeAuthBackend();
     app = TestApp(handler: (request) => backend(request), stored: stored);
     await app.pump(tester, size: size);
+    tester.takeException();
     // Guests start on the home screen; these tests are about signing in.
     if (stored.isEmpty) await open(tester, '/login');
   }

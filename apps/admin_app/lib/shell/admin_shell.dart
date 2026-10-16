@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_authentication/shared_authentication.dart';
@@ -14,149 +15,394 @@ import '../l10n/admin_strings.dart';
 import '../routing/admin_route_guard.dart';
 import '../routing/admin_routes.dart';
 
-/// One entry of the side navigation.
+/// One navigation section with route, title, subtitle, icon, and optional badge.
 class AdminSection {
-  const AdminSection(this.path, this.labelKey, this.hintKey, this.icon);
+  const AdminSection({
+    required this.path,
+    required this.title,
+    required this.hint,
+    required this.icon,
+    this.badgeKey,
+    this.isUrgentBadge = false,
+  });
 
   final String path;
-  final String labelKey;
-
-  /// One line that says what the section is for.
-  final String hintKey;
+  final String title;
+  final String hint;
   final IconData icon;
+  final String? badgeKey;
+  final bool isUrgentBadge;
+}
 
-  static const Map<String, AdminSection> byPath = <String, AdminSection>{
-    AdminRoutes.trips: AdminSection(
-      AdminRoutes.trips,
-      AdminStrings.navTrips,
-      AdminStrings.hintTrips,
-      Icons.event_note_outlined,
+/// One group of navigation sections in the side navigation bar.
+class AdminNavGroup {
+  const AdminNavGroup({
+    required this.id,
+    required this.title,
+    required this.sections,
+  });
+
+  final String id;
+  final String title;
+  final List<AdminSection> sections;
+}
+
+/// Registry of the 11 demo groups matching prototypes/admin_demo_model.html.
+abstract final class AdminNavigationRegistry {
+  static const List<AdminNavGroup> groups = <AdminNavGroup>[
+    // 1. Overview
+    AdminNavGroup(
+      id: 'overview',
+      title: 'Overview',
+      sections: <AdminSection>[
+        AdminSection(
+          path: AdminRoutes.dashboard,
+          title: 'Dashboard',
+          hint: 'Everything that needs attention, and how sales are going',
+          icon: Icons.dashboard_outlined,
+        ),
+      ],
     ),
-    AdminRoutes.buses: AdminSection(
-      AdminRoutes.buses,
-      AdminStrings.navBuses,
-      AdminStrings.hintBuses,
-      Icons.directions_bus_outlined,
+
+    // 2. Operators
+    AdminNavGroup(
+      id: 'operators',
+      title: 'Operators',
+      sections: <AdminSection>[
+        AdminSection(
+          path: AdminRoutes.invitations,
+          title: 'Invitations',
+          hint: 'Invite bus operators by email',
+          icon: Icons.mark_email_read_outlined,
+        ),
+        AdminSection(
+          path: AdminRoutes.reviews,
+          title: 'KYC reviews',
+          hint: 'Check every document before operators or buses go live',
+          icon: Icons.verified_user_outlined,
+          badgeKey: 'kyc',
+        ),
+        AdminSection(
+          path: AdminRoutes.operators,
+          title: 'Operators',
+          hint: 'Every bus operator on the platform',
+          icon: Icons.business_center_outlined,
+        ),
+        AdminSection(
+          path: AdminRoutes.driverReports,
+          title: 'Driver reports',
+          hint: 'Driver misconduct, complaint records and breathalyzer compliance',
+          icon: Icons.badge_outlined,
+        ),
+        AdminSection(
+          path: AdminRoutes.driverRules,
+          title: 'Driver rules',
+          hint: 'Driving hours, rest limits and safety compliance rules',
+          icon: Icons.rule_outlined,
+        ),
+      ],
     ),
-    AdminRoutes.routes: AdminSection(
-      AdminRoutes.routes,
-      AdminStrings.navRoutes,
-      AdminStrings.hintRoutes,
-      Icons.alt_route,
+
+    // 3. Commercial
+    AdminNavGroup(
+      id: 'commercial',
+      title: 'Commercial',
+      sections: <AdminSection>[
+        AdminSection(
+          path: AdminRoutes.commission,
+          title: 'Commission',
+          hint: 'Set what Abra earns on each booking',
+          icon: Icons.percent_outlined,
+        ),
+        AdminSection(
+          path: AdminRoutes.payout,
+          title: 'Payout and fees',
+          hint: 'Payout cycles, platform fees and refund slabs',
+          icon: Icons.account_balance_wallet_outlined,
+        ),
+      ],
     ),
-    AdminRoutes.locations: AdminSection(
-      AdminRoutes.locations,
-      AdminStrings.navLocations,
-      AdminStrings.hintLocations,
-      Icons.place_outlined,
+
+    // 4. Catalogue
+    AdminNavGroup(
+      id: 'catalogue',
+      title: 'Catalogue',
+      sections: <AdminSection>[
+        AdminSection(
+          path: AdminRoutes.places,
+          title: 'Cities and places',
+          hint: 'Cities, boarding points and operator requested stops',
+          icon: Icons.place_outlined,
+          badgeKey: 'places',
+        ),
+        AdminSection(
+          path: AdminRoutes.busTypes,
+          title: 'Bus types',
+          hint: 'Bus categories, seating types and amenities',
+          icon: Icons.directions_bus_filled_outlined,
+        ),
+        AdminSection(
+          path: AdminRoutes.documentTypes,
+          title: 'Required documents',
+          hint: 'Documents required for company and bus KYC',
+          icon: Icons.fact_check_outlined,
+        ),
+        AdminSection(
+          path: AdminRoutes.kycConfiguration,
+          title: 'KYC questionnaire',
+          hint: 'Onboarding questions and rule triggers',
+          icon: Icons.tune_outlined,
+        ),
+      ],
     ),
-    AdminRoutes.operators: AdminSection(
-      AdminRoutes.operators,
-      AdminStrings.navOperators,
-      AdminStrings.hintOperators,
-      Icons.business_outlined,
+
+    // 5. Operations
+    AdminNavGroup(
+      id: 'operations',
+      title: 'Operations',
+      sections: <AdminSection>[
+        AdminSection(
+          path: AdminRoutes.buses,
+          title: 'Buses',
+          hint: 'Every bus on the platform and insurance tracking',
+          icon: Icons.directions_bus_outlined,
+        ),
+        AdminSection(
+          path: AdminRoutes.trips,
+          title: 'Trips',
+          hint: 'Trips, schedules and seat management',
+          icon: Icons.event_note_outlined,
+        ),
+        AdminSection(
+          path: AdminRoutes.inventory,
+          title: 'Seat inventory',
+          hint: 'Real-time occupied, held and blocked seats monitor',
+          icon: Icons.layers_outlined,
+        ),
+        AdminSection(
+          path: AdminRoutes.tracking,
+          title: 'Live tracking',
+          hint: 'Live GPS locations and route tracking',
+          icon: Icons.navigation_outlined,
+        ),
+      ],
     ),
-    AdminRoutes.places: AdminSection(
-      AdminRoutes.places,
-      AdminStrings.navPlaces,
-      AdminStrings.hintPlaces,
-      Icons.place_outlined,
+
+    // 6. Sales
+    AdminNavGroup(
+      id: 'sales',
+      title: 'Sales',
+      sections: <AdminSection>[
+        AdminSection(
+          path: AdminRoutes.bookings,
+          title: 'Bookings',
+          hint: 'Search passenger reservations by PNR, name or phone',
+          icon: Icons.confirmation_number_outlined,
+        ),
+        AdminSection(
+          path: AdminRoutes.payments,
+          title: 'Payments',
+          hint: 'Every payment through the gateway and reconciliation',
+          icon: Icons.payment_outlined,
+          badgeKey: 'payments',
+        ),
+        AdminSection(
+          path: AdminRoutes.refunds,
+          title: 'Refunds',
+          hint: 'Approve, track and retry passenger refunds',
+          icon: Icons.currency_exchange_outlined,
+          badgeKey: 'refunds',
+        ),
+        AdminSection(
+          path: AdminRoutes.settlements,
+          title: 'Settlements',
+          hint: 'Periodic operator payments, gross and net breakdown',
+          icon: Icons.account_balance_outlined,
+        ),
+      ],
     ),
-    AdminRoutes.cities: AdminSection(
-      AdminRoutes.cities,
-      AdminStrings.navCities,
-      AdminStrings.hintCities,
-      Icons.location_city_outlined,
+
+    // 7. Customers
+    AdminNavGroup(
+      id: 'customers',
+      title: 'Customers',
+      sections: <AdminSection>[
+        AdminSection(
+          path: AdminRoutes.customers,
+          title: 'Customers',
+          hint: 'Travellers who use the app',
+          icon: Icons.people_outline,
+        ),
+        AdminSection(
+          path: AdminRoutes.tickets,
+          title: 'Support tickets',
+          hint: 'Questions and problems from customers',
+          icon: Icons.help_outline,
+          badgeKey: 'tickets',
+        ),
+        AdminSection(
+          path: AdminRoutes.messages,
+          title: 'Chat & messages',
+          hint: 'Customer WhatsApp chatbot and support conversations',
+          icon: Icons.chat_outlined,
+        ),
+        AdminSection(
+          path: AdminRoutes.content,
+          title: 'Help content',
+          hint: 'FAQs, policy pages and support contacts',
+          icon: Icons.menu_book_outlined,
+        ),
+      ],
     ),
-    AdminRoutes.busTypes: AdminSection(
-      AdminRoutes.busTypes,
-      AdminStrings.navBusTypes,
-      AdminStrings.hintBusTypes,
-      Icons.category_outlined,
+
+    // 8. Marketing
+    AdminNavGroup(
+      id: 'marketing',
+      title: 'Marketing',
+      sections: <AdminSection>[
+        AdminSection(
+          path: AdminRoutes.banners,
+          title: 'Banners',
+          hint: 'Promotional graphics at the top of customer app',
+          icon: Icons.view_carousel_outlined,
+        ),
+        AdminSection(
+          path: AdminRoutes.offers,
+          title: 'Offers & coupons',
+          hint: 'Promotional discount coupons and campaign limits',
+          icon: Icons.local_offer_outlined,
+        ),
+        AdminSection(
+          path: AdminRoutes.announcements,
+          title: 'Announcements',
+          hint: 'Broadcast alerts and push messages to passengers',
+          icon: Icons.campaign_outlined,
+        ),
+        AdminSection(
+          path: AdminRoutes.popularRoutes,
+          title: 'Popular routes',
+          hint: 'Featured high-demand routes shown on search home',
+          icon: Icons.star_outline,
+        ),
+      ],
     ),
-    AdminRoutes.documentTypes: AdminSection(
-      AdminRoutes.documentTypes,
-      AdminStrings.navDocumentTypes,
-      AdminStrings.hintDocumentTypes,
-      Icons.fact_check_outlined,
+
+    // 9. Safety
+    AdminNavGroup(
+      id: 'safety',
+      title: 'Safety',
+      sections: <AdminSection>[
+        AdminSection(
+          path: AdminRoutes.sos,
+          title: 'SOS alerts',
+          hint: 'Live emergency alerts from traveling passengers',
+          icon: Icons.warning_amber_rounded,
+          badgeKey: 'sos',
+          isUrgentBadge: true,
+        ),
+        AdminSection(
+          path: AdminRoutes.incidents,
+          title: 'Incidents',
+          hint: 'Passenger and crew incident investigation records',
+          icon: Icons.report_problem_outlined,
+        ),
+        AdminSection(
+          path: AdminRoutes.safetySettings,
+          title: 'Safety settings',
+          hint: 'Escalation time limits, police contacts and SOS config',
+          icon: Icons.security_outlined,
+        ),
+      ],
     ),
-    AdminRoutes.kycConfiguration: AdminSection(
-      AdminRoutes.kycConfiguration,
-      AdminStrings.navKycConfiguration,
-      AdminStrings.hintKycConfiguration,
-      Icons.rule_folder_outlined,
+
+    // 10. Insights
+    AdminNavGroup(
+      id: 'insights',
+      title: 'Insights',
+      sections: <AdminSection>[
+        AdminSection(
+          path: AdminRoutes.reports,
+          title: 'Reports & analytics',
+          hint: 'Revenue, occupancy and cancellation analytics',
+          icon: Icons.bar_chart_outlined,
+        ),
+      ],
     ),
-    AdminRoutes.customers: AdminSection(
-      AdminRoutes.customers,
-      AdminStrings.navCustomers,
-      AdminStrings.hintCustomers,
-      Icons.people_outline,
+
+    // 11. System
+    AdminNavGroup(
+      id: 'system',
+      title: 'System',
+      sections: <AdminSection>[
+        AdminSection(
+          path: AdminRoutes.settings,
+          title: 'Settings',
+          hint: 'Company info, booking rules and payment gateways',
+          icon: Icons.settings_outlined,
+        ),
+        AdminSection(
+          path: AdminRoutes.staff,
+          title: 'Staff & roles',
+          hint: 'Platform staff accounts and permission levels',
+          icon: Icons.admin_panel_settings_outlined,
+        ),
+        AdminSection(
+          path: AdminRoutes.featureFlags,
+          title: 'Feature flags',
+          hint: 'Runtime feature flags and maintenance mode',
+          icon: Icons.flag_outlined,
+        ),
+        AdminSection(
+          path: AdminRoutes.audit,
+          title: 'Audit log',
+          hint: 'Sensitive actions, who did them and when',
+          icon: Icons.history_outlined,
+        ),
+      ],
     ),
-    AdminRoutes.invitations: AdminSection(
-      AdminRoutes.invitations,
-      AdminStrings.navInvitations,
-      AdminStrings.hintInvitations,
-      Icons.mark_email_read_outlined,
-    ),
-    AdminRoutes.reviews: AdminSection(
-      AdminRoutes.reviews,
-      AdminStrings.navReviews,
-      AdminStrings.hintReviews,
-      Icons.fact_check_outlined,
-    ),
-    AdminRoutes.banners: AdminSection(
-      AdminRoutes.banners,
-      AdminStrings.navBanners,
-      AdminStrings.hintBanners,
-      Icons.view_carousel_outlined,
-    ),
-    AdminRoutes.audit: AdminSection(
-      AdminRoutes.audit,
-      AdminStrings.navAudit,
-      AdminStrings.hintAudit,
-      Icons.history_outlined,
-    ),
-    AdminRoutes.settings: AdminSection(
-      AdminRoutes.settings,
-      AdminStrings.navSettings,
-      AdminStrings.hintSettings,
-      Icons.settings_outlined,
-    ),
+  ];
+
+  static final Map<String, AdminSection> byPath = <String, AdminSection>{
+    for (final group in groups)
+      for (final section in group.sections) section.path: section,
   };
 
-  /// Sections listed under "Content" (what customers see in the app) rather
-  /// than under "Catalogue".
-  static const Set<String> contentPaths = <String>{AdminRoutes.banners};
-
-  /// Cities and Locations are tabs of "Cities and places"; they are listed
-  /// on their own only for someone who cannot open that page.
-  static const Set<String> _insidePlaces = <String>{
-    AdminRoutes.cities,
-    AdminRoutes.locations,
-  };
-
-  /// The sections [access] may open, in display order.
-  static List<AdminSection> visibleTo(AccessState access) {
-    final hasPlaces = AdminRouteGuard.canOpen(access, AdminRoutes.places);
-    return <AdminSection>[
-      for (final path in AdminRoutes.sections)
-        if (AdminRouteGuard.canOpen(access, path) &&
-            !(hasPlaces && _insidePlaces.contains(path)))
-          byPath[path]!,
-    ];
+  /// Visible groups for current user's access state.
+  static List<AdminNavGroup> visibleGroups(AccessState access) {
+    final result = <AdminNavGroup>[];
+    for (final group in groups) {
+      final permittedSections = group.sections.where((section) {
+        return AdminRouteGuard.canOpen(access, section.path);
+      }).toList();
+      if (permittedSections.isNotEmpty) {
+        result.add(AdminNavGroup(
+          id: group.id,
+          title: group.title,
+          sections: permittedSections,
+        ));
+      }
+    }
+    return result;
   }
 }
 
-/// Frame of the management app: a navy side navigation with the sections
-/// the user's permissions allow (a drawer on narrow screens), and a top bar
-/// that names the open section and the signed-in user.
-class AdminShell extends ConsumerWidget {
-  const AdminShell({required this.currentPath, required this.child, super.key});
+/// Admin Shell containing left navy sidebar and pixel-matched top bar.
+class AdminShell extends ConsumerStatefulWidget {
+  const AdminShell({
+    required this.currentPath,
+    required this.child,
+    super.key,
+  });
 
   final String currentPath;
   final Widget child;
 
-  Future<void> _signOut(BuildContext context, WidgetRef ref) async {
+  @override
+  ConsumerState<AdminShell> createState() => _AdminShellState();
+}
+
+class _AdminShellState extends ConsumerState<AdminShell> {
+  Future<void> _signOut() async {
     final l10n = AbraLocalizations.of(context);
     final confirmed = await showAbraConfirmDialog(
       context,
@@ -165,37 +411,75 @@ class AdminShell extends ConsumerWidget {
       confirmLabel: l10n.text(AbraStrings.commonSignOut),
     );
     if (confirmed) {
-      // While the session is valid: this device stops receiving this person's push
       await ref.read(notificationCenterProvider).stop();
       await ref.read(sessionManagerProvider).signOut();
     }
   }
 
-  /// Takes the person to what a notification is about. A file waiting for review opens in Reviews.
-  static void _openNotification(BuildContext context, NotificationItem item) {
+  void _openNotification(NotificationItem item) {
     final route = item.route;
     if (route != null && route.startsWith('/onboarding/')) {
       context.go(AdminRoutes.reviewOf(route.substring('/onboarding/'.length)));
     } else if (route != null && route.startsWith(AdminRoutes.places)) {
-      // A place request: the Operator requests tab
       context.go(route);
     }
   }
 
+  void _openGlobalSearch() {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => _GlobalSearchDialog(
+        onSelect: (route) {
+          Navigator.of(dialogContext).pop();
+          context.go(route);
+        },
+      ),
+    );
+  }
+
+  void _showMfaDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Two-step verification'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text('Staff sign-in asks for a six digit code from an authenticator app.'),
+            SizedBox(height: AbraSpacing.md),
+            Text(
+              'Status: Enabled\nBackup codes remaining: 8',
+              style: TextStyle(color: AbraColors.tealDark, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+        actions: <Widget>[
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Done'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AbraLocalizations.of(context);
-    final textTheme = Theme.of(context).textTheme;
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final access = ref.watch(accessProvider);
-    final sections = AdminSection.visibleTo(access);
+    final badgeCounts = ref.watch(navBadgeCountsProvider);
+    final navGroups = AdminNavigationRegistry.visibleGroups(access);
     final breakpoint = AbraBreakpoint.of(context);
     final isWide = breakpoint == AbraBreakpoint.desktop;
-    final current = AdminSection.byPath[AdminRoutes.sectionOf(currentPath)];
-    final userName = access.user?.name;
+    final current = AdminNavigationRegistry.byPath[AdminRoutes.sectionOf(widget.currentPath)];
+    final userName = access.user?.name ?? 'Admin User';
 
     Widget navigation({required bool inDrawer}) => _SideNavigation(
-      sections: sections,
-      currentPath: currentPath,
+      groups: navGroups,
+      currentPath: widget.currentPath,
+      badgeCounts: badgeCounts,
       onSelect: (section) {
         if (inDrawer) Navigator.of(context).pop();
         context.go(section.path);
@@ -203,68 +487,207 @@ class AdminShell extends ConsumerWidget {
     );
 
     final appBar = AppBar(
-      backgroundColor: AbraColors.white,
-      foregroundColor: AbraColors.navy,
+      backgroundColor: isDark ? const Color(0xFF13222F) : AbraColors.white,
+      foregroundColor: isDark ? const Color(0xFFE6EEF5) : AbraColors.navy,
       surfaceTintColor: Colors.transparent,
       scrolledUnderElevation: 0,
       toolbarHeight: 68,
       titleSpacing: isWide ? AbraSpacing.xl : 0,
-      shape: const Border(bottom: BorderSide(color: AbraColors.divider)),
+      shape: Border(
+        bottom: BorderSide(
+          color: isDark ? const Color(0xFF2A3E50) : AbraColors.divider,
+        ),
+      ),
       title: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
-            current == null
-                ? l10n.text(AdminStrings.appName)
-                : l10n.text(current.labelKey),
-            style: textTheme.titleLarge,
+            current?.title ?? 'Abra Travels Admin',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: isDark ? const Color(0xFFE6EEF5) : AbraColors.navy,
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           if (current != null && breakpoint.isTabletOrWider)
             Text(
-              l10n.text(current.hintKey),
-              style: textTheme.bodySmall,
+              current.hint,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: isDark ? const Color(0xFF9FB6C9) : AbraColors.textSecondary,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
         ],
       ),
       actions: <Widget>[
+        // Global Search Pill
+        if (breakpoint.isTabletOrWider)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: InkWell(
+              onTap: _openGlobalSearch,
+              borderRadius: const BorderRadius.all(Radius.circular(10)),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF0F1C27) : const Color(0xFFF3F5F7),
+                  borderRadius: const BorderRadius.all(Radius.circular(10)),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF2A3E50) : AbraColors.border,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Icon(
+                      Icons.search,
+                      size: 16,
+                      color: isDark ? const Color(0xFF9FB6C9) : AbraColors.textSecondary,
+                    ),
+                    const SizedBox(width: AbraSpacing.sm),
+                    Text(
+                      'Search PNR, operator, bus...',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? const Color(0xFF9FB6C9) : AbraColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(width: AbraSpacing.md),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1B2E3E) : const Color(0xFFE5EAEE),
+                        borderRadius: const BorderRadius.all(Radius.circular(4)),
+                      ),
+                      child: Text(
+                        'Ctrl K',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? const Color(0xFF9FB6C9) : AbraColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        const SizedBox(width: AbraSpacing.md),
+
+        // Role Chip
         if (breakpoint.isTabletOrWider)
           Center(
-            child: AbraStatusBadge(
-              label: l10n.text(
-                access.hasPlatformScope
-                    ? AdminStrings.navScopePlatform
-                    : AdminStrings.navScopeOperator,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: const BoxDecoration(
+                color: AbraColors.skyContainer,
+                borderRadius: BorderRadius.all(Radius.circular(99)),
               ),
-              tone: AbraStatusTone.info,
-              icon: access.hasPlatformScope
-                  ? Icons.public
-                  : Icons.business_outlined,
+              child: const Text(
+                'Super Admin',
+                style: TextStyle(
+                  color: AbraColors.deepBlue,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
+                ),
+              ),
             ),
           ),
         const SizedBox(width: AbraSpacing.sm),
+
+        // Theme Toggle (Dark / Light)
         IconButton(
-          icon: const Icon(Icons.inbox_outlined),
-          tooltip: 'Notification inbox',
-          onPressed: () => context.go('/notifications'),
+          icon: Icon(
+            isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+            size: 20,
+          ),
+          tooltip: isDark ? 'Switch to light mode' : 'Switch to dark mode',
+          onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
         ),
-        NotificationBell(
-          center: ref.watch(notificationCenterProvider),
-          onOpen: (item) => _openNotification(context, item),
+
+        // Notification Bell with unread dot & dropdown popover
+        _NotificationBellWithMenu(
+          onOpenInbox: () => context.go('/notifications'),
+          onSelectRoute: (route) => context.go(route),
         ),
-        if (userName != null) ...<Widget>[
-          const SizedBox(width: AbraSpacing.lg),
-          _UserChip(name: userName, showName: breakpoint.isTabletOrWider),
-        ],
-        const SizedBox(width: AbraSpacing.xs),
-        IconButton(
-          icon: const Icon(Icons.logout),
-          tooltip: l10n.text(AbraStrings.commonSignOut),
-          onPressed: () => _signOut(context, ref),
+
+        // Account Dropdown Menu
+        PopupMenuButton<String>(
+          tooltip: 'Account',
+          offset: const Offset(0, 52),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(14)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AbraSpacing.xs),
+            child: _UserChip(name: userName, showName: breakpoint.isTabletOrWider),
+          ),
+          itemBuilder: (context) => <PopupMenuEntry<String>>[
+            PopupMenuItem<String>(
+              enabled: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const Text(
+                    'Super Admin',
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                  ),
+                  Text(
+                    'admin@abratravels.in',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? const Color(0xFF9FB6C9) : AbraColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const PopupMenuDivider(),
+            const PopupMenuItem<String>(
+              value: 'staff',
+              child: Row(
+                children: <Widget>[
+                  Icon(Icons.admin_panel_settings_outlined, size: 18),
+                  SizedBox(width: 8),
+                  Text('Staff and roles'),
+                ],
+              ),
+            ),
+            const PopupMenuItem<String>(
+              value: 'mfa',
+              child: Row(
+                children: <Widget>[
+                  Icon(Icons.security_outlined, size: 18),
+                  SizedBox(width: 8),
+                  Text('Two-step verification'),
+                ],
+              ),
+            ),
+            const PopupMenuDivider(),
+            const PopupMenuItem<String>(
+              value: 'signout',
+              child: Row(
+                children: <Widget>[
+                  Icon(Icons.logout, size: 18, color: AbraColors.danger),
+                  SizedBox(width: 8),
+                  Text('Sign out', style: TextStyle(color: AbraColors.danger)),
+                ],
+              ),
+            ),
+          ],
+          onSelected: (value) {
+            if (value == 'staff') {
+              context.go(AdminRoutes.staff);
+            } else if (value == 'mfa') {
+              _showMfaDialog();
+            } else if (value == 'signout') {
+              _signOut();
+            }
+          },
         ),
         const SizedBox(width: AbraSpacing.sm),
       ],
@@ -273,36 +696,47 @@ class AdminShell extends ConsumerWidget {
     final pageBody = Column(
       children: <Widget>[
         PushPermissionBanner(center: ref.watch(notificationCenterProvider)),
-        Expanded(child: child),
+        Expanded(child: widget.child),
       ],
     );
-    if (!isWide) {
-      return _NotificationLifecycle(
-        onOpen: (item) => _openNotification(context, item),
-        child: Scaffold(
-          appBar: appBar,
-          drawer: Drawer(
-            backgroundColor: AbraColors.navy,
-            child: SafeArea(child: navigation(inDrawer: true)),
-          ),
-          body: SafeArea(child: pageBody),
-        ),
-      );
-    }
-    return _NotificationLifecycle(
-      onOpen: (item) => _openNotification(context, item),
-      child: Scaffold(
-        body: SafeArea(
-          child: Row(
-            children: <Widget>[
-              SizedBox(
-                width: AbraSizes.sideNavigation,
-                child: navigation(inDrawer: false),
-              ),
-              Expanded(
-                child: Scaffold(appBar: appBar, body: pageBody),
-              ),
-            ],
+
+    return CallbackShortcuts(
+      bindings: <ShortcutActivator, VoidCallback>{
+        const SingleActivator(LogicalKeyboardKey.keyK, control: true): _openGlobalSearch,
+        const SingleActivator(LogicalKeyboardKey.keyK, meta: true): _openGlobalSearch,
+      },
+      child: Focus(
+        autofocus: true,
+        child: _NotificationLifecycle(
+          onOpen: _openNotification,
+          child: Scaffold(
+            backgroundColor: isDark ? const Color(0xFF0B1620) : const Color(0xFFF3F5F7),
+            appBar: !isWide ? appBar : null,
+            drawer: !isWide
+                ? Drawer(
+                    backgroundColor: const Color(0xFF12304A),
+                    child: SafeArea(child: navigation(inDrawer: true)),
+                  )
+                : null,
+            body: SafeArea(
+              child: isWide
+                  ? Row(
+                      children: <Widget>[
+                        SizedBox(
+                          width: 262,
+                          child: navigation(inDrawer: false),
+                        ),
+                        Expanded(
+                          child: Scaffold(
+                            backgroundColor: isDark ? const Color(0xFF0B1620) : const Color(0xFFF3F5F7),
+                            appBar: appBar,
+                            body: pageBody,
+                          ),
+                        ),
+                      ],
+                    )
+                  : pageBody,
+            ),
           ),
         ),
       ),
@@ -310,8 +744,584 @@ class AdminShell extends ConsumerWidget {
   }
 }
 
-/// Starts the notifications once a staff user is in (live socket and push) and shows a toast
-/// when one arrives while the page is open. Stops them when the session ends.
+/// Notification Bell with unread counter dot and quick popover preview.
+class _NotificationBellWithMenu extends StatefulWidget {
+  const _NotificationBellWithMenu({
+    required this.onOpenInbox,
+    required this.onSelectRoute,
+  });
+
+  final VoidCallback onOpenInbox;
+  final ValueChanged<String> onSelectRoute;
+
+  @override
+  State<_NotificationBellWithMenu> createState() => _NotificationBellWithMenuState();
+}
+
+class _NotificationBellWithMenuState extends State<_NotificationBellWithMenu> {
+  int _unreadCount = 3;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<String>(
+      tooltip: 'Notifications',
+      offset: const Offset(0, 52),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(14)),
+      ),
+      icon: Stack(
+        clipBehavior: Clip.none,
+        children: <Widget>[
+          const Icon(Icons.notifications_outlined, size: 22),
+          if (_unreadCount > 0)
+            Positioned(
+              right: -4,
+              top: -4,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFEF4444),
+                  borderRadius: BorderRadius.all(Radius.circular(99)),
+                ),
+                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                child: Text(
+                  '$_unreadCount',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+        ],
+      ),
+      itemBuilder: (context) => <PopupMenuEntry<String>>[
+        PopupMenuItem<String>(
+          enabled: false,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              const Text(
+                'Notifications',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+              ),
+              TextButton(
+                onPressed: () {
+                  setState(() => _unreadCount = 0);
+                  Navigator.of(context).pop();
+                },
+                child: const Text('Mark all read', style: TextStyle(fontSize: 12)),
+              ),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(),
+        const PopupMenuItem<String>(
+          value: AdminRoutes.reviews,
+          child: ListTile(
+            dense: true,
+            leading: Icon(Icons.verified_user_outlined, color: AbraColors.deepBlue),
+            title: Text('New KYC submission', style: TextStyle(fontWeight: FontWeight.w700)),
+            subtitle: Text('New Horizon Travels submitted documents'),
+          ),
+        ),
+        const PopupMenuItem<String>(
+          value: AdminRoutes.places,
+          child: ListTile(
+            dense: true,
+            leading: Icon(Icons.place_outlined, color: AbraColors.deepBlue),
+            title: Text('Place request', style: TextStyle(fontWeight: FontWeight.w700)),
+            subtitle: Text('Kaveri Express requested Hosur Bus Stand'),
+          ),
+        ),
+        const PopupMenuItem<String>(
+          value: AdminRoutes.sos,
+          child: ListTile(
+            dense: true,
+            leading: Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444)),
+            title: Text('SOS from Divya Iyer', style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFB91C1C))),
+            subtitle: Text('Needs assistance on Hyderabad to Bengaluru'),
+          ),
+        ),
+        const PopupMenuDivider(),
+        PopupMenuItem<String>(
+          value: 'inbox',
+          child: Center(
+            child: TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                widget.onOpenInbox();
+              },
+              child: const Text('View all notifications'),
+            ),
+          ),
+        ),
+      ],
+      onSelected: (value) {
+        if (value == 'inbox') {
+          widget.onOpenInbox();
+        } else {
+          widget.onSelectRoute(value);
+        }
+      },
+    );
+  }
+}
+
+/// Global Search Dialog modal searching PNR, operator, bus, customer, trip and ticket.
+class _GlobalSearchDialog extends StatefulWidget {
+  const _GlobalSearchDialog({required this.onSelect});
+
+  final ValueChanged<String> onSelect;
+
+  @override
+  State<_GlobalSearchDialog> createState() => _GlobalSearchDialogState();
+}
+
+class _GlobalSearchDialogState extends State<_GlobalSearchDialog> {
+  final _searchController = TextEditingController();
+  String _query = '';
+
+  static const List<Map<String, String>> _mockEntities = <Map<String, String>>[
+    {
+      'type': 'Booking',
+      'title': 'ABRK1024A — Rahul Verma — Hyderabad to Bengaluru',
+      'route': AdminRoutes.bookings,
+      'icon': 'ticket',
+    },
+    {
+      'type': 'Operator',
+      'title': 'Kaveri Express — Bengaluru',
+      'route': AdminRoutes.operators,
+      'icon': 'business',
+    },
+    {
+      'type': 'Operator',
+      'title': 'Godavari Lines — Visakhapatnam',
+      'route': AdminRoutes.operators,
+      'icon': 'business',
+    },
+    {
+      'type': 'Bus',
+      'title': 'TS09 UB 4521 — Kaveri Express (AC Sleeper)',
+      'route': AdminRoutes.buses,
+      'icon': 'bus',
+    },
+    {
+      'type': 'Trip',
+      'title': 'TRP-3001 — Hyderabad to Bengaluru (Departs 21:00)',
+      'route': AdminRoutes.trips,
+      'icon': 'trip',
+    },
+    {
+      'type': 'Customer',
+      'title': 'Divya Iyer — +91 98450 11223 — divya@example.com',
+      'route': AdminRoutes.customers,
+      'icon': 'customer',
+    },
+    {
+      'type': 'Ticket',
+      'title': 'TKT-8001 — Refund not received for cancelled booking',
+      'route': AdminRoutes.tickets,
+      'icon': 'ticket',
+    },
+    {
+      'type': 'Place',
+      'title': 'Hosur Bus Stand Gate 2 — Bengaluru',
+      'route': AdminRoutes.places,
+      'icon': 'place',
+    },
+  ];
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final results = _query.length < 2
+        ? const <Map<String, String>>[]
+        : _mockEntities.where((item) {
+            final q = _query.toLowerCase();
+            return (item['title'] ?? '').toLowerCase().contains(q) ||
+                (item['type'] ?? '').toLowerCase().contains(q);
+          }).toList();
+
+    return Dialog(
+      backgroundColor: isDark ? const Color(0xFF13222F) : AbraColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(16)),
+      ),
+      child: Container(
+        width: 600,
+        constraints: const BoxConstraints(maxHeight: 520),
+        padding: const EdgeInsets.all(AbraSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                const Text(
+                  'Search everything',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 20),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: AbraSpacing.sm),
+            TextField(
+              controller: _searchController,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: 'Search PNR, phone, operator, bus, customer...',
+                prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: isDark ? const Color(0xFF0F1C27) : const Color(0xFFF3F5F7),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: isDark ? const Color(0xFF2A3E50) : AbraColors.border,
+                  ),
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              ),
+              onChanged: (val) => setState(() => _query = val.trim()),
+            ),
+            const SizedBox(height: AbraSpacing.md),
+            Expanded(
+              child: _query.length < 2
+                  ? Center(
+                      child: Text(
+                        'Type at least 2 characters to search across bookings, buses and operators.',
+                        style: TextStyle(
+                          color: isDark ? const Color(0xFF9FB6C9) : AbraColors.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
+                    )
+                  : (results.isEmpty
+                      ? Center(
+                          child: Text(
+                            'No matches found for "$_query"',
+                            style: TextStyle(
+                              color: isDark ? const Color(0xFF9FB6C9) : AbraColors.textSecondary,
+                              fontSize: 13,
+                            ),
+                          ),
+                        )
+                      : ListView.separated(
+                          itemCount: results.length,
+                          separatorBuilder: (context, index) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final item = results[index];
+                            final type = item['type'] ?? '';
+                            final title = item['title'] ?? '';
+                            final route = item['route'] ?? AdminRoutes.dashboard;
+
+                            return ListTile(
+                              dense: true,
+                              leading: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: const BoxDecoration(
+                                  color: AbraColors.skyContainer,
+                                  borderRadius: BorderRadius.all(Radius.circular(8)),
+                                ),
+                                child: Icon(
+                                  _iconFor(item['icon']),
+                                  size: 16,
+                                  color: AbraColors.deepBlue,
+                                ),
+                              ),
+                              title: Row(
+                                children: <Widget>[
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: isDark ? const Color(0xFF1B2E3E) : const Color(0xFFE5EAEE),
+                                      borderRadius: const BorderRadius.all(Radius.circular(4)),
+                                    ),
+                                    child: Text(
+                                      type,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: isDark ? const Color(0xFF9FB6C9) : AbraColors.textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: AbraSpacing.sm),
+                                  Expanded(
+                                    child: Text(
+                                      title,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              trailing: const Icon(Icons.arrow_forward_ios, size: 12),
+                              onTap: () => widget.onSelect(route),
+                            );
+                          },
+                        )),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _iconFor(String? type) => switch (type) {
+    'ticket' => Icons.confirmation_number_outlined,
+    'business' => Icons.business_center_outlined,
+    'bus' => Icons.directions_bus_outlined,
+    'trip' => Icons.event_note_outlined,
+    'customer' => Icons.people_outline,
+    'place' => Icons.place_outlined,
+    _ => Icons.info_outline,
+  };
+}
+
+/// The navy left side navigation with the 11 groups and badge counters.
+class _SideNavigation extends StatelessWidget {
+  const _SideNavigation({
+    required this.groups,
+    required this.currentPath,
+    required this.badgeCounts,
+    required this.onSelect,
+  });
+
+  final List<AdminNavGroup> groups;
+  final String currentPath;
+  final Map<String, int> badgeCounts;
+  final ValueChanged<AdminSection> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final activeSection = AdminRoutes.sectionOf(currentPath);
+
+    return Material(
+      color: const Color(0xFF12304A),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          // Brand Logo Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+            child: Row(
+              children: <Widget>[
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: const BoxDecoration(
+                    color: AbraColors.blue,
+                    borderRadius: BorderRadius.all(Radius.circular(10)),
+                  ),
+                  child: const Icon(
+                    Icons.directions_bus,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Text(
+                      'Abra Travels',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 17,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                    Text(
+                      'Admin portal',
+                      style: TextStyle(
+                        color: Color(0xFF9FB6C9),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const Divider(color: Color(0x1FFFFFFF), height: 1),
+
+          // 11 Groups List
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+              itemCount: groups.length,
+              itemBuilder: (context, groupIndex) {
+                final group = groups[groupIndex];
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 14, 12, 4),
+                      child: Text(
+                        group.title.toUpperCase(),
+                        style: const TextStyle(
+                          color: Color(0xFF8FA9BF),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ),
+                    for (final section in group.sections)
+                      _NavItem(
+                        section: section,
+                        isSelected: section.path == activeSection,
+                        badgeCount: section.badgeKey != null
+                            ? (badgeCounts[section.badgeKey] ?? 0)
+                            : 0,
+                        onTap: () => onSelect(section),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A navigation item matching the demo .ni class.
+class _NavItem extends StatelessWidget {
+  const _NavItem({
+    required this.section,
+    required this.isSelected,
+    required this.badgeCount,
+    required this.onTap,
+  });
+
+  final AdminSection section;
+  final bool isSelected;
+  final int badgeCount;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = isSelected ? Colors.white : const Color(0xFFD3E2EE);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Material(
+        color: isSelected ? AbraColors.blue : Colors.transparent,
+        borderRadius: const BorderRadius.all(Radius.circular(10)),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: const BorderRadius.all(Radius.circular(10)),
+          hoverColor: const Color(0x14FFFFFF),
+          splashColor: const Color(0x14FFFFFF),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 40),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: <Widget>[
+                Icon(section.icon, size: 19, color: foreground),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    section.title,
+                    style: TextStyle(
+                      color: foreground,
+                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                      fontSize: 13.5,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (badgeCount > 0)
+                  Container(
+                    margin: const EdgeInsets.only(left: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: section.isUrgentBadge
+                          ? const Color(0xFFEF4444)
+                          : const Color(0xFFF59E0B),
+                      borderRadius: const BorderRadius.all(Radius.circular(99)),
+                    ),
+                    child: Text(
+                      '$badgeCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _UserChip extends StatelessWidget {
+  const _UserChip({required this.name, required this.showName});
+
+  final String name;
+  final bool showName;
+
+  String get _initials {
+    final words = name.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty);
+    return words.take(2).map((w) => w.characters.first.toUpperCase()).join();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        CircleAvatar(
+          radius: 16,
+          backgroundColor: AbraColors.navySecondary,
+          child: Text(
+            _initials.isEmpty ? 'A' : _initials,
+            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+          ),
+        ),
+        if (showName) ...<Widget>[
+          const SizedBox(width: AbraSpacing.sm),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 160),
+            child: Text(
+              name,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 class _NotificationLifecycle extends ConsumerStatefulWidget {
   const _NotificationLifecycle({required this.child, required this.onOpen});
 
@@ -364,205 +1374,11 @@ class _NotificationLifecycleState
 
   @override
   Widget build(BuildContext context) {
-    // A session that ends by itself (expired, signed out elsewhere) also ends the live channel
     ref.listen(authStateProvider, (previous, next) {
       if (next is AuthSignedOut) {
         unawaited(ref.read(notificationCenterProvider).stop());
       }
     });
     return widget.child;
-  }
-}
-
-/// The navy navigation: product mark, then the sections.
-class _SideNavigation extends StatelessWidget {
-  const _SideNavigation({
-    required this.sections,
-    required this.currentPath,
-    required this.onSelect,
-  });
-
-  final List<AdminSection> sections;
-  final String currentPath;
-  final ValueChanged<AdminSection> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AbraLocalizations.of(context);
-    final textTheme = Theme.of(context).textTheme;
-    Widget heading(String key) => Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AbraSpacing.md,
-        AbraSpacing.sm,
-        AbraSpacing.md,
-        AbraSpacing.sm,
-      ),
-      child: ExcludeSemantics(
-        child: Text(
-          l10n.text(key).toUpperCase(),
-          style: textTheme.labelSmall?.copyWith(
-            color: AbraColors.onNavyMuted,
-            letterSpacing: 1.1,
-          ),
-        ),
-      ),
-    );
-    Widget item(AdminSection section) => _NavItem(
-      section: section,
-      isSelected: section.path == currentPath,
-      onTap: () => onSelect(section),
-    );
-    final content = sections
-        .where((section) => AdminSection.contentPaths.contains(section.path))
-        .toList();
-    return Material(
-      color: AbraColors.navy,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AbraSpacing.lg,
-              AbraSpacing.lg,
-              AbraSpacing.lg,
-              AbraSpacing.lg,
-            ),
-            child: AbraBrandMark(
-              name: l10n.text(AdminStrings.brandName),
-              caption: l10n.text(AdminStrings.brandCaption),
-            ),
-          ),
-          const Divider(color: AbraColors.navyDivider, height: 1),
-          Expanded(
-            child: Semantics(
-              container: true,
-              label: l10n.text(AdminStrings.navCatalogue),
-              child: ListView(
-                padding: const EdgeInsets.all(AbraSpacing.md),
-                children: <Widget>[
-                  heading(AdminStrings.navCatalogue),
-                  for (final section in sections)
-                    if (!content.contains(section)) item(section),
-                  if (content.isNotEmpty) ...<Widget>[
-                    const SizedBox(height: AbraSpacing.md),
-                    heading(AdminStrings.navContent),
-                    for (final section in content) item(section),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  const _NavItem({
-    required this.section,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  final AdminSection section;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AbraLocalizations.of(context);
-    final foreground = isSelected ? AbraColors.white : AbraColors.onNavyMuted;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AbraSpacing.xs),
-      child: AnimatedContainer(
-        duration: AbraMotion.isReduced(context)
-            ? Duration.zero
-            : AbraDurations.fast,
-        decoration: BoxDecoration(
-          color: isSelected ? AbraColors.blue : Colors.transparent,
-          borderRadius: AbraRadius.medium,
-        ),
-        child: ListTile(
-          dense: true,
-          minTileHeight: AbraSizes.minTouchTarget,
-          horizontalTitleGap: AbraSpacing.md,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: AbraSpacing.md,
-          ),
-          shape: const RoundedRectangleBorder(borderRadius: AbraRadius.medium),
-          hoverColor: AbraColors.navyHover,
-          focusColor: AbraColors.navyHover,
-          splashColor: AbraColors.navyHover,
-          iconColor: foreground,
-          textColor: foreground,
-          selectedColor: AbraColors.white,
-          selected: isSelected,
-          leading: Icon(section.icon, size: 20),
-          title: Text(
-            l10n.text(section.labelKey),
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: foreground,
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-            ),
-          ),
-          onTap: onTap,
-        ),
-      ),
-    );
-  }
-}
-
-/// The signed-in user: initials, and the name where there is room.
-class _UserChip extends StatelessWidget {
-  const _UserChip({required this.name, required this.showName});
-
-  final String name;
-  final bool showName;
-
-  String get _initials {
-    final words = name.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty);
-    return words.take(2).map((w) => w.characters.first.toUpperCase()).join();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return Semantics(
-      container: true,
-      label: showName
-          ? null
-          : AbraLocalizations.of(context).text(
-              AdminStrings.userMenuSignedInAs,
-              <String, Object?>{'name': name},
-            ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          ExcludeSemantics(
-            child: CircleAvatar(
-              radius: 16,
-              backgroundColor: AbraColors.navySecondary,
-              child: Text(
-                _initials,
-                style: textTheme.labelMedium?.copyWith(color: AbraColors.white),
-              ),
-            ),
-          ),
-          if (showName) ...<Widget>[
-            const SizedBox(width: AbraSpacing.sm),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 200),
-              child: Text(
-                name,
-                style: textTheme.labelLarge,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
   }
 }

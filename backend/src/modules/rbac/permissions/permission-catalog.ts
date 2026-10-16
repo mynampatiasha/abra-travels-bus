@@ -371,6 +371,30 @@ export const AUDIT_PERMISSIONS = definePermissions('audit', {
   },
 });
 
+export const COMMISSION_PERMISSIONS = definePermissions('commissions', {
+  read: {
+    name: 'View commission',
+    description: 'View the commission rules, the default and the change history.',
+    grantableTo: PLATFORM_AND_OPERATOR,
+  },
+  manage: {
+    name: 'Manage commission',
+    description: 'Add commission rules, save new versions, switch them on or off and set the default.',
+    grantableTo: PLATFORM_ONLY,
+  },
+  delete: {
+    name: 'Delete commission rules',
+    description: 'Delete commission rules and restore the ones that were deleted.',
+    grantableTo: PLATFORM_ONLY,
+    sensitive: true,
+  },
+  export: {
+    name: 'Export commission rules',
+    description: 'Download the commission rules as CSV or Excel.',
+    grantableTo: PLATFORM_ONLY,
+  },
+});
+
 /** Every permission of the platform. A new module's group is added to this object. */
 export const PERMISSION_CATALOG = {
   ...USER_PERMISSIONS,
@@ -396,6 +420,7 @@ export const PERMISSION_CATALOG = {
   ...SETTING_PERMISSIONS,
   ...AUDIT_PERMISSIONS,
   ...BANNER_PERMISSIONS,
+  ...COMMISSION_PERMISSIONS,
 } as const;
 
 /** Union of every declared permission key; the only values `@RequirePermission` accepts. */

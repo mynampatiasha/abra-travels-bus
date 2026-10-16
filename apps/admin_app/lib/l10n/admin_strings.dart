@@ -731,6 +731,111 @@ abstract final class AdminStrings {
   static const auditViewList = 'auditViewList';
   static const auditEmptyTitle = 'auditEmptyTitle';
   static const auditEmptyMessage = 'auditEmptyMessage';
+  static const navCommission = 'navCommission';
+  static const hintCommission = 'hintCommission';
+  static const commCrumbGroup = 'commCrumbGroup';
+  static const commTabRules = 'commTabRules';
+  static const commTabCalc = 'commTabCalc';
+  static const commTabHistory = 'commTabHistory';
+  static const commRuleOrder = 'commRuleOrder';
+  static const commDefaultTitle = 'commDefaultTitle';
+  static const commDefaultHint = 'commDefaultHint';
+  static const commDefaultNotSaved = 'commDefaultNotSaved';
+  static const commChange = 'commChange';
+  static const commSearch = 'commSearch';
+  static const commAppliesTo = 'commAppliesTo';
+  static const commStatus = 'commStatus';
+  static const commScopeOperator = 'commScopeOperator';
+  static const commScopeRoute = 'commScopeRoute';
+  static const commScopeBusType = 'commScopeBusType';
+  static const commFormScopeOperator = 'commFormScopeOperator';
+  static const commFormScopeRoute = 'commFormScopeRoute';
+  static const commFormScopeBusType = 'commFormScopeBusType';
+  static const commStatusActive = 'commStatusActive';
+  static const commStatusInactive = 'commStatusInactive';
+  static const commNewRule = 'commNewRule';
+  static const commColId = 'commColId';
+  static const commColTarget = 'commColTarget';
+  static const commColCommission = 'commColCommission';
+  static const commColFrom = 'commColFrom';
+  static const commColVersion = 'commColVersion';
+  static const commColNote = 'commColNote';
+  static const commColActions = 'commColActions';
+  static const commEdit = 'commEdit';
+  static const commView = 'commView';
+  static const commDelete = 'commDelete';
+  static const commDeactivate = 'commDeactivate';
+  static const commActivate = 'commActivate';
+  static const commResults = 'commResults';
+  static const commPage = 'commPage';
+  static const commPrevious = 'commPrevious';
+  static const commNext = 'commNext';
+  static const commTableView = 'commTableView';
+  static const commListView = 'commListView';
+  static const commDefaultDialogTitle = 'commDefaultDialogTitle';
+  static const commType = 'commType';
+  static const commTypePercent = 'commTypePercent';
+  static const commTypeFlat = 'commTypeFlat';
+  static const commValue = 'commValue';
+  static const commValueHint = 'commValueHint';
+  static const commValueDefaultLabel = 'commValueDefaultLabel';
+  static const commSave = 'commSave';
+  static const commNewRuleTitle = 'commNewRuleTitle';
+  static const commEditRuleTitle = 'commEditRuleTitle';
+  static const commWhichOne = 'commWhichOne';
+  static const commNote = 'commNote';
+  static const commNoteHint = 'commNoteHint';
+  static const commSaveRule = 'commSaveRule';
+  static const commSaveVersion = 'commSaveVersion';
+  static const commViewTitle = 'commViewTitle';
+  static const commVersions = 'commVersions';
+  static const commVersionLine = 'commVersionLine';
+  static const commErrPercent = 'commErrPercent';
+  static const commErrValue = 'commErrValue';
+  static const commErrDate = 'commErrDate';
+  static const commErrTarget = 'commErrTarget';
+  static const commSavedRule = 'commSavedRule';
+  static const commDefaultSaved = 'commDefaultSaved';
+  static const commRuleOn = 'commRuleOn';
+  static const commRuleOff = 'commRuleOff';
+  static const commDeleted = 'commDeleted';
+  static const commUndo = 'commUndo';
+  static const commRestored = 'commRestored';
+  static const commRestoredOff = 'commRestoredOff';
+  static const commDeleteTitle = 'commDeleteTitle';
+  static const commDeleteMessage = 'commDeleteMessage';
+  static const commCalcTitle = 'commCalcTitle';
+  static const commFare = 'commFare';
+  static const commSeats = 'commSeats';
+  static const commOperator = 'commOperator';
+  static const commRoute = 'commRoute';
+  static const commBusType = 'commBusType';
+  static const commNotChosen = 'commNotChosen';
+  static const commCalculate = 'commCalculate';
+  static const commResultTitle = 'commResultTitle';
+  static const commRuleUsed = 'commRuleUsed';
+  static const commAmtOperatorFare = 'commAmtOperatorFare';
+  static const commAmtCommission = 'commAmtCommission';
+  static const commAmtFareShown = 'commAmtFareShown';
+  static const commAmtGst = 'commAmtGst';
+  static const commAmtFee = 'commAmtFee';
+  static const commAmtCustomer = 'commAmtCustomer';
+  static const commAmtOperator = 'commAmtOperator';
+  static const commSeatsRange = 'commSeatsRange';
+  static const commCalcEmpty = 'commCalcEmpty';
+  static const commHistoryEmpty = 'commHistoryEmpty';
+  static const commHistoryEmptyHint = 'commHistoryEmptyHint';
+  static const commEmptyTitle = 'commEmptyTitle';
+  static const commEmptyMessage = 'commEmptyMessage';
+  static const commResultOne = 'commResultOne';
+  static const commClear = 'commClear';
+  static const commExportCsv = 'commExportCsv';
+  static const commCancel = 'commCancel';
+  static const commClose = 'commClose';
+  static const commEmptyFilteredTitle = 'commEmptyFilteredTitle';
+  static const commEmptyFiltered = 'commEmptyFiltered';
+  static const commClearFilters = 'commClearFilters';
+  static const commDefaultFallback = 'commDefaultFallback';
   static const Set<String> all = <String>{
     appName,
     signInTitle,
@@ -1545,5 +1650,110 @@ abstract final class AdminStrings {
     auditViewList,
     auditEmptyTitle,
     auditEmptyMessage,
+    navCommission,
+    hintCommission,
+    commCrumbGroup,
+    commTabRules,
+    commTabCalc,
+    commTabHistory,
+    commRuleOrder,
+    commDefaultTitle,
+    commDefaultHint,
+    commDefaultNotSaved,
+    commChange,
+    commSearch,
+    commAppliesTo,
+    commStatus,
+    commScopeOperator,
+    commScopeRoute,
+    commScopeBusType,
+    commFormScopeOperator,
+    commFormScopeRoute,
+    commFormScopeBusType,
+    commStatusActive,
+    commStatusInactive,
+    commNewRule,
+    commColId,
+    commColTarget,
+    commColCommission,
+    commColFrom,
+    commColVersion,
+    commColNote,
+    commColActions,
+    commEdit,
+    commView,
+    commDelete,
+    commDeactivate,
+    commActivate,
+    commResults,
+    commPage,
+    commPrevious,
+    commNext,
+    commTableView,
+    commListView,
+    commDefaultDialogTitle,
+    commType,
+    commTypePercent,
+    commTypeFlat,
+    commValue,
+    commValueHint,
+    commValueDefaultLabel,
+    commSave,
+    commNewRuleTitle,
+    commEditRuleTitle,
+    commWhichOne,
+    commNote,
+    commNoteHint,
+    commSaveRule,
+    commSaveVersion,
+    commViewTitle,
+    commVersions,
+    commVersionLine,
+    commErrPercent,
+    commErrValue,
+    commErrDate,
+    commErrTarget,
+    commSavedRule,
+    commDefaultSaved,
+    commRuleOn,
+    commRuleOff,
+    commDeleted,
+    commUndo,
+    commRestored,
+    commRestoredOff,
+    commDeleteTitle,
+    commDeleteMessage,
+    commCalcTitle,
+    commFare,
+    commSeats,
+    commOperator,
+    commRoute,
+    commBusType,
+    commNotChosen,
+    commCalculate,
+    commResultTitle,
+    commRuleUsed,
+    commAmtOperatorFare,
+    commAmtCommission,
+    commAmtFareShown,
+    commAmtGst,
+    commAmtFee,
+    commAmtCustomer,
+    commAmtOperator,
+    commSeatsRange,
+    commCalcEmpty,
+    commHistoryEmpty,
+    commHistoryEmptyHint,
+    commEmptyTitle,
+    commEmptyMessage,
+    commResultOne,
+    commClear,
+    commExportCsv,
+    commCancel,
+    commClose,
+    commEmptyFilteredTitle,
+    commEmptyFiltered,
+    commClearFilters,
+    commDefaultFallback,
   };
 }

@@ -11,6 +11,7 @@ import 'package:shared_theme/shared_theme.dart';
 import '../app/providers.dart';
 import '../core/ui/gradient_header.dart';
 import '../core/ui/responsive.dart';
+import '../features/ai_assistant/floating_ai_button.dart';
 import '../features/authentication/gate/require_sign_in.dart';
 import '../features/authentication/gate/sign_in_intent.dart';
 import '../l10n/customer_strings.dart';
@@ -124,10 +125,13 @@ class AppShell extends ConsumerWidget {
       ],
     );
 
+    final isHome = current == 0;
+
     if (CustomerLayout.usesNavigationRail(context)) {
       final extended = CustomerLayout.usesExtendedRail(context);
       return Scaffold(
-        appBar: appBar,
+        appBar: isHome ? null : appBar,
+        floatingActionButton: const FloatingAiButton(),
         body: SafeArea(
           top: false,
           child: Row(
@@ -140,6 +144,51 @@ class AppShell extends ConsumerWidget {
                   onDestinationSelected: _select,
                   extended: extended,
                   minExtendedWidth: AbraSizes.sideNavigation,
+                  leading: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AbraSpacing.md,
+                      horizontal: AbraSpacing.sm,
+                    ),
+                    child: extended
+                        ? Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  gradient: AbraGradients.brandDeep,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(
+                                  Icons.directions_bus,
+                                  color: AbraColors.white,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                l10n.text(CustomerStrings.appName),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: AbraColors.navy,
+                                ),
+                              ),
+                            ],
+                          )
+                        : Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              gradient: AbraGradients.brandDeep,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.directions_bus,
+                              color: AbraColors.white,
+                              size: 20,
+                            ),
+                          ),
+                  ),
                   labelType: extended
                       ? NavigationRailLabelType.none
                       : NavigationRailLabelType.all,
@@ -172,8 +221,9 @@ class AppShell extends ConsumerWidget {
     }
 
     return Scaffold(
-      appBar: appBar,
+      appBar: isHome ? null : appBar,
       body: content,
+      floatingActionButton: const FloatingAiButton(),
       bottomNavigationBar: Semantics(
         container: true,
         label: l10n.text(CustomerStrings.navMainLabel),

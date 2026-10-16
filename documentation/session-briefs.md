@@ -6,6 +6,8 @@ How to use: open a new session, paste the whole block of one brief (it already c
 
 Written 12 October 2026. Repository: `D:\New_project\abra-travels`.
 
+**USER'S ORDER FOR EVERY SESSION (14 October 2026, overrides anything below): every screen you build or change must look and behave exactly like its demo screen in `prototypes/` (same columns, filters, tabs, buttons, colours, dialogs, empty states, side menu, table/list toggle, phone and laptop layouts). Do not ship a "normal" generic admin table in its place. Before coding, list every element of the demo page (plan Appendix D to H). After coding, open the real screen next to the demo at laptop and phone widths and fix every difference. A screen is not done, and must not be shown to the user for testing, until that side-by-side check passes. If a shared piece (table, toolbar, tabs, dialog) does not match the demo, fix the shared piece.**
+
 ---
 
 # Brief 1. Coordinator (this session)

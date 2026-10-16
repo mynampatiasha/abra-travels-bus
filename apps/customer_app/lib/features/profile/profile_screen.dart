@@ -98,6 +98,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     CustomerStrings.routeNotificationSettingsTitle,
                     () => context.push(AppRoutes.notificationSettings),
                   ),
+                  ListTile(
+                    minTileHeight: AbraSizes.minTouchTarget,
+                    leading: const Icon(Icons.mail_outline, color: AbraColors.blue),
+                    title: const Text('Messages sent to me'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push(AppRoutes.messagesArchive),
+                  ),
                 ],
               ),
             ),
@@ -152,6 +159,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               expand: true,
               isLoading: _isSigningOut,
               onPressed: _signOut,
+            ),
+            const SizedBox(height: AbraSpacing.md),
+            TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: AbraColors.danger,
+              ),
+              onPressed: () => context.push(AppRoutes.accountDelete),
+              child: const Text('Delete account'),
             ),
           ],
         ],

@@ -24,6 +24,7 @@ abstract final class AppRoutes {
   static const supportContact = '/support/contact';
   static const profileEdit = '/profile/edit';
   static const notificationSettings = '/profile/notifications';
+  static const messagesArchive = '/profile/messages';
 
   // Information pages (open to everyone).
   static const terms = '/terms';

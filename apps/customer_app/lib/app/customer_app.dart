@@ -151,6 +151,7 @@ class _CustomerAppState extends ConsumerState<CustomerApp>
         ],
         onGenerateTitle: (context) =>
             AbraLocalizations.of(context).text(CustomerStrings.appName),
+        builder: (context, child) => child ?? const SizedBox.shrink(),
       ),
     );
   }

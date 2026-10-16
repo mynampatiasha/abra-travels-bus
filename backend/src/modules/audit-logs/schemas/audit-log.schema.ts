@@ -54,6 +54,13 @@ export const AUDIT_ACTIONS = [
   'operator.bank-failed',
   'operator.profile-updated',
   'operator.bank-changed',
+  'commission.rule.created',
+  'commission.rule.versioned',
+  'commission.rule.activated',
+  'commission.rule.deactivated',
+  'commission.rule.deleted',
+  'commission.rule.restored',
+  'commission.default.changed',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

@@ -159,6 +159,9 @@ abstract final class CustomerStrings {
   static const homeTrustOperators = 'homeTrustOperators';
   static const homeTrustFares = 'homeTrustFares';
   static const homeTrustPoints = 'homeTrustPoints';
+  static const homeOffersTitle = 'homeOffersTitle';
+  static const homeOffersViewAll = 'homeOffersViewAll';
+  static const homePopularRoutesTitle = 'homePopularRoutesTitle';
   static const splashTagline = 'splashTagline';
   static const loginBrandTagline = 'loginBrandTagline';
 
