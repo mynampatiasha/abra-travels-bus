@@ -238,6 +238,92 @@ class FakeBackend {
     },
   };
 
+  final List<JsonMap> featureFlags = <JsonMap>[
+    <String, Object?>{
+      'key': 'live_tracking',
+      'name': 'Live tracking',
+      'description': 'Customers see the bus on a map',
+      'on': true,
+      'updatedAt': null,
+    },
+    <String, Object?>{
+      'key': 'whatsapp_chatbot',
+      'name': 'WhatsApp chatbot',
+      'description': 'Booking help on WhatsApp',
+      'on': false,
+      'updatedAt': null,
+    },
+    <String, Object?>{
+      'key': 'ai_support',
+      'name': 'AI support assistant',
+      'description': 'AI answers common questions',
+      'on': false,
+      'updatedAt': null,
+    },
+    <String, Object?>{
+      'key': 'women_safety',
+      'name': 'Women safety',
+      'description': 'SOS and trip sharing',
+      'on': true,
+      'updatedAt': null,
+    },
+    <String, Object?>{
+      'key': 'partner_api',
+      'name': 'Partner API',
+      'description': 'External agents',
+      'on': false,
+      'updatedAt': null,
+    },
+    <String, Object?>{
+      'key': 'dynamic_pricing',
+      'name': 'Dynamic pricing',
+      'description': 'Fares change with demand',
+      'on': false,
+      'updatedAt': null,
+    },
+    <String, Object?>{
+      'key': 'mobile_app',
+      'name': 'Mobile app booking',
+      'description': 'Booking in the customer app',
+      'on': true,
+      'updatedAt': null,
+    },
+    <String, Object?>{
+      'key': 'driver_app',
+      'name': 'Driver app',
+      'description': 'Driver check-in and GPS',
+      'on': true,
+      'updatedAt': null,
+    },
+    <String, Object?>{
+      'key': 'advanced_analytics',
+      'name': 'Advanced analytics',
+      'description': 'Extra reports',
+      'on': false,
+      'updatedAt': null,
+    },
+  ];
+
+  final JsonMap maintenance = <String, Object?>{
+    'scopes': <String, Object?>{
+      'global': false,
+      'customer': false,
+      'operator': false,
+      'partner': false,
+      'admin': false,
+    },
+    'message': 'We are improving Abra Travels. Back soon.',
+    'from': null,
+    'to': null,
+    'activeNow': <String, Object?>{
+      'customer': false,
+      'operator': false,
+      'partner': false,
+      'admin': false,
+    },
+    'updatedAt': null,
+  };
+
   /// Replaces the answer to one request (`METHOD path`), for error cases.
   final Map<String, FakeResponse Function(RecordedRequest request)> overrides =
       <String, FakeResponse Function(RecordedRequest)>{};
@@ -304,6 +390,8 @@ class FakeBackend {
     }
     if (path.startsWith('audit-logs')) return _audit(request);
     if (path.startsWith('catalogue/')) return _catalogue(request);
+    if (path.startsWith('admin/feature-flags')) return _featureFlags(request);
+    if (path.startsWith('admin/maintenance')) return _maintenance(request);
     // The admin lists (`admin/banners`) behave like the catalogue ones.
     if (path.startsWith('admin/')) return _catalogue(request);
     if (path.startsWith('settings/integrations/')) return _settings(request);
@@ -638,6 +726,72 @@ class FakeBackend {
         : (ready ? 'READY' : 'INCOMPLETE');
     current['missing'] = ready ? <String>[] : <String>['setup'];
     return FakeResponse.ok(current);
+  }
+
+  FakeResponse _featureFlags(RecordedRequest request) {
+    if (!persona.permissions.contains('settings.read')) {
+      return FakeResponse.error(403, 'PERMISSION_DENIED');
+    }
+    final method = request.options.method;
+    if (method == 'GET') {
+      return FakeResponse.ok(featureFlags);
+    }
+    if (!persona.permissions.contains('settings.update')) {
+      return FakeResponse.error(403, 'PERMISSION_DENIED');
+    }
+    final parts = request.path.split('/');
+    if (parts.length >= 3 && method == 'PUT') {
+      final key = parts[2];
+      final flag = featureFlags.where((f) => f['key'] == key).firstOrNull;
+      if (flag == null) return FakeResponse.error(404, 'RESOURCE_NOT_FOUND');
+      final body = asJsonMap(request.body! as Map);
+      flag['on'] = body['on'] == true;
+      flag['updatedAt'] = DateTime.now().toUtc().toIso8601String();
+      return FakeResponse.ok(flag);
+    }
+    return FakeResponse.error(404, 'RESOURCE_NOT_FOUND');
+  }
+
+  FakeResponse _maintenance(RecordedRequest request) {
+    if (!persona.permissions.contains('settings.read')) {
+      return FakeResponse.error(403, 'PERMISSION_DENIED');
+    }
+    final method = request.options.method;
+    if (method == 'GET') {
+      return FakeResponse.ok(maintenance);
+    }
+    if (!persona.permissions.contains('settings.update')) {
+      return FakeResponse.error(403, 'PERMISSION_DENIED');
+    }
+    if (method == 'PUT') {
+      final body = asJsonMap(request.body! as Map);
+      final scopes = maintenance['scopes']! as Map<String, Object?>;
+      if (body['scopes'] != null) {
+        final newScopes = body['scopes']! as Map;
+        for (final entry in newScopes.entries) {
+          scopes['${entry.key}'] = entry.value == true;
+        }
+      }
+      if (body.containsKey('message') && body['message'] != null) {
+        maintenance['message'] = body['message'];
+      }
+      if (body.containsKey('from')) {
+        maintenance['from'] = body['from'];
+      }
+      if (body.containsKey('to')) {
+        maintenance['to'] = body['to'];
+      }
+      if (maintenance['from'] != null && maintenance['to'] != null) {
+        final fromStr = '${maintenance['from']}';
+        final toStr = '${maintenance['to']}';
+        if (toStr.isNotEmpty && fromStr.isNotEmpty && toStr.compareTo(fromStr) <= 0) {
+          return FakeResponse.error(400, 'VALIDATION_FAILED', message: 'End must be after start');
+        }
+      }
+      maintenance['updatedAt'] = DateTime.now().toUtc().toIso8601String();
+      return FakeResponse.ok(maintenance);
+    }
+    return FakeResponse.error(404, 'RESOURCE_NOT_FOUND');
   }
 
   /// Records the signed-in persona may see: operator staff get their own
