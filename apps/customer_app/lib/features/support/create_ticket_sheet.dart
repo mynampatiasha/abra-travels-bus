@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_theme/shared_theme.dart';
 
 import '../../core/ui/adaptive_sheet.dart';
-import 'controllers/support_controller.dart';
 import 'models/support_models.dart';
 
 class CreateTicketSheet extends ConsumerStatefulWidget {
@@ -31,7 +30,6 @@ class _CreateTicketSheetState extends ConsumerState<CreateTicketSheet> {
   final _subjectController = TextEditingController();
   final _messageController = TextEditingController();
   bool _hasScreenshot = false;
-  bool _submitting = false;
 
   static const _categories = <(String key, String label)>[
     ('BOOKING', 'Booking issue'),
@@ -46,39 +44,6 @@ class _CreateTicketSheetState extends ConsumerState<CreateTicketSheet> {
     _subjectController.dispose();
     _messageController.dispose();
     super.dispose();
-  }
-
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _submitting = true);
-    try {
-      final ticket = await ref
-          .read(supportTicketsProvider.notifier)
-          .createTicket(
-            subject: _subjectController.text.trim(),
-            category: _category,
-            message: _messageController.text.trim(),
-            bookingId: widget.initialBookingId,
-            attachments: _hasScreenshot ? const ['screenshot.png'] : const [],
-          );
-      if (!mounted) return;
-      Navigator.of(context).pop(ticket);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Ticket ${ticket.id} created successfully!'),
-          backgroundColor: AbraColors.teal,
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to submit ticket: $e'),
-          backgroundColor: AbraColors.danger,
-        ),
-      );
-    }
   }
 
   @override
@@ -212,22 +177,13 @@ class _CreateTicketSheetState extends ConsumerState<CreateTicketSheet> {
                     ),
                   ),
                   const SizedBox(width: AbraSpacing.md),
-                  Expanded(
-                    child: FilledButton(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AbraColors.blue,
+                  const Expanded(
+                    child: Tooltip(
+                      message: 'Not connected yet',
+                      child: FilledButton(
+                        onPressed: null,
+                        child: Text('Submit Ticket'),
                       ),
-                      onPressed: _submitting ? null : _submit,
-                      child: _submitting
-                          ? const SizedBox(
-                              height: 18,
-                              width: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text('Submit Ticket'),
                     ),
                   ),
                 ],

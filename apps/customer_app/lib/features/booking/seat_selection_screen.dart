@@ -265,13 +265,25 @@ class _SeatBody extends StatelessWidget {
               AsyncValueView<SeatMap>(
                 value: mapValue,
                 onRetry: onRetry,
-                data: (context, map) => SeatGrid(
-                  map: map,
-                  deck: map.hasDecks ? deck : SeatDeck.lower,
-                  chosenIds: chosenIds,
-                  currencyCode: trip.currency,
-                  onSeatTap: onSeatTap,
-                ),
+                data: (context, map) => map.seats.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: AbraSpacing.xxl),
+                          child: Text(
+                            'Not connected yet - built in Phase 3',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AbraColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      )
+                    : SeatGrid(
+                        map: map,
+                        deck: map.hasDecks ? deck : SeatDeck.lower,
+                        chosenIds: chosenIds,
+                        currencyCode: trip.currency,
+                        onSeatTap: onSeatTap,
+                      ),
               ),
           ],
         ),

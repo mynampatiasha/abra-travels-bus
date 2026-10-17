@@ -116,8 +116,8 @@ class _PortalShellState extends ConsumerState<PortalShell> {
   }
 
   int _badgeFor(String route) {
-    if (route == PortalRoutes.dashboard) return 1;
-    if (route == PortalRoutes.driverReports) return 6;
+    if (route == PortalRoutes.dashboard) return 0;
+    if (route == PortalRoutes.driverReports) return 0;
     if (route == PortalRoutes.notifications) return _notifCount;
     return 0;
   }
@@ -153,7 +153,7 @@ class _PortalShellState extends ConsumerState<PortalShell> {
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'Kaveri Express',
+                'Operator Portal',
                 style: TextStyle(
                   color: AbraColors.onNavyMuted,
                   fontSize: 12,
@@ -815,7 +815,7 @@ class _AiAssistantDialogState extends State<_AiAssistantDialog> {
             ),
             const Divider(),
             const SizedBox(height: 8),
-            const Text('Suggested questions for Kaveri Express:', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+            const Text('Suggested questions:', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -825,8 +825,8 @@ class _AiAssistantDialogState extends State<_AiAssistantDialog> {
                   avatar: const Icon(Icons.trending_down, size: 16, color: AbraColors.orangeDark),
                   label: const Text('Which trips have low occupancy?'),
                   onPressed: () => _triggerPrompt(
-                    'Low Occupancy Trips (Next 48 Hours)',
-                    'Trip TRP2 (BLR → MAA) has only 12 / 45 seats booked (26.6% occupancy). We suggest launching a 10% flash discount to boost last-minute bookings.',
+                    'Low Occupancy Trips',
+                    'Occupancy insights are not connected yet - built in Phase 7.',
                     actionLabel: 'Create Promo Offer',
                     actionRoute: PortalRoutes.offers,
                   ),
@@ -836,7 +836,7 @@ class _AiAssistantDialogState extends State<_AiAssistantDialog> {
                   label: const Text('7-day earnings summary'),
                   onPressed: () => _triggerPrompt(
                     '7-Day Earnings Summary',
-                    'Kaveri Express generated ₹1,29,000 net earnings over the last 7 days from 48 confirmed bookings across 6 scheduled trips. Platform commission withheld was ₹9,030 (7%).',
+                    'Earnings summary is not connected yet - built in Phase 6.',
                     actionLabel: 'View Detailed Settlements',
                     actionRoute: PortalRoutes.earnings,
                   ),
@@ -846,7 +846,7 @@ class _AiAssistantDialogState extends State<_AiAssistantDialog> {
                   label: const Text('Expiring bus documents'),
                   onPressed: () => _triggerPrompt(
                     'Expiring Vehicle Documents',
-                    'Bus TS09 UB 4521 (Kaveri Gold 1) insurance expires in 6 days (2025-08-15). Please renew and upload new policy documents to avoid suspension of scheduled trips.',
+                    'Vehicle document tracking is not connected yet - built in Phase 2.',
                     actionLabel: 'Manage Bus Documents',
                     actionRoute: PortalRoutes.buses,
                   ),
@@ -856,7 +856,7 @@ class _AiAssistantDialogState extends State<_AiAssistantDialog> {
                   label: const Text('Driver duty & compliance'),
                   onPressed: () => _triggerPrompt(
                     'Driver Compliance Status',
-                    '3 drivers are currently active. Ramesh K and Suresh M completed all pre-trip inspections with zero sobriety flags. Driver Anand R has a licence renewal coming up in 60 days.',
+                    'Driver compliance logs are not connected yet - built in Phase 9.',
                     actionLabel: 'View Driver Reports',
                     actionRoute: PortalRoutes.driverReports,
                   ),

@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/payment_models.dart';
-import 'mock_payment_repository.dart';
 
 /// Pays for a booking. Screens depend on this interface only; the backend
 /// replaces [MockPaymentRepository] by providing [ApiPaymentRepository].
@@ -26,6 +25,22 @@ class ApiPaymentRepository implements PaymentRepository {
   }) => throw UnimplementedError('POST /payments/orders');
 }
 
+/// Not connected yet - built in Phase 3.
+class NotConnectedPaymentRepository implements PaymentRepository {
+  const NotConnectedPaymentRepository();
+
+  @override
+  Future<PaymentResult> pay({
+    required String bookingId,
+    required int amountPaise,
+    required PaymentInstrument instrument,
+  }) async =>
+      const PaymentResult.failed(
+        failureCode: 'NOT_CONNECTED',
+        reference: 'REF-PHASE-3',
+      );
+}
+
 final paymentRepositoryProvider = Provider<PaymentRepository>(
-  (ref) => const MockPaymentRepository(),
+  (ref) => const NotConnectedPaymentRepository(),
 );

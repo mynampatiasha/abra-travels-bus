@@ -4,8 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_localization/shared_localization.dart';
 import 'package:shared_theme/shared_theme.dart';
 import 'package:shared_ui/shared_ui.dart';
-
-import '../../core/async_value_view.dart';
 import '../../core/ui/gradient_header.dart';
 import '../../core/ui/responsive.dart';
 import '../../core/ui/tonal_button.dart';
@@ -41,11 +39,19 @@ class LiveTrackingScreen extends ConsumerWidget {
               }),
       ),
       bottomNavigationBar: _TrackBar(bookingId: bookingId),
-      body: AsyncValueView<TrackingSnapshot>(
-        value: value,
-        onRetry: () => ref.invalidate(trackingProvider(bookingId)),
-        data: (context, snapshot) =>
+      body: value.when(
+        data: (snapshot) =>
             _TrackBody(bookingId: bookingId, snapshot: snapshot),
+        loading: () => const AbraLoadingView(),
+        error: (_, _) => const Center(
+          child: Padding(
+            padding: EdgeInsets.all(AbraSpacing.xxl),
+            child: Text(
+              'Not connected yet - built in Phase 5',
+              style: TextStyle(color: AbraColors.textSecondary),
+            ),
+          ),
+        ),
       ),
     );
   }

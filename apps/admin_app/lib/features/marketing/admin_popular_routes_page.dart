@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_theme/shared_theme.dart';
 
-import 'marketing_mock_store.dart';
-
 /// Popular Routes screen matching prototypes/admin_demo_model.html.
 class AdminPopularRoutesPage extends ConsumerStatefulWidget {
   const AdminPopularRoutesPage({super.key});
@@ -16,7 +14,6 @@ class AdminPopularRoutesPage extends ConsumerStatefulWidget {
 class _AdminPopularRoutesPageState
     extends ConsumerState<AdminPopularRoutesPage> {
   final _searchController = TextEditingController();
-  String _searchQuery = '';
 
   @override
   void dispose() {
@@ -26,21 +23,10 @@ class _AdminPopularRoutesPageState
 
   @override
   Widget build(BuildContext context) {
-    final marketingState = ref.watch(marketingStoreProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final surfaceColor = isDark ? const Color(0xFF13222F) : Colors.white;
     final borderColor =
         isDark ? const Color(0xFF2A3E50) : const Color(0xFFE2E8F0);
-
-    final sortedRoutes = List<PopularRouteRecord>.from(marketingState.popularRoutes)
-      ..sort((a, b) => a.order.compareTo(b.order));
-
-    final filtered = sortedRoutes.where((r) {
-      if (_searchQuery.isNotEmpty) {
-        return r.route.toLowerCase().contains(_searchQuery.toLowerCase());
-      }
-      return true;
-    }).toList();
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -99,7 +85,7 @@ class _AdminPopularRoutesPageState
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Shown on the customer app home and the public website.',
+                      'Curated list of routes shown prominently on the customer app home screen.',
                       style: TextStyle(
                         fontSize: 14,
                         color: isDark
@@ -109,13 +95,16 @@ class _AdminPopularRoutesPageState
                     ),
                   ],
                 ),
-                ElevatedButton.icon(
-                  onPressed: () => _showAddRouteDialog(context, sortedRoutes),
-                  icon: const Icon(Icons.add, size: 16),
-                  label: const Text('Add route'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AbraColors.blue,
-                    foregroundColor: Colors.white,
+                Tooltip(
+                  message: 'Not connected yet',
+                  child: ElevatedButton.icon(
+                    onPressed: null,
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text('Add popular route'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AbraColors.blue,
+                      foregroundColor: Colors.white,
+                    ),
                   ),
                 ),
               ],
@@ -134,21 +123,9 @@ class _AdminPopularRoutesPageState
                 height: 38,
                 child: TextField(
                   controller: _searchController,
-                  onChanged: (val) {
-                    setState(() => _searchQuery = val.trim());
-                  },
                   decoration: InputDecoration(
-                    hintText: 'Search popular routes...',
+                    hintText: 'Search routes by origin, destination...',
                     prefixIcon: const Icon(Icons.search, size: 18),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, size: 16),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() => _searchQuery = '');
-                            },
-                          )
-                        : null,
                     contentPadding: EdgeInsets.zero,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(6),
@@ -157,201 +134,56 @@ class _AdminPopularRoutesPageState
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
-            // Routes DataTable
+            // Content Table Card
             Container(
               decoration: BoxDecoration(
                 color: surfaceColor,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: borderColor),
               ),
-              child: filtered.isEmpty
-                  ? const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(32),
-                        child: Text('No routes found'),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      showCheckboxColumn: false,
+                      headingRowColor: WidgetStatePropertyAll(
+                        isDark ? const Color(0xFF102030) : const Color(0xFFF8FAFB),
                       ),
-                    )
-                  : SingleChildScrollView(
-                      child: DataTable(
-                        headingRowColor: WidgetStateProperty.all(
-                          isDark
-                              ? const Color(0xFF1E293B)
-                              : const Color(0xFFF8FAFC),
-                        ),
-                        columns: const [
-                          DataColumn(label: Text('Order')),
-                          DataColumn(label: Text('Route')),
-                          DataColumn(label: Text('Searches (30 d)')),
-                          DataColumn(label: Text('Bookings (30 d)')),
-                          DataColumn(label: Text('Shown')),
-                        ],
-                        rows: filtered.asMap().entries.map((entry) {
-                          final idx = entry.key;
-                          final r = entry.value;
-                          final isFirst = idx == 0;
-                          final isLast = idx == filtered.length - 1;
-
-                          return DataRow(
-                            cells: [
-                              DataCell(
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      '${r.order}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    IconButton(
-                                      icon: const Icon(Icons.arrow_upward,
-                                          size: 16),
-                                      tooltip: 'Move up',
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                      onPressed: isFirst
-                                          ? null
-                                          : () {
-                                              ref
-                                                  .read(marketingStoreProvider
-                                                      .notifier)
-                                                  .movePopularRoute(r.id, -1);
-                                            },
-                                    ),
-                                    const SizedBox(width: 4),
-                                    IconButton(
-                                      icon: const Icon(Icons.arrow_downward,
-                                          size: 16),
-                                      tooltip: 'Move down',
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                      onPressed: isLast
-                                          ? null
-                                          : () {
-                                              ref
-                                                  .read(marketingStoreProvider
-                                                      .notifier)
-                                                  .movePopularRoute(r.id, 1);
-                                            },
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              DataCell(
-                                Text(
-                                  r.route,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w600),
-                                ),
-                              ),
-                              DataCell(Text('${r.searches}')),
-                              DataCell(Text('${r.bookings}')),
-                              DataCell(
-                                Switch(
-                                  value: r.active,
-                                  activeTrackColor: AbraColors.blue,
-                                  onChanged: (_) {
-                                    ref
-                                        .read(marketingStoreProvider.notifier)
-                                        .togglePopularRoute(r.id);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(r.active
-                                            ? 'Hidden from home screen'
-                                            : 'Shown on home screen'),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
-                          );
-                        }).toList(),
-                      ),
+                      columns: const <DataColumn>[
+                        DataColumn(label: Text('Order', style: TextStyle(fontWeight: FontWeight.w700))),
+                        DataColumn(label: Text('Route', style: TextStyle(fontWeight: FontWeight.w700))),
+                        DataColumn(label: Text('Starting Fare', style: TextStyle(fontWeight: FontWeight.w700))),
+                        DataColumn(label: Text('Daily Buses', style: TextStyle(fontWeight: FontWeight.w700))),
+                        DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.w700))),
+                        DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.w700))),
+                      ],
+                      rows: const <DataRow>[],
                     ),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.all(AbraSpacing.xxl),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        Icon(Icons.star_outline, size: 48, color: AbraColors.textDisabled),
+                        SizedBox(height: AbraSpacing.md),
+                        Text(
+                          'Not connected yet - built in Phase 7',
+                          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
       ),
-    );
-  }
-
-  void _showAddRouteDialog(
-      BuildContext context, List<PopularRouteRecord> existing) {
-    const candidateRoutes = [
-      'Pune to Mumbai',
-      'Mumbai to Pune',
-      'Hyderabad to Warangal',
-      'Warangal to Hyderabad',
-      'Vijayawada to Visakhapatnam',
-      'Visakhapatnam to Vijayawada',
-      'Bengaluru to Mysuru',
-      'Mysuru to Bengaluru',
-      'Coimbatore to Kochi',
-    ];
-
-    final available = candidateRoutes
-        .where((r) => !existing.any((e) => e.route == r))
-        .toList();
-
-    String selected = available.isNotEmpty ? available.first : '';
-
-    showDialog<void>(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setDialogState) {
-            return AlertDialog(
-              title: const Text('Add popular route'),
-              content: available.isEmpty
-                  ? const Text('All available routes are already featured.')
-                  : DropdownButtonFormField<String>(
-                      initialValue: selected,
-                      decoration: const InputDecoration(
-                        labelText: 'Select route',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: available.map((r) {
-                        return DropdownMenuItem(value: r, child: Text(r));
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) {
-                          setDialogState(() => selected = val);
-                        }
-                      },
-                    ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Cancel'),
-                ),
-                if (available.isNotEmpty)
-                  ElevatedButton(
-                    onPressed: () {
-                      if (selected.isEmpty) return;
-                      ref
-                          .read(marketingStoreProvider.notifier)
-                          .addPopularRoute(selected);
-                      Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Added $selected to popular routes')),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AbraColors.blue,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text('Add'),
-                  ),
-              ],
-            );
-          },
-        );
-      },
     );
   }
 }

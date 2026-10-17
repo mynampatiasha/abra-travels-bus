@@ -136,130 +136,18 @@ class ClientLiveTrackingScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(AbraRadius.md),
               border: Border.all(color: AbraColors.border),
             ),
-            child: Stack(
-              children: [
-                // Route highway visualization
-                Center(
-                  child: Container(
-                    height: 4,
-                    width: double.infinity,
-                    margin: const EdgeInsets.symmetric(horizontal: 40),
-                    decoration: BoxDecoration(
-                      color: AbraColors.deepBlue.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                // Route nodes
-                Positioned(
-                  left: 40,
-                  top: 155,
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 14,
-                        height: 14,
-                        decoration: BoxDecoration(
-                          color: AbraColors.teal,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text('Bengaluru', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AbraColors.navy)),
-                    ],
-                  ),
-                ),
-                Positioned(
-                  right: 40,
-                  top: 155,
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 14,
-                        height: 14,
-                        decoration: BoxDecoration(
-                          color: AbraColors.deepBlue,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text('Hyderabad', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AbraColors.navy)),
-                    ],
-                  ),
-                ),
-                // Active bus pulse marker
-                if (kMockLive.isNotEmpty) ...[
-                  Positioned(
-                    left: 200,
-                    top: 130,
-                    child: Column(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AbraColors.navy,
-                            borderRadius: BorderRadius.circular(AbraRadius.sm),
-                            boxShadow: AbraShadows.card,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.directions_bus, size: 12, color: Colors.white),
-                              const SizedBox(width: 4),
-                              Text('${kMockLive.first['bus']} • ${kMockLive.first['speed']} km/h', style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w700)),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Container(
-                          width: 16,
-                          height: 16,
-                          decoration: BoxDecoration(
-                            color: AbraColors.danger,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AbraColors.danger.withValues(alpha: 0.5),
-                                blurRadius: 8,
-                                spreadRadius: 2,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+            child: const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.map_outlined, size: 48, color: AbraColors.textDisabled),
+                  SizedBox(height: 12),
+                  Text(
+                    'Not connected yet - built in Phase 5',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AbraColors.textPrimary),
                   ),
                 ],
-                // Bottom coordinates overlay
-                Positioned(
-                  bottom: 12,
-                  left: 12,
-                  right: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      borderRadius: BorderRadius.circular(AbraRadius.sm),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          kMockLive.isNotEmpty ? 'NH 44 Corridor · Anantapur Sector' : 'GPS Highway Telemetry',
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-                        ),
-                        Text(
-                          kMockLive.isNotEmpty ? 'Lat: 15.3173° N, Lng: 75.7139° E' : 'No active buses on road',
-                          style: const TextStyle(fontSize: 11, color: AbraColors.textSecondary),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ],
@@ -295,9 +183,10 @@ class ClientLiveTrackingScreen extends StatelessWidget {
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 32),
               child: Center(
-                child: Text('No bus is running\nBuses appear here when the driver starts the trip in the driver app.',
+                child: Text(
+                  'Not connected yet - built in Phase 5',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: AbraColors.textSecondary, fontSize: 13),
+                  style: TextStyle(color: AbraColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600),
                 ),
               ),
             )
@@ -340,18 +229,23 @@ class ClientLiveTrackingScreen extends StatelessWidget {
                         Text('${l['speed']} km/h · ${relativeTime(l['ping'] as String? ?? '')}',
                           style: const TextStyle(fontSize: 12, color: AbraColors.textSecondary),
                         ),
-                        OutlinedButton.icon(
-                          icon: const Icon(Icons.phone, size: 14),
-                          label: const Text('Call'),
-                          style: OutlinedButton.styleFrom(
-                            visualDensity: VisualDensity.compact,
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        Tooltip(
+                          message: 'Not connected yet',
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            ),
+                            onPressed: null,
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.phone, size: 14),
+                                SizedBox(width: 4),
+                                Text('Call'),
+                              ],
+                            ),
                           ),
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Calling driver ${l['driver']}...')),
-                            );
-                          },
                         ),
                       ],
                     ),
@@ -382,7 +276,7 @@ class ClientLiveTrackingScreen extends StatelessWidget {
           if (kMockSos.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 24),
-              child: Center(child: Text('No SOS on your buses', style: TextStyle(color: AbraColors.textSecondary))),
+              child: Center(child: Text('Not connected yet - built in Phase 5', style: TextStyle(color: AbraColors.textSecondary, fontWeight: FontWeight.w600))),
             )
           else
             SizedBox(
