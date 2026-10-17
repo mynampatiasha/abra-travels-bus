@@ -78,9 +78,11 @@ export const SYSTEM_ROLES: readonly RoleDefinition[] = [
     ],
   },
   {
+    // The admin demo's "Accounts": money pages, read-only. Payments, refunds and settlements are
+    // added here when those features exist.
     key: 'ACCOUNTS',
     name: 'Accounts',
-    description: 'Handles financial commissions, payouts and audit reporting.',
+    description: 'Looks at commission and the audit trail for the money side of the platform.',
     userType: 'STAFF',
     dataScopeType: 'ALL',
     permissionKeys: ['commissions.read', 'commissions.export', 'audit.read'],
