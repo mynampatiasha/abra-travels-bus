@@ -37,7 +37,7 @@ class PortalKpiCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AbraRadius.lg),
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
             border: Border.all(
               color: isHighlighted ? AbraColors.blue : borderCol,
@@ -60,14 +60,19 @@ class PortalKpiCard extends StatelessWidget {
               const SizedBox(width: AbraSpacing.md),
               Expanded(
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      value,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: textCol,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        value,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: textCol,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 2),

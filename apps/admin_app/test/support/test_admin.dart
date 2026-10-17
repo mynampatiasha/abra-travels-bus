@@ -872,9 +872,15 @@ String locationOf(WidgetTester tester) => containerOf(
   tester,
 ).read(adminRouterProvider).routerDelegate.currentConfiguration.uri.path;
 
-Future<void> open(WidgetTester tester, String location) async {
+Future<void> open(WidgetTester tester, String location, {bool settleDown = true}) async {
   containerOf(tester).read(adminRouterProvider).go(location);
-  await settle(tester);
+  if (settleDown) {
+    await settle(tester);
+  } else {
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+  }
 }
 
 /// Lets file uploads (`multipart/form-data`) through to the fake backend,

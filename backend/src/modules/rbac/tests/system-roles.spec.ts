@@ -29,11 +29,12 @@ describe('system roles', () => {
         'DRIVER',
         'CONDUCTOR',
         'SUPPORT',
+        'ACCOUNTS',
         'PARTNER',
         'CUSTOMER',
       ].sort(),
     );
-    expect(SYSTEM_ROLE_KEYS).toHaveLength(12);
+    expect(SYSTEM_ROLE_KEYS).toHaveLength(13);
   });
 
   it('passes its own start-up validation', () => {
@@ -79,6 +80,7 @@ describe('system roles', () => {
     ['SUPER_ADMIN', 'STAFF', 'ALL'],
     ['ADMIN', 'STAFF', 'ALL'],
     ['SUPPORT', 'STAFF', 'ALL'],
+    ['ACCOUNTS', 'STAFF', 'ALL'],
     ['OPERATOR_ADMIN', 'OPERATOR_STAFF', 'OWN_OPERATOR'],
     ['OPERATOR_MANAGER', 'OPERATOR_STAFF', 'OWN_OPERATOR'],
     ['BOOKING_STAFF', 'OPERATOR_STAFF', 'OWN_OPERATOR'],

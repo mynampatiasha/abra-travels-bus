@@ -45,7 +45,15 @@ void main() {
       await openSettings(tester, Persona.superAdmin, card: null);
 
       expect(locationOf(tester), AdminRoutes.settings);
-      expect(find.widgetWithText(ListTile, 'Settings'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byWidgetPredicate(
+            (w) => w.runtimeType.toString() == '_SideNavigation',
+          ),
+          matching: find.text('Settings'),
+        ),
+        findsOneWidget,
+      );
       // one card for each connection, with where it stands
       expect(find.text('WhatsApp'), findsOneWidget);
       expect(find.text('Email'), findsOneWidget);
@@ -115,7 +123,15 @@ void main() {
         'cannot open the page', (tester) async {
       final app = await openSettings(tester, Persona.support, card: null);
 
-      expect(find.widgetWithText(ListTile, 'Settings'), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byWidgetPredicate(
+            (w) => w.runtimeType.toString() == '_SideNavigation',
+          ),
+          matching: find.text('Settings'),
+        ),
+        findsNothing,
+      );
       expect(find.text('Test connection'), findsNothing);
       expect(app.requestsTo('settings/integrations/whatsapp'), isEmpty);
     });

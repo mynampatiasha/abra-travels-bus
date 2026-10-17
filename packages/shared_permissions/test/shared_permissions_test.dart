@@ -370,7 +370,7 @@ void main() {
       final backend = RegExp(
         r"'([A-Z_]+)'",
       ).allMatches(list).map((m) => m.group(1)!).toSet();
-      expect(backend, hasLength(12));
+      expect(backend, hasLength(13));
       expect(RoleKeys.all, backend);
     });
   });

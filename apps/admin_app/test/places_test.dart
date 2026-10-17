@@ -71,8 +71,20 @@ void main() {
       }
       expect(find.text('Hyderabad Bus Stand'), findsOneWidget);
       expect(find.text('Boarding'), findsOneWidget);
-      expect(find.text('Admin'), findsOneWidget);
-      expect(find.text('4'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(DataTable),
+          matching: find.text('Admin'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(DataTable),
+          matching: find.text('4'),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('?tab=requests opens Operator requests; Approve sends it', (

@@ -79,7 +79,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Exported dashboard data to CSV'),
+                            content: Text('Not connected yet'),
                             behavior: SnackBarBehavior.floating,
                           ),
                         );

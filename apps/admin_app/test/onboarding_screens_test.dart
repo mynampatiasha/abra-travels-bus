@@ -1,7 +1,6 @@
 import 'package:admin_app/core/browser_files.dart' as browser;
 import 'package:admin_app/core/csv.dart';
 import 'package:admin_app/routing/admin_routes.dart';
-import 'package:admin_app/shell/admin_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_network/shared_network.dart';
@@ -42,15 +41,19 @@ void main() {
       await openAs(tester, FakeBackend(Persona.superAdmin), AdminRoutes.trips);
       expect(
         find.descendant(
-          of: find.byType(AdminShell),
-          matching: find.widgetWithText(ListTile, 'Invitations'),
+          of: find.byWidgetPredicate(
+            (w) => w.runtimeType.toString() == '_SideNavigation',
+          ),
+          matching: find.text('Invitations'),
         ),
         findsOneWidget,
       );
       expect(
         find.descendant(
-          of: find.byType(AdminShell),
-          matching: find.widgetWithText(ListTile, 'Reviews'),
+          of: find.byWidgetPredicate(
+            (w) => w.runtimeType.toString() == '_SideNavigation',
+          ),
+          matching: find.text('KYC reviews'),
         ),
         findsOneWidget,
       );
@@ -58,8 +61,24 @@ void main() {
 
     testWidgets('does not offer them to read-only staff', (tester) async {
       await openAs(tester, FakeBackend(Persona.support), AdminRoutes.trips);
-      expect(find.widgetWithText(ListTile, 'Invitations'), findsNothing);
-      expect(find.widgetWithText(ListTile, 'Reviews'), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byWidgetPredicate(
+            (w) => w.runtimeType.toString() == '_SideNavigation',
+          ),
+          matching: find.text('Invitations'),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: find.byWidgetPredicate(
+            (w) => w.runtimeType.toString() == '_SideNavigation',
+          ),
+          matching: find.text('KYC reviews'),
+        ),
+        findsNothing,
+      );
       await open(tester, AdminRoutes.reviews);
       expect(find.text('Alpha Lines'), findsNothing);
     });

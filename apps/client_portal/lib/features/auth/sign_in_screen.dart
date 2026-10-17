@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_authentication/shared_authentication.dart';
@@ -12,9 +11,7 @@ import 'package:shared_ui/shared_ui.dart';
 
 import '../../app/providers.dart';
 import '../../core/failure_text.dart';
-import '../../core/mock/abra_mock_db.dart';
 import '../../l10n/portal_strings.dart';
-import '../../routing/portal_routes.dart';
 import 'sign_in_controller.dart';
 
 /// Shown while the stored session is checked; offers a retry when the
@@ -89,172 +86,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     await _controller.verify(
       code: _useRecovery ? null : value,
       recoveryCode: _useRecovery ? value : null,
-    );
-  }
-
-  void _showSocialAccountChooser(BuildContext context, String provider) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) {
-        final accounts = [
-          {
-            'name': 'Ramesh Kumar',
-            'email': 'ramesh@kaveriexpress.in',
-            'company': 'Kaveri Express',
-            'role': 'Owner',
-            'status': 'VERIFIED',
-            'route': PortalRoutes.dashboard,
-          },
-          {
-            'name': 'Geetha Srinivas',
-            'email': 'geetha@kaveriexpress.in',
-            'company': 'Kaveri Express',
-            'role': 'Manager',
-            'status': 'VERIFIED',
-            'route': PortalRoutes.dashboard,
-          },
-          {
-            'name': 'Mohan Das',
-            'email': 'mohan@kaveriexpress.in',
-            'company': 'Kaveri Express',
-            'role': 'Booking Staff',
-            'status': 'VERIFIED',
-            'route': PortalRoutes.dashboard,
-          },
-          {
-            'name': 'Sunil Varma',
-            'email': 'sunil@newhorizontravels.com',
-            'company': 'New Horizon Travels',
-            'role': 'New Partner',
-            'status': 'KYC_DRAFT',
-            'route': PortalRoutes.kycVerification,
-          },
-        ];
-
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AbraRadius.lg),
-          ),
-          title: Row(
-            children: [
-              Icon(
-                provider == 'Apple' ? Icons.apple : Icons.account_circle,
-                color: AbraColors.blue,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Continue with $provider',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          content: SizedBox(
-            width: 420,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Choose an account for Abra Travels Partner Portal:',
-                  style: TextStyle(
-                    color: AbraColors.textSecondary,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                for (final acc in accounts)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: AbraColors.border),
-                      borderRadius: BorderRadius.circular(AbraRadius.md),
-                    ),
-                    child: ListTile(
-                      dense: true,
-                      leading: CircleAvatar(
-                        backgroundColor: AbraColors.lightBlue,
-                        child: Text(
-                          (acc['name'] as String).substring(0, 1),
-                          style: const TextStyle(
-                            color: AbraColors.deepBlue,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                      title: Text(
-                        acc['name'] as String,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      subtitle: Text(
-                        '${acc['email']} • ${acc['company']}',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      trailing: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: acc['status'] == 'VERIFIED'
-                              ? AbraColors.tealContainer
-                              : AbraColors.orangeContainer,
-                          borderRadius: BorderRadius.circular(99),
-                        ),
-                        child: Text(
-                          acc['role'] as String,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: acc['status'] == 'VERIFIED'
-                                ? AbraColors.tealDark
-                                : AbraColors.orangeDark,
-                          ),
-                        ),
-                      ),
-                      onTap: () {
-                        Navigator.of(ctx).pop();
-                        final name = acc['name'] as String;
-                        if (name == 'Sunil Varma') {
-                          kActiveKycState = 'DRAFT';
-                          kCurrentRole = 'Owner';
-                        } else if (name == 'Ramesh Kumar') {
-                          kActiveKycState = 'APPROVED';
-                          kCurrentRole = 'Owner';
-                        } else if (name == 'Geetha Srinivas') {
-                          kActiveKycState = 'APPROVED';
-                          kCurrentRole = 'Manager';
-                        } else if (name == 'Mohan Das') {
-                          kActiveKycState = 'APPROVED';
-                          kCurrentRole = 'Booking Staff';
-                        }
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Signed in as ${acc['name']} (${acc['company']})',
-                            ),
-                            backgroundColor: AbraColors.tealDark,
-                          ),
-                        );
-                        context.go(acc['route'] as String);
-                      },
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel'),
-            ),
-          ],
-        );
-      },
     );
   }
 
@@ -364,20 +195,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               variant: AbraButtonVariant.callToAction,
               expand: true,
               isLoading: state.isBusy,
-              onPressed: () {
-                if (_email.text.trim().isEmpty) {
-                  _showSocialAccountChooser(context, 'Abra Partner');
-                } else {
-                  _submitPassword();
-                }
-              },
+              onPressed: _submitPassword,
             ),
             const SizedBox(height: AbraSpacing.md),
-            Row(
+            const Row(
               children: [
                 Expanded(child: Divider(color: AbraColors.divider)),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: EdgeInsets.symmetric(horizontal: 12),
                   child: Text(
                     'OR',
                     style: TextStyle(
@@ -391,69 +216,52 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               ],
             ),
             const SizedBox(height: AbraSpacing.md),
-            // Continue with Google
-            OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AbraRadius.md),
-                ),
-                side: BorderSide(color: AbraColors.border),
-                backgroundColor: Colors.white,
-              ),
-              onPressed: () => _showSocialAccountChooser(context, 'Google'),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.network(
-                    'https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png',
-                    width: 20,
-                    height: 20,
-                    errorBuilder: (_, __, ___) => const Icon(
-                      Icons.g_mobiledata,
-                      color: Colors.red,
-                      size: 24,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final provider in SocialSignInProvider.values) ...[
+                  SizedBox(
+                    width: 48,
+                    child: GoogleSignInButton(
+                      iconOnly: true,
+                      showTerms: false,
+                      termsAccepted: _terms,
+                      enabled: !state.isBusy,
+                      provider: provider,
+                      exchange: (token, password) async {
+                        final manager = ref.read(sessionManagerProvider);
+                        final result = provider == SocialSignInProvider.apple
+                            ? await manager.signInWithApple(
+                                token,
+                                audience: 'CLIENT',
+                                linkPassword: password,
+                              )
+                            : await manager.signInWithGoogle(
+                                token,
+                                audience: 'CLIENT',
+                                linkPassword: password,
+                              );
+                        if (result is MfaChallenge) {
+                          _controller.acceptGoogleChallenge(result);
+                        }
+                      },
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'Continue with Google',
-                    style: TextStyle(
-                      color: AbraColors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                    ),
-                  ),
+                  const SizedBox(width: 16),
                 ],
-              ),
-            ),
-            const SizedBox(height: AbraSpacing.sm),
-            // Continue with Apple
-            OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AbraRadius.md),
-                ),
-                side: BorderSide(color: AbraColors.border),
-                backgroundColor: Colors.black,
-              ),
-              onPressed: () => _showSocialAccountChooser(context, 'Apple'),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.apple, color: Colors.white, size: 22),
-                  SizedBox(width: 10),
-                  Text(
-                    'Continue with Apple',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                    ),
+                SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: IconButton.outlined(
+                    tooltip: 'Continue with phone number',
+                    onPressed: !_terms || state.isBusy
+                        ? null
+                        : () => showClientLoginMethods(context, signIn: true),
+                    icon: const Icon(Icons.phone_outlined),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
             const SizedBox(height: AbraSpacing.md),
             const Text(
