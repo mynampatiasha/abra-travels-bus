@@ -1077,135 +1077,170 @@ class _BusesAdminManageScreenState
   Widget _buildTableView(BuildContext context, List<JsonMap> items, bool canManage) {
     final allSelected = items.isNotEmpty && items.every((i) => _selectedBusIds.contains('${i['id']}'));
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minWidth: 1000),
-        child: DataTable(
-          headingRowColor: WidgetStateProperty.all(AbraColors.lightGray.withValues(alpha: 0.5)),
-          horizontalMargin: 16,
-          columnSpacing: 20,
-          columns: [
-            DataColumn(
-              label: Checkbox(
-                value: allSelected,
-                onChanged: (v) {
-                  setState(() {
-                    if (v == true) {
-                      _selectedBusIds.addAll(items.map((i) => '${i['id']}'));
-                    } else {
-                      _selectedBusIds.clear();
-                    }
-                  });
-                },
-              ),
-            ),
-            const DataColumn(label: Text('Registration', style: TextStyle(fontWeight: FontWeight.w700))),
-            const DataColumn(label: Text('Operator', style: TextStyle(fontWeight: FontWeight.w700))),
-            const DataColumn(label: Text('Type', style: TextStyle(fontWeight: FontWeight.w700))),
-            const DataColumn(label: Text('Seats', style: TextStyle(fontWeight: FontWeight.w700))),
-            const DataColumn(label: Text('Layout', style: TextStyle(fontWeight: FontWeight.w700))),
-            const DataColumn(label: Text('Insurance', style: TextStyle(fontWeight: FontWeight.w700))),
-            const DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.w700))),
-            const DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.w700))),
-          ],
-          rows: items.map((bus) {
-            final id = '${bus['id']}';
-            final isSelected = _selectedBusIds.contains(id);
-            final status = '${bus['status'] ?? 'ACTIVE'}';
-            final regNumber = '${bus['registrationNumber'] ?? '—'}';
-            final busName = '${bus['name'] ?? ''}';
-            final opName = '${bus['operatorName'] ?? bus['operatorId'] ?? '—'}';
-            final typeName = '${bus['busTypeName'] ?? bus['busTypeId'] ?? '—'}';
-            final seats = '${bus['seatCapacity'] ?? 40}';
-            final layout = '${bus['seatLayoutType'] ?? '2+2 Seater'}';
-            final insuranceRaw = bus['insuranceExpiryDate'];
-            final insuranceFormatted = _formatInsuranceDate(insuranceRaw);
+    const double rowHeight = 56.0;
+    const double headingHeight = 56.0;
 
-            return DataRow(
-              selected: isSelected,
-              onSelectChanged: (v) {
+    final dataTable = SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: DataTable(
+        headingRowHeight: headingHeight,
+        dataRowMinHeight: rowHeight,
+        dataRowMaxHeight: rowHeight,
+        headingRowColor: WidgetStateProperty.all(AbraColors.lightGray.withValues(alpha: 0.5)),
+        horizontalMargin: 16,
+        columnSpacing: 20,
+        columns: [
+          DataColumn(
+            label: Checkbox(
+              value: allSelected,
+              onChanged: (v) {
                 setState(() {
                   if (v == true) {
-                    _selectedBusIds.add(id);
+                    _selectedBusIds.addAll(items.map((i) => '${i['id']}'));
                   } else {
-                    _selectedBusIds.remove(id);
+                    _selectedBusIds.clear();
                   }
                 });
               },
-              cells: [
-                DataCell(
-                  Checkbox(
-                    value: isSelected,
-                    onChanged: (v) {
-                      setState(() {
-                        if (v == true) {
-                          _selectedBusIds.add(id);
-                        } else {
-                          _selectedBusIds.remove(id);
-                        }
-                      });
-                    },
-                  ),
+            ),
+          ),
+          const DataColumn(label: Text('Registration', style: TextStyle(fontWeight: FontWeight.w700))),
+          const DataColumn(label: Text('Operator', style: TextStyle(fontWeight: FontWeight.w700))),
+          const DataColumn(label: Text('Type', style: TextStyle(fontWeight: FontWeight.w700))),
+          const DataColumn(label: Text('Seats', style: TextStyle(fontWeight: FontWeight.w700))),
+          const DataColumn(label: Text('Layout', style: TextStyle(fontWeight: FontWeight.w700))),
+          const DataColumn(label: Text('Insurance', style: TextStyle(fontWeight: FontWeight.w700))),
+          const DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.w700))),
+        ],
+        rows: items.map((bus) {
+          final id = '${bus['id']}';
+          final isSelected = _selectedBusIds.contains(id);
+          final status = '${bus['status'] ?? 'ACTIVE'}';
+          final regNumber = '${bus['registrationNumber'] ?? '—'}';
+          final busName = '${bus['name'] ?? ''}';
+          final opName = '${bus['operatorName'] ?? bus['operatorId'] ?? '—'}';
+          final typeName = '${bus['busTypeName'] ?? bus['busTypeId'] ?? '—'}';
+          final seats = '${bus['seatCapacity'] ?? 40}';
+          final layout = '${bus['seatLayoutType'] ?? '2+2 Seater'}';
+          final insuranceRaw = bus['insuranceExpiryDate'];
+          final insuranceFormatted = _formatInsuranceDate(insuranceRaw);
+
+          return DataRow(
+            selected: isSelected,
+            onSelectChanged: (v) {
+              setState(() {
+                if (v == true) {
+                  _selectedBusIds.add(id);
+                } else {
+                  _selectedBusIds.remove(id);
+                }
+              });
+            },
+            cells: [
+              DataCell(
+                Checkbox(
+                  value: isSelected,
+                  onChanged: (v) {
+                    setState(() {
+                      if (v == true) {
+                        _selectedBusIds.add(id);
+                      } else {
+                        _selectedBusIds.remove(id);
+                      }
+                    });
+                  },
                 ),
-                DataCell(
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+              ),
+              DataCell(
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      regNumber,
+                      style: const TextStyle(fontWeight: FontWeight.w800, color: AbraColors.navy),
+                    ),
+                    if (busName.isNotEmpty)
                       Text(
-                        regNumber,
-                        style: const TextStyle(fontWeight: FontWeight.w800, color: AbraColors.navy),
+                        busName,
+                        style: const TextStyle(fontSize: 12, color: AbraColors.textSecondary),
                       ),
-                      if (busName.isNotEmpty)
-                        Text(
-                          busName,
-                          style: const TextStyle(fontSize: 12, color: AbraColors.textSecondary),
-                        ),
-                    ],
-                  ),
+                  ],
                 ),
-                DataCell(Text(opName)),
-                DataCell(Text(typeName)),
-                DataCell(Text(seats)),
-                DataCell(Text(layout)),
-                DataCell(Text(insuranceFormatted)),
-                DataCell(_buildStatusBadge(status)),
-                DataCell(
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.visibility_outlined, size: 18),
-                        tooltip: 'View details',
-                        onPressed: () => _showBusDetailsModal(context, bus),
-                      ),
-                      if (canManage) ...[
-                        IconButton(
-                          icon: const Icon(Icons.edit_outlined, size: 18),
-                          tooltip: 'Edit',
-                          onPressed: () => _showEditBusModal(context, bus),
-                        ),
-                        if (status != 'RETIRED')
-                          IconButton(
-                            icon: const Icon(Icons.build_circle_outlined, size: 18),
-                            tooltip: 'Change status',
-                            onPressed: () => _showStatusDialog(context, bus),
-                          ),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline, size: 18, color: AbraColors.danger),
-                          tooltip: 'Retire bus',
-                          onPressed: () => _handleDeleteBus(context, bus),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            );
-          }).toList(),
-        ),
+              ),
+              DataCell(Text(opName)),
+              DataCell(Text(typeName)),
+              DataCell(Text(seats)),
+              DataCell(Text(layout)),
+              DataCell(Text(insuranceFormatted)),
+              DataCell(_buildStatusBadge(status)),
+            ],
+          );
+        }).toList(),
       ),
+    );
+
+    final pinnedActions = DecoratedBox(
+      decoration: const BoxDecoration(
+        color: AbraColors.white,
+        border: Border(left: BorderSide(color: AbraColors.divider)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            height: headingHeight,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            alignment: Alignment.center,
+            color: AbraColors.lightGray.withValues(alpha: 0.5),
+            child: const Text('Actions', style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+          for (final bus in items)
+            Container(
+              height: rowHeight,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                border: Border(bottom: BorderSide(color: AbraColors.divider, width: 0.5)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.visibility_outlined, size: 18),
+                    tooltip: 'View details',
+                    onPressed: () => _showBusDetailsModal(context, bus),
+                  ),
+                  if (canManage) ...[
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined, size: 18),
+                      tooltip: 'Edit',
+                      onPressed: () => _showEditBusModal(context, bus),
+                    ),
+                    if ('${bus['status'] ?? 'ACTIVE'}' != 'RETIRED')
+                      IconButton(
+                        icon: const Icon(Icons.build_circle_outlined, size: 18),
+                        tooltip: 'Change status',
+                        onPressed: () => _showStatusDialog(context, bus),
+                      ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, size: 18, color: AbraColors.danger),
+                      tooltip: 'Retire bus',
+                      onPressed: () => _handleDeleteBus(context, bus),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: dataTable),
+        pinnedActions,
+      ],
     );
   }
 

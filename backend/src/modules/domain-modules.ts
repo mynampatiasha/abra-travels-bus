@@ -4,7 +4,7 @@ import { CustomersModule } from './customers/customers.module';
 import { SessionsModule } from './sessions/sessions.module';
 import { RbacModule } from './rbac/rbac.module';
 import { OperatorsModule } from './operators/operators.module';
-import { OperatorStaffModule } from './operator-staff/operator-staff.module';
+import { OperatorStaffModule } from './operator-staff/crew_client_manage';
 import { BusesModule } from './buses/buses.module';
 import { BusTypesModule } from './bus-types/bus-types.module';
 import { DocumentTypesModule } from './document-types/document-types.module';
