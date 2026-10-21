@@ -51,26 +51,8 @@ class ReviewsPage extends ConsumerWidget {
     return ResourcePage(
       path: 'onboarding/submissions',
       exportPath: canExport ? 'onboarding/submissions' : null,
-      stats: const <StatSpec>[
-        StatSpec(
-          AdminStrings.revStatusPending,
-          <String, String>{'status': 'PENDING'},
-          Icons.hourglass_top,
-          AbraColors.orangeDark,
-        ),
-        StatSpec(
-          AdminStrings.revStatusRejected,
-          <String, String>{'status': 'REJECTED'},
-          Icons.undo,
-          AbraColors.danger,
-        ),
-        StatSpec(
-          AdminStrings.revStatusApproved,
-          <String, String>{'status': 'APPROVED'},
-          Icons.verified_outlined,
-          AbraColors.tealDark,
-        ),
-      ],
+      emptyTitle: 'No submissions waiting',
+      emptyMessage: 'You are all caught up.',
       filters: const <FilterSpec>[
         ChoiceFilter('status', AdminStrings.fieldStatus, submissionStatuses),
         ChoiceFilter(
@@ -85,19 +67,47 @@ class ReviewsPage extends ConsumerWidget {
       ],
       columns: <ColumnSpec>[
         ColumnSpec(
-          AdminStrings.revColSubject,
-          (_, r) => Text(_subjectText(l10n, r)),
-          text: (r) => _subjectText(l10n, r),
+          'ID',
+          (_, r) => Text(
+            r['id'] != null
+                ? '#${r['id'].toString().length > 6 ? r['id'].toString().substring(0, 6) : r['id']}'
+                : '',
+            style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+          ),
+          text: (r) => '${r['id'] ?? ''}',
         ),
         ColumnSpec(
           AdminStrings.revColCompany,
-          (_, r) => textCell(r['companyName']),
+          (_, r) {
+            final bus = r['busRegistrationNumber'] as String?;
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  '${r['companyName'] ?? ''}',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                if (bus != null && bus.isNotEmpty)
+                  Text(
+                    'Bus $bus',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AbraColors.textSecondary,
+                    ),
+                  ),
+              ],
+            );
+          },
           text: (r) => '${r['companyName'] ?? ''}',
         ),
         ColumnSpec(
-          AdminStrings.revColBus,
-          (_, r) => textCell(r['busRegistrationNumber']),
-          text: (r) => '${r['busRegistrationNumber'] ?? ''}',
+          AdminStrings.revColSubject,
+          (_, r) => AbraStatusBadge(
+            label: _subjectText(l10n, r),
+            tone: AbraStatusTone.info,
+          ),
+          text: (r) => _subjectText(l10n, r),
         ),
         ColumnSpec(
           AdminStrings.revColStatus,

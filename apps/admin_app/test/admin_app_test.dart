@@ -784,7 +784,8 @@ void main() {
       expect(find.text('Andhra Pradesh'), findsOneWidget);
       expect(find.text('Active'), findsWidgets);
       expect(find.text('Inactive'), findsWidgets);
-      expect(find.text('1–2 of 2'), findsOneWidget);
+      expect(find.text('2 results'), findsOneWidget);
+      expect(find.text('Page 1 of 1'), findsOneWidget);
     });
 
     testWidgets('search and the status filter are applied by the backend', (
@@ -830,27 +831,29 @@ void main() {
       final app = TestAdmin.signedIn(backend);
       await app.pump(tester);
       await open(tester, AdminRoutes.cities);
-      expect(find.text('1–20 of 27'), findsOneWidget);
+      expect(find.text('27 results'), findsOneWidget);
+      expect(find.text('Page 1 of 2'), findsOneWidget);
       expect(
         tester
-            .widget<IconButton>(
-              find.widgetWithIcon(IconButton, Icons.chevron_left),
+            .widget<TextButton>(
+              find.widgetWithText(TextButton, 'Previous'),
             )
             .onPressed,
         isNull,
       );
 
-      await tapOn(tester, find.byTooltip('Next page'));
+      await tapOn(tester, find.widgetWithText(TextButton, 'Next'));
       await settle(tester);
       expect(
         app.requestsTo('catalogue/cities').last.options.queryParameters['page'],
         2,
       );
-      expect(find.text('21–27 of 27'), findsOneWidget);
+      expect(find.text('27 results'), findsOneWidget);
+      expect(find.text('Page 2 of 2'), findsOneWidget);
       expect(
         tester
-            .widget<IconButton>(
-              find.widgetWithIcon(IconButton, Icons.chevron_right),
+            .widget<TextButton>(
+              find.widgetWithText(TextButton, 'Next'),
             )
             .onPressed,
         isNull,

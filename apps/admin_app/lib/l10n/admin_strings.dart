@@ -478,6 +478,9 @@ abstract final class AdminStrings {
   static const deleteRestored = 'deleteRestored';
   static const bnSubtitle = 'bnSubtitle';
   static const bnTabAll = 'bnTabAll';
+  static const bnTabAnalytics = 'bnTabAnalytics';
+  static const bnAnalyticsPhase7 = 'bnAnalyticsPhase7';
+  static const bnAnalyticsPhase7Hint = 'bnAnalyticsPhase7Hint';
   static const bnNew = 'bnNew';
   static const bnNewTitle = 'bnNewTitle';
   static const bnEditTitle = 'bnEditTitle';
@@ -676,6 +679,11 @@ abstract final class AdminStrings {
   static const opJoinedColumn = 'opJoinedColumn';
   static const opSearch = 'opSearch';
   static const opInvite = 'opInvite';
+  static const opColPayout = 'opColPayout';
+  static const opColRating = 'opColRating';
+  static const opFilterPayoutMode = 'opFilterPayoutMode';
+  static const opPayoutAuto = 'opPayoutAuto';
+  static const opPayoutManual = 'opPayoutManual';
   static const opdPayoutMode = 'opdPayoutMode';
   static const opdPayoutAuto = 'opdPayoutAuto';
   static const opdPayoutManual = 'opdPayoutManual';
@@ -1397,6 +1405,9 @@ abstract final class AdminStrings {
     deleteRestored,
     bnSubtitle,
     bnTabAll,
+    bnTabAnalytics,
+    bnAnalyticsPhase7,
+    bnAnalyticsPhase7Hint,
     bnNew,
     bnNewTitle,
     bnEditTitle,
@@ -1595,6 +1606,11 @@ abstract final class AdminStrings {
     opJoinedColumn,
     opSearch,
     opInvite,
+    opColPayout,
+    opColRating,
+    opFilterPayoutMode,
+    opPayoutAuto,
+    opPayoutManual,
     opdPayoutMode,
     opdPayoutAuto,
     opdPayoutManual,

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_localization/shared_localization.dart';
 import 'package:shared_permissions/shared_permissions.dart';
 import 'package:shared_theme/shared_theme.dart';
+import 'package:shared_ui/shared_ui.dart';
 
 import '../../../app/providers.dart';
 import '../../../l10n/admin_strings.dart';
@@ -65,32 +66,6 @@ class DocumentTypesPage extends ConsumerWidget {
       exportPath: access.can(PermissionKeys.documentsExport)
           ? 'document-types'
           : null,
-      stats: const <StatSpec>[
-        StatSpec(
-          AdminStrings.statusActive,
-          <String, String>{'active': 'true'},
-          Icons.check_circle_outline,
-          AbraColors.tealDark,
-        ),
-        StatSpec(
-          AdminStrings.statusInactive,
-          <String, String>{'active': 'false'},
-          Icons.pause_circle_outline,
-          AbraColors.navySecondary,
-        ),
-        StatSpec(
-          AdminStrings.subjectOperator,
-          <String, String>{'appliesTo': 'OPERATOR'},
-          Icons.business_outlined,
-          AbraColors.blueDark,
-        ),
-        StatSpec(
-          AdminStrings.subjectBus,
-          <String, String>{'appliesTo': 'BUS'},
-          Icons.directions_bus_outlined,
-          AbraColors.blue,
-        ),
-      ],
       importSpec: canManage
           ? ImportSpec(
               name: 'required documents',
@@ -110,6 +85,8 @@ class DocumentTypesPage extends ConsumerWidget {
               save: (values) => repository.post('document-types', values),
             )
           : null,
+      emptyTitle: 'Nothing here yet',
+      emptyMessage: 'New items will appear here.',
       filters: const <FilterSpec>[
         ChoiceFilter(
           'appliesTo',
@@ -125,16 +102,40 @@ class DocumentTypesPage extends ConsumerWidget {
       columns: <ColumnSpec>[
         ColumnSpec(
           AdminStrings.fieldName,
-          (_, r) => textCell(r['name']),
+          (_, r) {
+            final instr = r['instructions'] as String?;
+            return (instr != null && instr.isNotEmpty)
+                ? Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        '${r['name'] ?? ''}',
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      Text(
+                        instr,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AbraColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  )
+                : textCell(r['name']);
+          },
           text: (r) => plainText(r['name']),
         ),
         ColumnSpec(
           AdminStrings.fieldAppliesTo,
-          (_, r) => Text(
-            l10n.text(
+          (_, r) => AbraStatusBadge(
+            label: l10n.text(
               CatalogueLabels.documentSubjects[r['appliesTo']] ??
                   AdminStrings.subjectBus,
             ),
+            tone: AbraStatusTone.info,
           ),
           text: (r) => l10n.text(
             CatalogueLabels.documentSubjects['${r['appliesTo']}'] ??
@@ -144,17 +145,13 @@ class DocumentTypesPage extends ConsumerWidget {
         ColumnSpec(
           AdminStrings.fieldRequired,
           (_, r) => Text(
-            l10n.text(
-              r['isRequired'] == true
-                  ? AdminStrings.formYes
-                  : AdminStrings.formNo,
-            ),
-          ),
-          text: (r) => l10n.text(
             r['isRequired'] == true
-                ? AdminStrings.formYes
-                : AdminStrings.formNo,
+                ? l10n.text(AdminStrings.formYes)
+                : 'Optional',
           ),
+          text: (r) => r['isRequired'] == true
+              ? l10n.text(AdminStrings.formYes)
+              : 'Optional',
         ),
         ColumnSpec(
           AdminStrings.fieldRequiresExpiry,
@@ -187,6 +184,12 @@ class DocumentTypesPage extends ConsumerWidget {
                     const <Object?>[]))
               CatalogueLabels.documentFileTypes['$type'] ?? '$type',
           ].join(', '),
+        ),
+        ColumnSpec(
+          AdminStrings.fieldMaxFileSize,
+          (_, r) => Text('${r['maxFileSizeMb'] ?? 5} MB'),
+          isNumeric: true,
+          text: (r) => '${r['maxFileSizeMb'] ?? 5} MB',
         ),
         ColumnSpec(
           AdminStrings.fieldMaxFiles,

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_localization/shared_localization.dart';
 import 'package:shared_permissions/shared_permissions.dart';
 import 'package:shared_theme/shared_theme.dart';
+import 'package:shared_ui/shared_ui.dart';
 
 import '../../../app/providers.dart';
 import '../../../l10n/admin_strings.dart';
@@ -43,20 +44,6 @@ class BusTypesPage extends ConsumerWidget {
       exportPath: access.can(PermissionKeys.catalogueExport)
           ? 'bus-types'
           : null,
-      stats: const <StatSpec>[
-        StatSpec(
-          AdminStrings.statusActive,
-          <String, String>{'active': 'true'},
-          Icons.check_circle_outline,
-          AbraColors.tealDark,
-        ),
-        StatSpec(
-          AdminStrings.statusInactive,
-          <String, String>{'active': 'false'},
-          Icons.pause_circle_outline,
-          AbraColors.navySecondary,
-        ),
-      ],
       importSpec: canManage
           ? ImportSpec(
               name: 'bus types',
@@ -73,6 +60,8 @@ class BusTypesPage extends ConsumerWidget {
               save: (values) => repository.post('bus-types', values),
             )
           : null,
+      emptyTitle: 'Nothing here yet',
+      emptyMessage: 'New items will appear here.',
       filters: const <FilterSpec>[
         ChoiceFilter(
           'active',
@@ -82,14 +71,14 @@ class BusTypesPage extends ConsumerWidget {
       ],
       columns: <ColumnSpec>[
         ColumnSpec(
-          AdminStrings.fieldKey,
-          (_, r) => textCell(r['key']),
-          text: (r) => plainText(r['key']),
-        ),
-        ColumnSpec(
           AdminStrings.fieldName,
           (_, r) => textCell(r['name']),
           text: (r) => plainText(r['name']),
+        ),
+        ColumnSpec(
+          AdminStrings.fieldKey,
+          (_, r) => textCell(r['key']),
+          text: (r) => plainText(r['key']),
         ),
         ColumnSpec(
           AdminStrings.fieldAc,
@@ -104,16 +93,23 @@ class BusTypesPage extends ConsumerWidget {
         ),
         ColumnSpec(
           AdminStrings.fieldBerthType,
-          (_, r) => Text(
-            l10n.text(
+          (_, r) => AbraStatusBadge(
+            label: l10n.text(
               CatalogueLabels.berthTypes[r['berthType']] ??
                   AdminStrings.berthMixed,
             ),
+            tone: AbraStatusTone.info,
           ),
           text: (r) => l10n.text(
             CatalogueLabels.berthTypes['${r['berthType']}'] ??
                 AdminStrings.berthMixed,
           ),
+        ),
+        ColumnSpec(
+          AdminStrings.opdBuses,
+          (_, r) => Text('${r['busesCount'] ?? r['buses'] ?? 0}'),
+          isNumeric: true,
+          text: (r) => '${r['busesCount'] ?? r['buses'] ?? 0}',
         ),
         ColumnSpec(
           AdminStrings.fieldStatus,

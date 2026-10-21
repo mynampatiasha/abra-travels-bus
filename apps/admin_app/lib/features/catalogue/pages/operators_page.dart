@@ -43,26 +43,8 @@ class OperatorsPage extends ConsumerWidget {
       exportPath: access.can(PermissionKeys.operatorsExport)
           ? 'admin/operators'
           : null,
-      stats: const <StatSpec>[
-        StatSpec(
-          AdminStrings.operatorActive,
-          <String, String>{'status': 'ACTIVE'},
-          Icons.verified_outlined,
-          AbraColors.tealDark,
-        ),
-        StatSpec(
-          AdminStrings.operatorPending,
-          <String, String>{'status': 'PENDING_APPROVAL'},
-          Icons.hourglass_top,
-          AbraColors.orangeDark,
-        ),
-        StatSpec(
-          AdminStrings.operatorSuspended,
-          <String, String>{'status': 'SUSPENDED'},
-          Icons.block,
-          AbraColors.danger,
-        ),
-      ],
+      emptyTitle: 'No operators yet',
+      emptyMessage: 'Invite your first operator.',
       filters: const <FilterSpec>[
         SearchFilter('query', AdminStrings.opSearch),
         ChoiceFilter(
@@ -70,31 +52,50 @@ class OperatorsPage extends ConsumerWidget {
           AdminStrings.fieldStatus,
           CatalogueLabels.operatorStatuses,
         ),
+        ChoiceFilter(
+          'payoutMode',
+          AdminStrings.opFilterPayoutMode,
+          <String, String>{
+            'AUTO': AdminStrings.opPayoutAuto,
+            'MANUAL': AdminStrings.opPayoutManual,
+          },
+        ),
       ],
       columns: <ColumnSpec>[
         ColumnSpec(
           AdminStrings.opNameColumn,
-          (context, r) => InkWell(
-            onTap: () => context.go(AdminRoutes.operatorOf('${r['id']}')),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  operatorNameOf(r),
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-                ),
-                Text(
-                  '${(r['owner'] as Map<Object?, Object?>?)?['name'] ?? ''}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AbraColors.textSecondary,
+          (context, r) {
+            final owner = (r['owner'] as Map<Object?, Object?>?)?['name'] ??
+                r['owner'] ??
+                '';
+            final city = r['city'] ?? '';
+            final sub = [
+              if ('$owner'.isNotEmpty) '$owner',
+              if ('$city'.isNotEmpty) '$city',
+            ].join(' - ');
+            return InkWell(
+              onTap: () => context.go(AdminRoutes.operatorOf('${r['id']}')),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    operatorNameOf(r),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
+                  if (sub.isNotEmpty)
+                    Text(
+                      sub,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AbraColors.textSecondary,
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
           text: operatorNameOf,
         ),
         ColumnSpec(
@@ -108,7 +109,7 @@ class OperatorsPage extends ConsumerWidget {
         ColumnSpec(
           AdminStrings.opKycColumn,
           (context, r) {
-            final kyc = r['kycStatus'] as String?;
+            final kyc = (r['kycStatus'] ?? r['kyc']) as String?;
             return kyc == null
                 ? const Text('—')
                 : AbraStatusBadge(
@@ -118,24 +119,55 @@ class OperatorsPage extends ConsumerWidget {
                     tone: submissionTone(kyc),
                   );
           },
-          text: (r) => CatalogueLabels.readable('${r['kycStatus'] ?? ''}'),
+          text: (r) => CatalogueLabels.readable('${r['kycStatus'] ?? r['kyc'] ?? ''}'),
         ),
         ColumnSpec(
           AdminStrings.opdBuses,
-          (_, r) => Text('${r['buses'] ?? 0}'),
+          (_, r) => Text(r['buses'] != null ? '${r['buses']}' : '-'),
           isNumeric: true,
-          text: (r) => plainText(r['buses']),
+          text: (r) => r['buses'] != null ? plainText(r['buses']) : '-',
         ),
         ColumnSpec(
           AdminStrings.opdTrips,
-          (_, r) => Text('${r['trips'] ?? 0}'),
+          (_, r) => Text(r['trips'] != null ? '${r['trips']}' : '-'),
           isNumeric: true,
-          text: (r) => plainText(r['trips']),
+          text: (r) => r['trips'] != null ? plainText(r['trips']) : '-',
+        ),
+        ColumnSpec(
+          AdminStrings.opColPayout,
+          (context, r) {
+            final payout = r['payout'] ?? r['payoutMode'];
+            if (payout == null || '$payout'.isEmpty) {
+              return const Text('-');
+            }
+            return AbraStatusBadge(
+              label: AbraLocalizations.of(context).text(
+                payout == 'AUTO'
+                    ? AdminStrings.opPayoutAuto
+                    : AdminStrings.opPayoutManual,
+              ),
+              tone: AbraStatusTone.info,
+            );
+          },
+          text: (r) {
+            final payout = r['payout'] ?? r['payoutMode'];
+            return payout == null || '$payout'.isEmpty
+                ? '-'
+                : (payout == 'AUTO' ? 'Automatic' : 'Manual');
+          },
+        ),
+        ColumnSpec(
+          AdminStrings.opColRating,
+          (_, r) => Text(
+            r['rating'] != null ? '${r['rating']}' : '-',
+          ),
+          isNumeric: true,
+          text: (r) => r['rating'] != null ? '${r['rating']}' : '-',
         ),
         ColumnSpec(
           AdminStrings.opJoinedColumn,
-          (_, r) => Text(dateOf(r['joinedAt'])),
-          text: (r) => dateOf(r['joinedAt']),
+          (_, r) => Text(dateOf(r['joinedAt'] ?? r['joined'])),
+          text: (r) => dateOf(r['joinedAt'] ?? r['joined']),
         ),
       ],
       onCreate: access.can(PermissionKeys.operatorsCreate)
