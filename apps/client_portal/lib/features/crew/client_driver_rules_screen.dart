@@ -22,7 +22,7 @@ class _ClientDriverRulesScreenState extends State<ClientDriverRulesScreen> {
   bool _requirePostTripLog = true;
   bool _enforceSobrietyCheck = true;
   bool _speedAlertThreshold = true;
-  int _maxSpeedLimit = 80;
+  final int _maxSpeedLimit = 80;
 
   @override
   Widget build(BuildContext context) {
@@ -31,33 +31,30 @@ class _ClientDriverRulesScreenState extends State<ClientDriverRulesScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          PortalSectionTitle(
+          const PortalSectionTitle(
             title: 'Driver rules',
             subtitle: 'Safety shift limits, mandatory rest breaks and compliance rules',
-            breadcrumbs: const ['Fleet', 'Driver rules'],
+            breadcrumbs: ['Fleet', 'Driver rules'],
             actions: [
-              FilledButton.icon(
-                icon: const Icon(Icons.check, size: 16),
-                label: const Text('Save safety rules'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: AbraColors.blue,
-                  foregroundColor: Colors.white,
+              Tooltip(
+                message: 'Not connected yet',
+                child: FilledButton(
+                  onPressed: null,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check, size: 16),
+                      SizedBox(width: 8),
+                      Text('Save safety rules'),
+                    ],
+                  ),
                 ),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Driver safety rules updated successfully'),
-                      backgroundColor: AbraColors.tealDark,
-                    ),
-                  );
-                },
               ),
             ],
           ),
           const SizedBox(height: AbraSpacing.lg),
           const PortalInfoBanner(
-            message:
-                'These safety limits prevent driver fatigue and are strictly enforced when assigning drivers to schedules and live trips.',
+            message: 'Not connected yet - built in Phase 9',
             tone: PortalBannerTone.info,
             icon: Icons.shield_outlined,
           ),

@@ -7,7 +7,6 @@ import 'package:shared_notifications/shared_notifications.dart';
 import 'package:shared_permissions/shared_permissions.dart';
 
 import '../bootstrap/app_dependencies.dart';
-import '../features/safety/safety_mock_store.dart';
 import '../routing/admin_routes.dart';
 
 /// Active theme mode (Light or Dark).
@@ -30,12 +29,9 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
 
 /// Dynamic badge counts for navigation items matching demo model state.
 final navBadgeCountsProvider = Provider<Map<String, int>>((ref) {
-  final safety = ref.watch(safetyStoreProvider);
-  final newSosCount = safety.alerts.where((a) => a.status == 'NEW').length;
-
-  return <String, int>{
+  return const <String, int>{
     'kyc': 3,
-    'sos': newSosCount,
+    'sos': 0,
     'payments': 1,
     'tickets': 4,
     'places': 1,

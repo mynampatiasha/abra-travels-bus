@@ -93,7 +93,7 @@ class DriverReportsScreen extends ConsumerWidget {
                 child: const Padding(
                   padding: EdgeInsets.all(16),
                   child: Center(
-                    child: Text('You are all caught up! No reports due.',
+                    child: Text('Not connected yet - built in Phase 9',
                         style: TextStyle(color: Color(0xFF64748B))),
                   ),
                 ),
@@ -137,7 +137,7 @@ class DriverReportsScreen extends ConsumerWidget {
                 child: const Padding(
                   padding: EdgeInsets.all(16),
                   child: Center(
-                    child: Text('No submitted reports yet.', style: TextStyle(color: Color(0xFF64748B))),
+                    child: Text('Not connected yet - built in Phase 9', style: TextStyle(color: Color(0xFF64748B))),
                   ),
                 ),
               )
@@ -348,6 +348,7 @@ class _DriverReportFormScreenState extends ConsumerState<DriverReportFormScreen>
     setState(() => _attachedFiles.removeAt(index));
   }
 
+  // ignore: unused_element
   void _submit(bool isFinal) {
     final lang = ref.read(driverLanguageProvider);
 
@@ -420,7 +421,7 @@ class _DriverReportFormScreenState extends ConsumerState<DriverReportFormScreen>
                     ),
                     SizedBox(height: 8),
                     Text(
-                      '• Total Distance: —\n• Total Driving Hours: —\n• Passengers Carried: —\n• Total Delays: —',
+                      'Not connected yet - built in Phase 9',
                       style: TextStyle(fontSize: 13, color: Color(0xFF475569), height: 1.4),
                     ),
                   ],
@@ -591,27 +592,33 @@ class _DriverReportFormScreenState extends ConsumerState<DriverReportFormScreen>
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(52),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: Tooltip(
+                    message: 'Not connected yet',
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(52),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: null,
+                      child: Text(t('save_draft', lang)),
                     ),
-                    onPressed: () => _submit(false),
-                    child: Text(t('save_draft', lang)),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   flex: 2,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1677C8),
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size.fromHeight(52),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: Tooltip(
+                    message: 'Not connected yet',
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1677C8),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size.fromHeight(52),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: null,
+                      child: Text(t('send_report', lang), style: const TextStyle(fontWeight: FontWeight.w700)),
                     ),
-                    onPressed: () => _submit(true),
-                    child: Text(t('send_report', lang), style: const TextStyle(fontWeight: FontWeight.w700)),
                   ),
                 ),
               ],

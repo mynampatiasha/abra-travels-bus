@@ -20,7 +20,7 @@ class _ClientBookingsScreenState extends State<ClientBookingsScreen> {
   @override
   void initState() {
     super.initState();
-    _bookings = List.from(kMockBookings);
+    _bookings = const [];
   }
 
   @override
@@ -37,13 +37,6 @@ class _ClientBookingsScreenState extends State<ClientBookingsScreen> {
       return true;
     }).toList();
 
-    final totalCount = _bookings.length;
-    final confirmedCount = _bookings.where((b) => b['status'] == 'CONFIRMED').length;
-    final cancelledCount = _bookings.where((b) => b['status'] == 'CANCELLED').length;
-    final yourSharePaise = _bookings
-        .where((b) => b['status'] != 'CANCELLED')
-        .fold<int>(0, (sum, b) => sum + ((b['amount'] as int) - (b['commission'] as int)));
-
     return LayoutBuilder(
       builder: (context, constraints) {
         final isNarrow = constraints.maxWidth < 800;
@@ -53,19 +46,24 @@ class _ClientBookingsScreenState extends State<ClientBookingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              PortalSectionTitle(
+              const PortalSectionTitle(
                 title: 'Bookings',
                 subtitle: 'Bookings on your trips from the Abra customer app.',
-                breadcrumbs: const ['Sales', 'Bookings'],
+                breadcrumbs: ['Sales', 'Bookings'],
                 actions: [
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.download, size: 16),
-                    label: const Text('Export CSV'),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Bookings CSV exported successfully')),
-                      );
-                    },
+                  Tooltip(
+                    message: 'Not connected yet',
+                    child: OutlinedButton(
+                      onPressed: null,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.download, size: 16),
+                          SizedBox(width: 8),
+                          Text('Export CSV'),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -73,35 +71,35 @@ class _ClientBookingsScreenState extends State<ClientBookingsScreen> {
 
               // 4 Prototype KPI Cards (Responsive)
               if (isNarrow)
-                Column(
+                const Column(
                   children: [
                     Row(
                       children: [
-                        Expanded(child: PortalKpiCard(icon: Icons.confirmation_number_outlined, value: '$totalCount', label: 'Bookings')),
-                        const SizedBox(width: AbraSpacing.md),
-                        Expanded(child: PortalKpiCard(icon: Icons.check_circle_outline, value: '$confirmedCount', label: 'Confirmed', iconColor: AbraColors.teal)),
+                        Expanded(child: PortalKpiCard(icon: Icons.confirmation_number_outlined, value: 'Not connected yet - built in Phase 3', label: 'Bookings')),
+                        SizedBox(width: AbraSpacing.md),
+                        Expanded(child: PortalKpiCard(icon: Icons.check_circle_outline, value: 'Not connected yet - built in Phase 3', label: 'Confirmed', iconColor: AbraColors.teal)),
                       ],
                     ),
-                    const SizedBox(height: AbraSpacing.md),
+                    SizedBox(height: AbraSpacing.md),
                     Row(
                       children: [
-                        Expanded(child: PortalKpiCard(icon: Icons.cancel_outlined, value: '$cancelledCount', label: 'Cancelled', iconColor: AbraColors.danger)),
-                        const SizedBox(width: AbraSpacing.md),
-                        Expanded(child: PortalKpiCard(icon: Icons.account_balance_wallet_outlined, value: formatRs(yourSharePaise), label: 'Your share', iconColor: AbraColors.deepBlue)),
+                        Expanded(child: PortalKpiCard(icon: Icons.cancel_outlined, value: 'Not connected yet - built in Phase 3', label: 'Cancelled', iconColor: AbraColors.danger)),
+                        SizedBox(width: AbraSpacing.md),
+                        Expanded(child: PortalKpiCard(icon: Icons.account_balance_wallet_outlined, value: 'Not connected yet - built in Phase 3', label: 'Your share', iconColor: AbraColors.deepBlue)),
                       ],
                     ),
                   ],
                 )
               else
-                Row(
+                const Row(
                   children: [
-                    Expanded(child: PortalKpiCard(icon: Icons.confirmation_number_outlined, value: '$totalCount', label: 'Bookings')),
-                    const SizedBox(width: AbraSpacing.md),
-                    Expanded(child: PortalKpiCard(icon: Icons.check_circle_outline, value: '$confirmedCount', label: 'Confirmed', iconColor: AbraColors.teal)),
-                    const SizedBox(width: AbraSpacing.md),
-                    Expanded(child: PortalKpiCard(icon: Icons.cancel_outlined, value: '$cancelledCount', label: 'Cancelled', iconColor: AbraColors.danger)),
-                    const SizedBox(width: AbraSpacing.md),
-                    Expanded(child: PortalKpiCard(icon: Icons.account_balance_wallet_outlined, value: formatRs(yourSharePaise), label: 'Your share', iconColor: AbraColors.deepBlue)),
+                    Expanded(child: PortalKpiCard(icon: Icons.confirmation_number_outlined, value: 'Not connected yet - built in Phase 3', label: 'Bookings')),
+                    SizedBox(width: AbraSpacing.md),
+                    Expanded(child: PortalKpiCard(icon: Icons.check_circle_outline, value: 'Not connected yet - built in Phase 3', label: 'Confirmed', iconColor: AbraColors.teal)),
+                    SizedBox(width: AbraSpacing.md),
+                    Expanded(child: PortalKpiCard(icon: Icons.cancel_outlined, value: 'Not connected yet - built in Phase 3', label: 'Cancelled', iconColor: AbraColors.danger)),
+                    SizedBox(width: AbraSpacing.md),
+                    Expanded(child: PortalKpiCard(icon: Icons.account_balance_wallet_outlined, value: 'Not connected yet - built in Phase 3', label: 'Your share', iconColor: AbraColors.deepBlue)),
                   ],
                 ),
               const SizedBox(height: AbraSpacing.xl),
@@ -160,17 +158,15 @@ class _ClientBookingsScreenState extends State<ClientBookingsScreen> {
                             children: [
                               const Icon(Icons.confirmation_number_outlined, size: 48, color: AbraColors.textDisabled),
                               const SizedBox(height: 12),
-                              Text(
-                                _searchQuery.isNotEmpty || _statusFilter != 'ALL'
-                                    ? 'No matching bookings found'
-                                    : 'No bookings yet',
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AbraColors.textPrimary),
+                              const Text(
+                                'Not connected yet - built in Phase 3',
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AbraColors.textPrimary),
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 _searchQuery.isNotEmpty || _statusFilter != 'ALL'
                                     ? 'Try clearing the search or filter'
-                                    : 'When customers book your trips, they appear here.',
+                                    : 'When connected, customer bookings will appear here.',
                                 style: const TextStyle(fontSize: 13, color: AbraColors.textSecondary),
                               ),
                             ],
@@ -281,25 +277,34 @@ class _ClientBookingsScreenState extends State<ClientBookingsScreen> {
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
-          OutlinedButton.icon(
-            icon: const Icon(Icons.phone, size: 14),
-            label: const Text('Call passenger'),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Calling ${b['customer']} (${b['phone']})...')));
-            },
+          const Tooltip(
+            message: 'Not connected yet',
+            child: OutlinedButton(
+              onPressed: null,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.phone, size: 14),
+                  SizedBox(width: 8),
+                  Text('Call passenger'),
+                ],
+              ),
+            ),
           ),
           if (b['status'] == 'CONFIRMED') ...[
-            FilledButton.icon(
-              icon: const Icon(Icons.cancel, size: 14),
-              label: const Text('Cancel & refund'),
-              style: FilledButton.styleFrom(backgroundColor: AbraColors.danger),
-              onPressed: () {
-                setState(() => b['status'] = 'CANCELLED');
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Booking ${b['pnr']} cancelled and refund initiated')),
-                );
-              },
+            const Tooltip(
+              message: 'Not connected yet',
+              child: FilledButton(
+                onPressed: null,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.cancel, size: 14),
+                    SizedBox(width: 8),
+                    Text('Cancel & refund'),
+                  ],
+                ),
+              ),
             ),
           ],
         ],

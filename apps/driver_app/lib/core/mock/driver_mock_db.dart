@@ -113,15 +113,7 @@ class DriverMockDb {
     required String reason,
     String? note,
   }) {
-    sosEvents.add({
-      'id': 'SOS-${DateTime.now().millisecondsSinceEpoch}',
-      'tripId': tripId,
-      'driver': currentDriver,
-      'reason': reason,
-      'note': note ?? '',
-      'at': DateTime.now().toIso8601String(),
-      'status': 'NEW',
-    });
+    // Phase 5: To be connected to backend emergency SOS API.
   }
 
   void dispose() {
