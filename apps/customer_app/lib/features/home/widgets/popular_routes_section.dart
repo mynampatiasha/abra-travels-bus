@@ -57,53 +57,59 @@ class PopularRoutesSection extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(14),
                       side: const BorderSide(color: AbraColors.divider),
                     ),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(14),
-                      onTap: () {
-                        final now = ref.read(discoveryClockProvider)();
-                        final today = TravelDates.today(now);
-                        final controller = ref.read(searchFormControllerProvider.notifier);
-                        controller.setFrom(City(id: r.$1, name: r.$2, state: ''));
-                        controller.setTo(City(id: r.$3, name: r.$4, state: ''));
-                        context.push(
-                          AppRoutes.searchResultsFor(
-                            fromId: r.$1,
-                            fromName: r.$2,
-                            toId: r.$3,
-                            toName: r.$4,
-                            date: TravelDates.format(today),
-                          ),
-                        );
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AbraSpacing.md,
-                          vertical: 12,
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.location_on_outlined,
-                              size: 18,
-                              color: AbraColors.blue,
+                    child: Semantics(
+                      button: true,
+                      label: '${r.$2} to ${r.$4}',
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () {
+                          final now = ref.read(discoveryClockProvider)();
+                          final today = TravelDates.today(now);
+                          final controller = ref.read(searchFormControllerProvider.notifier);
+                          controller.setFrom(City(id: r.$1, name: r.$2, state: ''));
+                          controller.setTo(City(id: r.$3, name: r.$4, state: ''));
+                          context.push(
+                            AppRoutes.searchResultsFor(
+                              fromId: r.$1,
+                              fromName: r.$2,
+                              toId: r.$3,
+                              toName: r.$4,
+                              date: TravelDates.format(today),
                             ),
-                            const SizedBox(width: AbraSpacing.md),
-                            Expanded(
-                              child: Text(
-                                '${r.$2} → ${r.$4}',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: AbraColors.textPrimary,
+                          );
+                        },
+                        child: ExcludeSemantics(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AbraSpacing.md,
+                              vertical: 12,
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.location_on_outlined,
+                                  size: 18,
+                                  color: AbraColors.blue,
                                 ),
-                              ),
+                                const SizedBox(width: AbraSpacing.md),
+                                Expanded(
+                                  child: Text(
+                                    '${r.$2} → ${r.$4}',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: AbraColors.textPrimary,
+                                    ),
+                                  ),
+                                ),
+                                const Icon(
+                                  Icons.chevron_right,
+                                  size: 18,
+                                  color: AbraColors.textDisabled,
+                                ),
+                              ],
                             ),
-                            const Icon(
-                              Icons.chevron_right,
-                              size: 18,
-                              color: AbraColors.textDisabled,
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
