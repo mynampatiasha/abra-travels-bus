@@ -1222,5 +1222,8 @@ abstract final class CustomerStrings {
     offersCarousel,
     offersCarouselPage,
     offersCopyCodeSemantics,
+    homeOffersTitle,
+    homeOffersViewAll,
+    homePopularRoutesTitle,
   };
 }

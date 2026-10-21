@@ -161,7 +161,7 @@ class _PhoneStepState extends ConsumerState<PhoneStep>
               width: 48,
               height: 48,
               child: Tooltip(
-                message: 'Not connected yet',
+                message: 'Continue with Google',
                 child: OutlinedButton(
                   style: OutlinedButton.styleFrom(
                     padding: EdgeInsets.zero,
@@ -186,7 +186,7 @@ class _PhoneStepState extends ConsumerState<PhoneStep>
               width: 48,
               height: 48,
               child: Tooltip(
-                message: 'Not connected yet',
+                message: 'Continue with Apple',
                 child: OutlinedButton(
                   style: OutlinedButton.styleFrom(
                     padding: EdgeInsets.zero,

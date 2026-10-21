@@ -27,14 +27,18 @@ class FloatingAiButton extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         shape: const CircleBorder(),
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: () => AiAssistantSheet.show(context),
-          child: const Center(
-            child: Icon(
-              Icons.star_rounded,
-              color: Colors.white,
-              size: 28,
+        child: Semantics(
+          button: true,
+          label: 'Abra AI Assistant',
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: () => AiAssistantSheet.show(context),
+            child: const Center(
+              child: Icon(
+                Icons.star_rounded,
+                color: Colors.white,
+                size: 28,
+              ),
             ),
           ),
         ),

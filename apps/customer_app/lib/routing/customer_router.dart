@@ -24,7 +24,6 @@ import '../features/my_trips/refund_status_screen.dart';
 import '../features/notifications/notifications_offers_screen.dart';
 import '../features/onboarding/first_launch.dart';
 import '../features/onboarding/onboarding_screen.dart';
-import '../features/profile/delete_account_screen.dart';
 import '../features/profile/messages_archive_screen.dart';
 import '../features/profile/notification_settings_screen.dart';
 import '../features/profile/profile_edit_screen.dart';
@@ -280,8 +279,11 @@ final customerRouterProvider = Provider<GoRouter>((ref) {
       _page(AppRoutes.notifications, (_) => const NotificationsScreen()),
       // Offers are open to guests.
       _page(AppRoutes.offers, (_) => const OffersScreen()),
-      _page(AppRoutes.settings, (_) => const NotificationSettingsScreen()),
-      _page(AppRoutes.accountDelete, (_) => const DeleteAccountScreen()),
+      _notBuilt(AppRoutes.settings, CustomerStrings.routeSettingsTitle),
+      _notBuilt(
+        AppRoutes.accountDelete,
+        CustomerStrings.routeAccountDeleteTitle,
+      ),
     ],
   );
   ref.onDispose(router.dispose);

@@ -64,11 +64,24 @@ class SupportScreen extends ConsumerWidget {
                   child: Padding(
                     padding: EdgeInsets.symmetric(vertical: AbraSpacing.lg),
                     child: Center(
-                      child: Text(
-                        'Not connected yet - built in Phase 4',
-                        style: TextStyle(
-                          color: AbraColors.textSecondary,
-                        ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Coming soon',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          SizedBox(height: AbraSpacing.xs),
+                          Text(
+                            'Not connected yet - built in Phase 4',
+                            style: TextStyle(
+                              color: AbraColors.textSecondary,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -163,38 +176,40 @@ class SupportScreen extends ConsumerWidget {
                     const Divider(height: AbraSpacing.lg),
                     _infoRow(Icons.access_time, 'Hours', contact.hours),
                     const SizedBox(height: AbraSpacing.lg),
-                    const Row(
+                    const Wrap(
+                      spacing: AbraSpacing.md,
+                      runSpacing: AbraSpacing.sm,
                       children: <Widget>[
-                        Expanded(
-                          child: Tooltip(
-                            message: 'Not connected yet',
-                            child: OutlinedButton(
-                              onPressed: null,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.phone, size: 16),
-                                  SizedBox(width: 8),
-                                  Text('Call'),
-                                ],
-                              ),
+                        Tooltip(
+                          message: 'Not connected yet',
+                          child: OutlinedButton(
+                            onPressed: null,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.phone, size: 16),
+                                SizedBox(width: 8),
+                                Text('Call'),
+                              ],
                             ),
                           ),
                         ),
-                        SizedBox(width: AbraSpacing.md),
-                        Expanded(
-                          child: Tooltip(
-                            message: 'Not connected yet',
-                            child: FilledButton(
-                              onPressed: null,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.support_agent, size: 16),
-                                  SizedBox(width: 8),
-                                  Text('Create a ticket'),
-                                ],
-                              ),
+                        Tooltip(
+                          message: 'Not connected yet',
+                          child: FilledButton(
+                            onPressed: null,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.support_agent, size: 16),
+                                SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    'Create a ticket',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -334,13 +349,17 @@ class SupportScreen extends ConsumerWidget {
             fontSize: 13,
           ),
         ),
-        const Spacer(),
-        Text(
-          value,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: AbraColors.textPrimary,
-            fontSize: 13,
+        const SizedBox(width: AbraSpacing.md),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: AbraColors.textPrimary,
+              fontSize: 13,
+            ),
           ),
         ),
       ],
