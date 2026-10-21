@@ -311,7 +311,10 @@ void main() {
     String city, {
     String? typing,
   }) async {
-    await tester.tap(find.bySemanticsLabel(RegExp('^$field,')));
+    final fieldFinder = find.bySemanticsLabel(RegExp('^$field,'));
+    await tester.ensureVisible(fieldFinder);
+    await tester.pump();
+    await tester.tap(fieldFinder);
     await settle(tester);
     expect(find.byType(CityPickerScreen), findsOneWidget);
     if (typing != null) {
@@ -397,7 +400,10 @@ void main() {
           find.text('Origin and destination must be different.'),
           findsNothing,
         );
-        await tester.tap(find.byTooltip('Swap origin and destination'));
+        final swap = find.byTooltip('Swap origin and destination');
+        await tester.ensureVisible(swap);
+        await tester.pump();
+        await tester.tap(swap);
         await tester.pump();
         expect(find.bySemanticsLabel('From, Mysuru'), findsOneWidget);
         expect(find.bySemanticsLabel('To, Bengaluru'), findsOneWidget);
@@ -661,10 +667,18 @@ void main() {
       expect(stored, hasLength(1));
       expect(find.text('Recent searches'), findsOneWidget);
 
-      await tester.tap(find.byTooltip('Swap origin and destination'));
+      final swap = find.byTooltip('Swap origin and destination');
+      await tester.ensureVisible(swap);
       await tester.pump();
-      await tester.tap(find.widgetWithText(ListTile, 'Bengaluru to Mysuru'));
+      await tester.tap(swap);
       await tester.pump();
+      final recentTile = find.widgetWithText(ListTile, 'Bengaluru to Mysuru');
+      await tester.ensureVisible(recentTile);
+      await tester.pump();
+      await tester.tap(recentTile);
+      await tester.pump();
+      await tester.fling(find.byType(ListView).first, const Offset(0, 500), 1000);
+      await settle(tester);
       expect(find.bySemanticsLabel('From, Bengaluru'), findsOneWidget);
       expect(find.bySemanticsLabel('To, Mysuru'), findsOneWidget);
       handle.dispose();
