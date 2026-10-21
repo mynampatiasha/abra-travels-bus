@@ -271,8 +271,10 @@ class _Idle extends ConsumerWidget {
                                 vertical: AbraSpacing.sm,
                               ),
                               child: Text(
-                                l10n.text(CustomerStrings.sosContactsEmpty),
-                                style: textTheme.bodyMedium,
+                                'Not connected yet - built in Phase 5',
+                                style: textTheme.bodyMedium?.copyWith(
+                                  color: AbraColors.textSecondary,
+                                ),
                               ),
                             ),
                           for (final contact in list)
@@ -285,13 +287,20 @@ class _Idle extends ConsumerWidget {
                               ),
                               onCall: () => _dial(ref, contact.phone),
                             ),
-                          Align(
+                          const Align(
                             alignment: AlignmentDirectional.centerStart,
-                            child: TextButton.icon(
-                              onPressed: () => _addContact(context, ref),
-                              icon: const Icon(Icons.add_rounded),
-                              label: Text(
-                                l10n.text(CustomerStrings.sosAddContact),
+                            child: Tooltip(
+                              message: 'Not connected yet',
+                              child: TextButton(
+                                onPressed: null,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.add_rounded),
+                                    SizedBox(width: 4),
+                                    Text('Add emergency contact'),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -341,6 +350,7 @@ class _Idle extends ConsumerWidget {
     );
   }
 
+  // ignore: unused_element
   Future<void> _addContact(BuildContext context, WidgetRef ref) async {
     await showAdaptiveSheet<bool>(
       context,

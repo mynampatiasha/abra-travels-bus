@@ -71,57 +71,63 @@ class HomeOffersSlider extends StatelessWidget {
             separatorBuilder: (_, _) => const SizedBox(width: 10),
             itemBuilder: (context, index) {
               final o = _offers[index];
-              return InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: () {
-                  Clipboard.setData(ClipboardData(text: o.$1));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('${o.$1} copied to clipboard!'),
-                      duration: const Duration(seconds: 2),
-                      behavior: SnackBarBehavior.floating,
+              return Semantics(
+                button: true,
+                label: '${o.$1}: ${o.$2}',
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: o.$1));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${o.$1} copied to clipboard!'),
+                        duration: const Duration(seconds: 2),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+                  child: ExcludeSemantics(
+                    child: Container(
+                      width: 210,
+                      decoration: BoxDecoration(
+                        color: AbraColors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AbraColors.divider),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            o.$1,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15,
+                              color: AbraColors.navy,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            o.$2,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AbraColors.textSecondary,
+                              height: 1.25,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  );
-                },
-                child: Container(
-                  width: 210,
-                  decoration: BoxDecoration(
-                    color: AbraColors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AbraColors.divider),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        o.$1,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 15,
-                          color: AbraColors.navy,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        o.$2,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AbraColors.textSecondary,
-                          height: 1.25,
-                        ),
-                      ),
-                    ],
                   ),
                 ),
               );

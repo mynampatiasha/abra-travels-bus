@@ -2,8 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/booking_models.dart';
 import '../models/ticket_models.dart';
-import 'mock_booking_repository.dart';
-import 'mock_ticket_repository.dart';
 
 /// Why seats could not be held.
 class SeatsUnavailableException implements Exception {
@@ -74,8 +72,42 @@ class ApiBookingRepository implements BookingRepository {
       throw UnimplementedError('GET /trips/:tripId/policy');
 }
 
+/// Not connected yet - built in Phase 3.
+class NotConnectedBookingRepository implements BookingRepository {
+  const NotConnectedBookingRepository();
+
+  @override
+  Future<SeatLock> lockSeats({
+    required String tripId,
+    required List<String> seatIds,
+    required String boardingPointId,
+    required String droppingPointId,
+  }) async =>
+      throw const SeatsUnavailableException();
+
+  @override
+  Future<BookingCreated> createBooking(BookingRequest request) async =>
+      throw StateError('Not connected yet - built in Phase 3');
+
+  @override
+  Future<CouponResult> applyCoupon({
+    required String tripId,
+    required String code,
+    required int basePaise,
+  }) async =>
+      CouponResult.invalid(code);
+
+  @override
+  Future<List<String>> suggestedCoupons(String tripId) async =>
+      const <String>[];
+
+  @override
+  Future<List<CancellationRule>> cancellationPolicy(String tripId) async =>
+      const <CancellationRule>[];
+}
+
 final bookingRepositoryProvider = Provider<BookingRepository>(
-  (ref) => MockBookingRepository(store: ref.watch(mockTicketStoreProvider)),
+  (ref) => const NotConnectedBookingRepository(),
 );
 
 /// The current time for the seat hold. Overridden in tests.

@@ -5,8 +5,10 @@ import 'package:customer_app/app/customer_app.dart';
 import 'package:customer_app/app/providers.dart';
 import 'package:customer_app/bootstrap/app_dependencies.dart';
 import 'package:customer_app/features/authentication/otp_sign_in_controller.dart';
+import 'package:customer_app/features/booking/repositories/seat_repository.dart';
 import 'package:customer_app/features/discovery/controllers/travel_dates.dart';
 import 'package:customer_app/features/home/home_banners_repository.dart';
+import 'package:customer_app/features/my_trips/repositories/trips_repository.dart';
 import 'package:customer_app/features/onboarding/first_launch.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -19,6 +21,8 @@ import 'package:shared_models/shared_models.dart';
 import 'package:shared_network/shared_network.dart';
 
 import 'fake_home_banners.dart';
+import 'fake_seat_repository.dart';
+import 'fake_trips_repository.dart';
 
 /// The real English resources (app + shared), read up front so widget
 /// tests need no real-time asset loading.
@@ -106,10 +110,14 @@ class TestApp {
     List<Locale> deviceLocales = const <Locale>[Locale('en')],
     TranslationSource? translations,
     HomeBannersRepository? banners,
+    SeatRepository? seats,
+    TripsRepository? trips,
     // The device settings of an earlier run, to start the app again as
     // after a restart.
     InMemoryPreferencesStore? devicePreferences,
   }) : banners = banners ?? FakeHomeBannersRepository(),
+       seats = seats ?? const FakeSeatRepository(),
+       trips = trips ?? FakeTripsRepository(),
        preferences = devicePreferences ?? InMemoryPreferencesStore(),
        adapter = FakeHttpAdapter(handler ?? (_) async => currentUserResponse),
        secureStore = InMemorySecureStore(stored) {
@@ -154,6 +162,8 @@ class TestApp {
   /// The banners on Home. None unless a test gives some, so other tests
   /// see no banner requests.
   final HomeBannersRepository banners;
+  final SeatRepository seats;
+  final TripsRepository trips;
   final InMemorySecureStore secureStore;
   final InMemoryPreferencesStore preferences;
   final MemoryLogger logger = MemoryLogger();
@@ -172,6 +182,8 @@ class TestApp {
     overrides: [
       appDependenciesProvider.overrideWithValue(dependencies),
       homeBannersRepositoryProvider.overrideWithValue(banners),
+      seatRepositoryProvider.overrideWithValue(seats),
+      tripsRepositoryProvider.overrideWithValue(trips),
       if (clock != null) signInClockProvider.overrideWithValue(clock),
       if (clock != null) discoveryClockProvider.overrideWithValue(clock),
     ],

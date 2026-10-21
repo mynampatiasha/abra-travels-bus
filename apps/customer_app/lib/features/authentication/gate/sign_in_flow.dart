@@ -127,165 +127,6 @@ class _PhoneStepState extends ConsumerState<PhoneStep>
     widget.onCodeSent();
   }
 
-  void _showSocialDemoSheet(BuildContext context, {required bool isApple}) {
-    final providerName = isApple ? 'Apple' : 'Google';
-    const demoUsers = [
-      UserProfile(
-        id: 'c1',
-        name: 'Ramesh Kumar',
-        email: 'ramesh.kumar@example.com',
-        phone: '+919876543210',
-        userType: UserType.customer,
-        status: UserStatus.active,
-        preferredLanguage: 'en',
-        emailVerified: true,
-        phoneVerified: true,
-        hasPassword: true,
-        mfaEnabled: false,
-      ),
-      UserProfile(
-        id: 'c2',
-        name: 'Priya Sharma',
-        email: 'priya.sharma@example.com',
-        phone: '+919876543211',
-        userType: UserType.customer,
-        status: UserStatus.active,
-        preferredLanguage: 'te',
-        emailVerified: true,
-        phoneVerified: true,
-        hasPassword: true,
-        mfaEnabled: false,
-      ),
-      UserProfile(
-        id: 'c3',
-        name: 'Rahul Verma',
-        email: 'rahul.verma@example.com',
-        phone: '+919876543212',
-        userType: UserType.customer,
-        status: UserStatus.active,
-        preferredLanguage: 'hi',
-        emailVerified: true,
-        phoneVerified: true,
-        hasPassword: true,
-        mfaEnabled: false,
-      ),
-    ];
-
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (sheetContext) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Row(
-                children: [
-                  Icon(
-                    isApple ? Icons.apple : Icons.account_circle,
-                    color: isApple ? Colors.black : const Color(0xFF4285F4),
-                    size: 26,
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Continue with $providerName',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0F172A),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'In the real app this opens the OAuth screen. For the demo, choose an account:',
-                style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
-              ),
-              const SizedBox(height: 16),
-              for (final user in demoUsers)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () {
-                      Navigator.of(sheetContext).pop();
-                      ref.read(authStateProvider.notifier).signInDemo(user);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                      ),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 18,
-                            backgroundColor: const Color(0xFFE2E8F0),
-                            child: Text(
-                              user.name?[0] ?? 'U',
-                              style: const TextStyle(
-                                color: Color(0xFF1E293B),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  user.name ?? '',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                    color: Color(0xFF0F172A),
-                                  ),
-                                ),
-                                Text(
-                                  user.email ?? '',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Color(0xFF64748B),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(Icons.arrow_forward_ios, size: 12, color: Color(0xFF94A3B8)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AbraLocalizations.of(context);
@@ -319,22 +160,23 @@ class _PhoneStepState extends ConsumerState<PhoneStep>
             SizedBox(
               width: 48,
               height: 48,
-              child: OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              child: Tooltip(
+                message: 'Continue with Google',
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                ),
-                onPressed: !signIn.isBusy
-                    ? () => _showSocialDemoSheet(context, isApple: false)
-                    : null,
-                child: const Text(
-                  'G',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF4285F4),
+                  onPressed: null,
+                  child: const Text(
+                    'G',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF4285F4),
+                    ),
                   ),
                 ),
               ),
@@ -343,17 +185,18 @@ class _PhoneStepState extends ConsumerState<PhoneStep>
             SizedBox(
               width: 48,
               height: 48,
-              child: OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              child: Tooltip(
+                message: 'Continue with Apple',
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
+                  onPressed: null,
+                  child: const Icon(Icons.apple, size: 26, color: Colors.black),
                 ),
-                onPressed: !signIn.isBusy
-                    ? () => _showSocialDemoSheet(context, isApple: true)
-                    : null,
-                child: const Icon(Icons.apple, size: 26, color: Colors.black),
               ),
             ),
           ],

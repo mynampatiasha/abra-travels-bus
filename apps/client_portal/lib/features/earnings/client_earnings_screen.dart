@@ -1,4 +1,3 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_theme/shared_theme.dart';
@@ -13,15 +12,6 @@ class ClientEarningsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final earnings = kMockEarnings;
-    final totalGross = earnings.fold<int>(0, (sum, e) => sum + (e['gross'] as int));
-    final totalCommission = earnings.fold<int>(0, (sum, e) => sum + (e['commission'] as int));
-    final totalNet = earnings.fold<int>(0, (sum, e) => sum + (e['net'] as int));
-
-    final spots = earnings.asMap().entries.map((e) =>
-      FlSpot(e.key.toDouble(), (e.value['net'] as int) / 10000)
-    ).toList();
-
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AbraSpacing.xxl),
       child: Column(
@@ -33,39 +23,39 @@ class ClientEarningsScreen extends StatelessWidget {
             breadcrumbs: ['Money', 'Earnings'],
           ),
           const SizedBox(height: AbraSpacing.xl),
-          Row(
+          const Row(
             children: [
               Expanded(
                 child: PortalKpiCard(
                   icon: Icons.confirmation_number_outlined,
-                  value: formatRs(totalGross),
+                  value: 'Not connected yet - built in Phase 6',
                   label: 'Gross sales, 30 days',
                   iconColor: AbraColors.blue,
                 ),
               ),
-              const SizedBox(width: AbraSpacing.md),
+              SizedBox(width: AbraSpacing.md),
               Expanded(
                 child: PortalKpiCard(
                   icon: Icons.percent,
-                  value: formatRs(totalCommission),
+                  value: 'Not connected yet - built in Phase 6',
                   label: 'Abra commission',
                   iconColor: AbraColors.orange,
                 ),
               ),
-              const SizedBox(width: AbraSpacing.md),
-              const Expanded(
+              SizedBox(width: AbraSpacing.md),
+              Expanded(
                 child: PortalKpiCard(
                   icon: Icons.replay,
-                  value: '₹0',
+                  value: 'Not connected yet - built in Phase 6',
                   label: 'Refunds you bore',
                   iconColor: AbraColors.danger,
                 ),
               ),
-              const SizedBox(width: AbraSpacing.md),
+              SizedBox(width: AbraSpacing.md),
               Expanded(
                 child: PortalKpiCard(
                   icon: Icons.account_balance_wallet,
-                  value: formatRs(totalNet),
+                  value: 'Not connected yet - built in Phase 6',
                   label: 'Your net, 30 days',
                   iconColor: AbraColors.teal,
                 ),
@@ -84,12 +74,12 @@ class ClientEarningsScreen extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: const [
+                const Row(
+                  children: [
                     Icon(Icons.account_balance, size: 18, color: AbraColors.deepBlue),
                     SizedBox(width: 8),
                     Text(
-                      'Payout: Automatic (Razorpay Route) · Bank HDFC Bank (•••• 4521): Verified',
+                      'Payout: Not connected yet - built in Phase 6',
                       style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                     ),
                   ],
@@ -116,41 +106,27 @@ class ClientEarningsScreen extends StatelessWidget {
               border: Border.all(color: AbraColors.border),
               boxShadow: AbraShadows.soft,
             ),
-            child: Column(
+            child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Daily net earnings after commission (last 30 days)', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-                const SizedBox(height: 16),
+                Text('Daily net earnings after commission (last 30 days)', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                SizedBox(height: 16),
                 SizedBox(
                   height: 220,
-                  child: LineChart(
-                    LineChartData(
-                      gridData: FlGridData(
-                        show: true,
-                        drawVerticalLine: false,
-                        getDrawingHorizontalLine: (_) => const FlLine(color: AbraColors.divider, strokeWidth: 1),
-                      ),
-                      titlesData: FlTitlesData(
-                        leftTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 36,
-                            getTitlesWidget: (v, _) => Text('${v.round()}k', style: const TextStyle(fontSize: 10, color: AbraColors.textSecondary)),
-                          ),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.show_chart, size: 48, color: AbraColors.textDisabled),
+                        SizedBox(height: 12),
+                        Text(
+                          'Not connected yet - built in Phase 6',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AbraColors.textPrimary),
                         ),
-                        bottomTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      ),
-                      borderData: FlBorderData(show: false),
-                      lineBarsData: [
-                        LineChartBarData(
-                          spots: spots,
-                          isCurved: true,
-                          color: AbraColors.teal,
-                          barWidth: 2.5,
-                          dotData: const FlDotData(show: false),
-                          belowBarData: BarAreaData(show: true, color: AbraColors.teal.withValues(alpha: 0.1)),
+                        SizedBox(height: 4),
+                        Text(
+                          'Daily earnings trends will appear here when connected.',
+                          style: TextStyle(fontSize: 13, color: AbraColors.textSecondary),
                         ),
                       ],
                     ),
@@ -184,7 +160,7 @@ class ClientEarningsScreen extends StatelessWidget {
                         children: [
                           Icon(Icons.wallet_outlined, size: 48, color: AbraColors.textDisabled),
                           SizedBox(height: 12),
-                          Text('No settlements yet', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AbraColors.textPrimary)),
+                          Text('Not connected yet - built in Phase 6', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AbraColors.textPrimary)),
                           SizedBox(height: 4),
                           Text('Settlements for completed trips appear here.', style: TextStyle(fontSize: 13, color: AbraColors.textSecondary)),
                         ],
@@ -247,7 +223,7 @@ class ClientEarningsScreen extends StatelessWidget {
   }
 
   void _showSettlementDetail(BuildContext context, Map<String, dynamic> s) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Settlement Statement: ${s['period']}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -271,15 +247,19 @@ class ClientEarningsScreen extends StatelessWidget {
             onPressed: () => _raiseQuery(context, s),
             child: const Text('Raise a query'),
           ),
-          FilledButton.icon(
-            icon: const Icon(Icons.download, size: 16),
-            label: const Text('Download CSV Statement'),
-            onPressed: () {
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Statement CSV exported for cycle ${s['period']}')),
-              );
-            },
+          const Tooltip(
+            message: 'Not connected yet',
+            child: FilledButton(
+              onPressed: null,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.download, size: 16),
+                  SizedBox(width: 8),
+                  Text('Download CSV Statement'),
+                ],
+              ),
+            ),
           ),
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
         ],
@@ -289,7 +269,7 @@ class ClientEarningsScreen extends StatelessWidget {
 
   void _raiseQuery(BuildContext context, Map<String, dynamic> s) {
     final queryCtrl = TextEditingController();
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Raise Query on Settlement ${s['period']}'),
@@ -313,14 +293,12 @@ class ClientEarningsScreen extends StatelessWidget {
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Query submitted to Abra Accounts team. Ticket #Q-8821 opened.')),
-              );
-            },
-            child: const Text('Send to Abra'),
+          const Tooltip(
+            message: 'Not connected yet',
+            child: FilledButton(
+              onPressed: null,
+              child: Text('Send to Abra'),
+            ),
           ),
         ],
       ),

@@ -79,19 +79,7 @@ List<Map<String, dynamic>> kMockBookings = <Map<String, dynamic>>[];
 
 List<Map<String, dynamic>> kMockOffers = <Map<String, dynamic>>[];
 
-List<Map<String, dynamic>> get kMockEarnings {
-  final now = DateTime.now();
-  return List.generate(30, (i) {
-    final day = now.subtract(Duration(days: 29 - i));
-    return {
-      'date': '${day.year}-${day.month.toString().padLeft(2,'0')}-${day.day.toString().padLeft(2,'0')}',
-      'bookings': 0,
-      'gross': 0,
-      'commission': 0,
-      'net': 0,
-    };
-  });
-}
+List<Map<String, dynamic>> get kMockEarnings => <Map<String, dynamic>>[];
 
 List<Map<String, dynamic>> kMockSettlements = <Map<String, dynamic>>[];
 

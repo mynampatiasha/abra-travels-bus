@@ -153,7 +153,7 @@ class DriverHomeScreen extends ConsumerWidget {
                       Text('No Active Trip Today',
                           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
                       SizedBox(height: 4),
-                      Text('New trips from your operator will appear here.',
+                      Text('Not connected yet - built in Phase 5',
                           style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
                     ],
                   ),
@@ -171,7 +171,7 @@ class DriverHomeScreen extends ConsumerWidget {
             if (nextTrips.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 8),
-                child: Text('No further trips planned on your schedule.',
+                child: Text('Not connected yet - built in Phase 5',
                     style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
               )
             else
@@ -301,33 +301,38 @@ class DriverHomeScreen extends ConsumerWidget {
 
   Widget _buildActionButtons(BuildContext context, WidgetRef ref, Map<String, dynamic> trip) {
     final status = trip['status'] as String;
-    final controller = ref.read(driverCoreControllerProvider);
 
     if (status == 'SCHEDULED') {
-      return ElevatedButton.icon(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.white,
-          foregroundColor: const Color(0xFF12304A),
-          minimumSize: const Size.fromHeight(52),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      return Tooltip(
+        message: 'Not connected yet',
+        child: ElevatedButton.icon(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: const Color(0xFF12304A),
+            minimumSize: const Size.fromHeight(52),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          icon: const Icon(Icons.group_add_rounded),
+          label: const Text('Start Boarding', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+          onPressed: null,
         ),
-        icon: const Icon(Icons.group_add_rounded),
-        label: const Text('Start Boarding', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-        onPressed: () => controller.startBoarding(context, trip['id'] as String),
       );
     }
 
     if (status == 'BOARDING') {
-      return ElevatedButton.icon(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF10B981),
-          foregroundColor: Colors.white,
-          minimumSize: const Size.fromHeight(52),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      return Tooltip(
+        message: 'Not connected yet',
+        child: ElevatedButton.icon(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF10B981),
+            foregroundColor: Colors.white,
+            minimumSize: const Size.fromHeight(52),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          icon: const Icon(Icons.play_arrow_rounded, size: 24),
+          label: const Text('Start Trip (Pre-Trip Check)', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+          onPressed: null,
         ),
-        icon: const Icon(Icons.play_arrow_rounded, size: 24),
-        label: const Text('Start Trip (Pre-Trip Check)', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-        onPressed: () => context.go(DriverRoutes.preTripPath(trip['id'] as String)),
       );
     }
 
@@ -335,30 +340,36 @@ class DriverHomeScreen extends ConsumerWidget {
       return Row(
         children: [
           Expanded(
-            child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.white,
-                side: const BorderSide(color: Colors.white70),
-                minimumSize: const Size.fromHeight(48),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Tooltip(
+              message: 'Not connected yet',
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: const BorderSide(color: Colors.white70),
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                icon: const Icon(Icons.access_time_rounded, size: 18),
+                label: const Text('Report Delay'),
+                onPressed: null,
               ),
-              icon: const Icon(Icons.access_time_rounded, size: 18),
-              label: const Text('Report Delay'),
-              onPressed: () => _showDelaySheet(context, ref, trip['id'] as String),
             ),
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFEF4444),
-                foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(48),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Tooltip(
+              message: 'Not connected yet',
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFEF4444),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                icon: const Icon(Icons.flag_rounded, size: 18),
+                label: const Text('End Trip'),
+                onPressed: null,
               ),
-              icon: const Icon(Icons.flag_rounded, size: 18),
-              label: const Text('End Trip'),
-              onPressed: () => context.go(DriverRoutes.endTripPath(trip['id'] as String)),
             ),
           ),
         ],
@@ -369,30 +380,36 @@ class DriverHomeScreen extends ConsumerWidget {
       return Row(
         children: [
           Expanded(
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF10B981),
-                foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(48),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Tooltip(
+              message: 'Not connected yet',
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF10B981),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                label: const Text('Resume Trip'),
+                onPressed: null,
               ),
-              icon: const Icon(Icons.play_arrow_rounded, size: 18),
-              label: const Text('Resume Trip'),
-              onPressed: () => controller.resumeTrip(context, trip['id'] as String),
             ),
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFEF4444),
-                foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(48),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Tooltip(
+              message: 'Not connected yet',
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFEF4444),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                icon: const Icon(Icons.flag_rounded, size: 18),
+                label: const Text('End Trip'),
+                onPressed: null,
               ),
-              icon: const Icon(Icons.flag_rounded, size: 18),
-              label: const Text('End Trip'),
-              onPressed: () => context.go(DriverRoutes.endTripPath(trip['id'] as String)),
             ),
           ),
         ],
@@ -402,6 +419,7 @@ class DriverHomeScreen extends ConsumerWidget {
     return const SizedBox.shrink();
   }
 
+  // ignore: unused_element
   void _showDelaySheet(BuildContext context, WidgetRef ref, String tripId) {
     int selectedMins = 30;
     String selectedReason = 'Traffic';
@@ -494,7 +512,7 @@ class DriverTripScreen extends ConsumerWidget {
           foregroundColor: Colors.white,
         ),
         body: const Center(
-          child: Text('No active trip at the moment.'),
+          child: Text('Not connected yet - built in Phase 5'),
         ),
       );
     }
@@ -576,75 +594,90 @@ class DriverTripScreen extends ConsumerWidget {
                   'Passengers (${passengers.length})',
                   style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
                 ),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1677C8),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                Tooltip(
+                  message: 'Not connected yet',
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1677C8),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    icon: const Icon(Icons.qr_code_scanner, size: 18),
+                    label: const Text('Scan Ticket'),
+                    onPressed: null,
                   ),
-                  icon: const Icon(Icons.qr_code_scanner, size: 18),
-                  label: const Text('Scan Ticket'),
-                  onPressed: () => _showScanTicketSheet(context, ref, trip['id'] as String),
                 ),
               ],
             ),
             const SizedBox(height: 8),
 
             // Passengers Manifest List
-            for (final p in passengers) ...[
-              Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        backgroundColor: const Color(0xFFE0F2FE),
-                        child: Text(
-                          p['customer'][0] as String,
-                          style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF0369A1)),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(p['customer'] as String, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                            Text(
-                              'PNR: ${p['pnr']} · Seats: ${p['seatList']}',
-                              style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
-                            ),
-                            Text(
-                              'Boarding: ${p['board']}',
-                              style: const TextStyle(color: Color(0xFF0284C7), fontSize: 11, fontWeight: FontWeight.w600),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (checkedIn.contains(p['id']))
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(8)),
-                          child: const Text('Checked In', style: TextStyle(color: Color(0xFF166534), fontWeight: FontWeight.w700, fontSize: 12)),
-                        )
-                      else
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFF1F5F9),
-                            foregroundColor: const Color(0xFF0F172A),
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            if (passengers.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Center(
+                  child: Text('Not connected yet - built in Phase 5',
+                      style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                ),
+              )
+            else
+              for (final p in passengers) ...[
+                Card(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: const Color(0xFFE0F2FE),
+                          child: Text(
+                            p['customer'][0] as String,
+                            style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF0369A1)),
                           ),
-                          onPressed: () => controller.checkInPassenger(context, trip['id'] as String, p['id'] as String, p['customer'] as String),
-                          child: const Text('Check In'),
                         ),
-                    ],
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(p['customer'] as String, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                              Text(
+                                'PNR: ${p['pnr']} · Seats: ${p['seatList']}',
+                                style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                              ),
+                              Text(
+                                'Boarding: ${p['board']}',
+                                style: const TextStyle(color: Color(0xFF0284C7), fontSize: 11, fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (checkedIn.contains(p['id']))
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(8)),
+                            child: const Text('Checked In', style: TextStyle(color: Color(0xFF166534), fontWeight: FontWeight.w700, fontSize: 12)),
+                          )
+                        else
+                          Tooltip(
+                            message: 'Not connected yet',
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFF1F5F9),
+                                foregroundColor: const Color(0xFF0F172A),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              onPressed: null,
+                              child: const Text('Check In'),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
-            ],
+                const SizedBox(height: 8),
+              ],
             const SizedBox(height: 24),
           ],
         ),
@@ -652,6 +685,7 @@ class DriverTripScreen extends ConsumerWidget {
     );
   }
 
+  // ignore: unused_element
   void _showScanTicketSheet(BuildContext context, WidgetRef ref, String tripId) {
     final pnrController = TextEditingController();
     showModalBottomSheet<void>(
@@ -686,40 +720,23 @@ class DriverTripScreen extends ConsumerWidget {
               TextField(
                 controller: pnrController,
                 decoration: InputDecoration(
-                  hintText: 'Enter PNR (e.g. ABRK5001A)',
+                  hintText: 'Enter PNR',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                 ),
               ),
                const SizedBox(height: 20),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1677C8),
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size.fromHeight(50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              Tooltip(
+                message: 'Not connected yet',
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1677C8),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size.fromHeight(50),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: null,
+                  child: const Text('Verify & Check In', style: TextStyle(fontWeight: FontWeight.w700)),
                 ),
-                onPressed: () {
-                  final db = ref.read(driverMockDbProvider);
-                  final pnr = pnrController.text.trim().toUpperCase();
-                  final b = db.bookings.firstWhere(
-                    (x) => x['pnr'] == pnr,
-                    orElse: () => <String, dynamic>{},
-                  );
-
-                  if (b.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('No ticket found with PNR $pnr'), backgroundColor: const Color(0xFFEF4444)),
-                    );
-                    return;
-                  }
-
-                  db.checkInPassenger(tripId, b['id'] as String);
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('${b['customer']} verified & checked in!'), backgroundColor: const Color(0xFF10B981)),
-                  );
-                },
-                child: const Text('Verify & Check In', style: TextStyle(fontWeight: FontWeight.w700)),
               ),
             ],
           ),
@@ -742,10 +759,10 @@ class DriverProfileScreen extends ConsumerWidget {
     final themeMode = ref.watch(driverThemeModeProvider);
     final isDark = themeMode == ThemeMode.dark;
 
-    final licenceNo = driver?['licence'] as String? ?? '—';
-    final licExp = driver?['licExp'] as String? ?? '—';
-    final operatorName = driver?['operatorName'] as String? ?? '—';
-    final phone = driver?['phone'] as String? ?? '—';
+    final licenceNo = driver?['licence'] as String? ?? 'Not connected yet - built in Phase 5';
+    final licExp = driver?['licExp'] as String? ?? 'Not connected yet - built in Phase 5';
+    final operatorName = driver?['operatorName'] as String? ?? 'Not connected yet - built in Phase 5';
+    final phone = driver?['phone'] as String? ?? 'Not connected yet - built in Phase 5';
 
     final tripsDoneCount = controller.myTrips.where((t) => t['status'] == 'ARRIVED').length;
     final upcomingCount = controller.myTrips.where((t) => t['status'] == 'SCHEDULED').length;

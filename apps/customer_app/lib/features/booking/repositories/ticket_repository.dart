@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/ticket_models.dart';
-import 'mock_ticket_repository.dart';
 
 /// Where a confirmed booking and its ticket come from. Screens depend on
 /// this interface only; the backend replaces [MockTicketRepository] by
@@ -18,6 +17,15 @@ class ApiTicketRepository implements TicketRepository {
       throw UnimplementedError('GET /bookings/:id/ticket');
 }
 
+/// Not connected yet - built in Phase 3.
+class NotConnectedTicketRepository implements TicketRepository {
+  const NotConnectedTicketRepository();
+
+  @override
+  Future<Ticket> ticket(String bookingId) async =>
+      throw StateError('Not connected yet - built in Phase 3');
+}
+
 final ticketRepositoryProvider = Provider<TicketRepository>(
-  (ref) => MockTicketRepository(ref.watch(mockTicketStoreProvider)),
+  (ref) => const NotConnectedTicketRepository(),
 );

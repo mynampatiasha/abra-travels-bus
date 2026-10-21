@@ -86,7 +86,7 @@ class _TicketDetailsScreenState extends ConsumerState<TicketDetailsScreen> {
             Center(child: Text('Error loading ticket: $err')),
         data: (SupportTicket? ticket) {
           if (ticket == null) {
-            return const Center(child: Text('Ticket not found'));
+            return const Center(child: Text('Not connected yet - built in Phase 4'));
           }
 
           return Column(
@@ -277,17 +277,9 @@ class _TicketDetailsScreenState extends ConsumerState<TicketDetailsScreen> {
                         style: IconButton.styleFrom(
                           backgroundColor: AbraColors.blue,
                         ),
-                        icon: _sending
-                            ? const SizedBox(
-                                height: 16,
-                                width: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Icon(Icons.send, size: 18),
-                        onPressed: _sending ? null : _sendReply,
+                        tooltip: 'Not connected yet',
+                        icon: const Icon(Icons.send, size: 18),
+                        onPressed: null,
                       ),
                     ],
                   ),

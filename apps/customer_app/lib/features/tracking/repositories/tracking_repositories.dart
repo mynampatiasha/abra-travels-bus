@@ -1,9 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../booking/repositories/booking_repository.dart';
-import '../../my_trips/repositories/trips_repository.dart';
 import '../models/tracking_models.dart';
-import 'mock_tracking_repositories.dart';
 
 /// Where the bus is. Screens depend on this interface only; the backend
 /// replaces [MockTrackingRepository] by providing [ApiTrackingRepository].
@@ -87,17 +84,63 @@ class ApiSharingRepository implements SharingRepository {
       throw UnimplementedError('DELETE /bookings/:id/share');
 }
 
+/// Not connected yet - built in Phase 5.
+class NotConnectedTrackingRepository implements TrackingRepository {
+  const NotConnectedTrackingRepository();
+
+  @override
+  Future<TrackingSnapshot> snapshot(String bookingId, {bool retry = false}) async =>
+      throw StateError('Not connected yet - built in Phase 5');
+}
+
+/// Not connected yet - built in Phase 5.
+class NotConnectedSafetyRepository implements SafetyRepository {
+  const NotConnectedSafetyRepository();
+
+  @override
+  Future<List<EmergencyContact>> contacts() async => const <EmergencyContact>[];
+
+  @override
+  Future<EmergencyContact> addContact({
+    required String name,
+    required String phone,
+    required String relation,
+  }) async =>
+      throw StateError('Not connected yet - built in Phase 5');
+
+  @override
+  Future<SosAlert> triggerSos(String bookingId) async =>
+      throw StateError('Not connected yet - built in Phase 5');
+
+  @override
+  Future<void> cancelSos(String alertId) async =>
+      throw StateError('Not connected yet - built in Phase 5');
+}
+
+/// Not connected yet - built in Phase 5.
+class NotConnectedSharingRepository implements SharingRepository {
+  const NotConnectedSharingRepository();
+
+  @override
+  Future<ShareState> state(String bookingId) async => const ShareState.off();
+
+  @override
+  Future<ShareState> start(String bookingId) async =>
+      throw StateError('Not connected yet - built in Phase 5');
+
+  @override
+  Future<ShareState> stop(String bookingId) async =>
+      throw StateError('Not connected yet - built in Phase 5');
+}
+
 final trackingRepositoryProvider = Provider<TrackingRepository>(
-  (ref) => MockTrackingRepository(now: ref.read(bookingClockProvider)),
+  (ref) => const NotConnectedTrackingRepository(),
 );
 
 final safetyRepositoryProvider = Provider<SafetyRepository>(
-  (ref) => MockSafetyRepository(now: ref.read(bookingClockProvider)),
+  (ref) => const NotConnectedSafetyRepository(),
 );
 
 final sharingRepositoryProvider = Provider<SharingRepository>(
-  (ref) => MockSharingRepository(
-    now: ref.read(bookingClockProvider),
-    trips: ref.watch(tripsRepositoryProvider),
-  ),
+  (ref) => const NotConnectedSharingRepository(),
 );

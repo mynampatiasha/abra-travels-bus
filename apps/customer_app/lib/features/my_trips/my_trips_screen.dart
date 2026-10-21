@@ -205,7 +205,7 @@ class _EmptyList extends ConsumerWidget {
           ),
           const SizedBox(height: AbraSpacing.sm),
           Text(
-            l10n.text(message),
+            'Not connected yet - built in Phase 4',
             textAlign: TextAlign.center,
             style: textTheme.bodyMedium?.copyWith(
               color: AbraColors.textSecondary,

@@ -38,8 +38,10 @@ class SosDriverSheet extends ConsumerStatefulWidget {
 class _SosDriverSheetState extends ConsumerState<SosDriverSheet> {
   SosCategory _selectedCategory = SosCategory.accident;
   bool _hasPhoto = false;
+  // ignore: unused_field
   bool _sending = false;
 
+  // ignore: unused_element
   void _submitSos() {
     setState(() => _sending = true);
     final db = ref.read(driverMockDbProvider);
@@ -216,24 +218,21 @@ class _SosDriverSheetState extends ConsumerState<SosDriverSheet> {
               const SizedBox(width: 12),
               Expanded(
                 flex: 2,
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFEF4444),
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size.fromHeight(52),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                child: Tooltip(
+                  message: 'Not connected yet',
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFEF4444),
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size.fromHeight(52),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
+                    icon: const Icon(Icons.emergency_rounded),
+                    label: const Text('Send SOS', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                    onPressed: null,
                   ),
-                  icon: const Icon(Icons.emergency_rounded),
-                  label: _sending
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                        )
-                      : const Text('Send SOS', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-                  onPressed: _sending ? null : _submitSos,
                 ),
               ),
             ],
