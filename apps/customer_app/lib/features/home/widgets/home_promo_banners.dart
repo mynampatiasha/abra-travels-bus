@@ -37,23 +37,30 @@ class HomePromoBanners extends StatelessWidget {
         separatorBuilder: (_, _) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
           final b = _banners[index];
-          return InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: () {
-              if (b.code != null) {
-                Clipboard.setData(ClipboardData(text: b.code!));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Offer code ${b.code} copied!'),
-                    duration: const Duration(seconds: 2),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              }
-            },
-            child: Container(
-              width: 270,
-              decoration: BoxDecoration(
+          final label = b.code != null
+              ? '${b.title}, ${b.sub}. Code ${b.code}'
+              : '${b.title}, ${b.sub}';
+          return Semantics(
+            button: true,
+            label: label,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () {
+                if (b.code != null) {
+                  Clipboard.setData(ClipboardData(text: b.code!));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Offer code ${b.code} copied!'),
+                      duration: const Duration(seconds: 2),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              child: ExcludeSemantics(
+                child: Container(
+                  width: 270,
+                  decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 gradient: LinearGradient(
                   colors: b.gradient,
@@ -122,7 +129,9 @@ class HomePromoBanners extends StatelessWidget {
                 ),
               ),
             ),
-          );
+          ),
+        ),
+      );
         },
       ),
     );
