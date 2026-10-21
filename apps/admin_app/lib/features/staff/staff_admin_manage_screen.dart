@@ -31,7 +31,7 @@ class StaffMember {
         name: '${json['name'] ?? ''}',
         email: '${json['email'] ?? ''}',
         role: '${json['role'] ?? 'SUPPORT'}',
-        roleName: '${json['roleName'] ?? json['role'] ?? 'Support Agent'}',
+        roleName: '${json['roleName'] ?? json['role'] ?? ''}',
         status: '${json['status'] ?? 'ACTIVE'}',
         mfa: json['mfa'] == true,
         overrides: (json['overrides'] as num?)?.toInt() ?? 0,

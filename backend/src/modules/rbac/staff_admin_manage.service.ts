@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { isValidObjectId, type Model, Schema, Types } from 'mongoose';
 import { ApiException } from '../../common/errors/api-exception';
@@ -14,7 +14,6 @@ import { assertPasswordAcceptable } from '../authentication/services/password-po
 import { MessageSenderService } from '../messages/messages_admin_manage.service';
 import { AUTH_SESSION_MODEL, type AuthSession } from '../sessions/schemas/auth-session.schema';
 import { SessionsService } from '../sessions/services/sessions.service';
-import { UserRepository } from '../users/repositories/user.repository';
 import { USER_MODEL, type User } from '../users/schemas/user.schema';
 import { UsersService } from '../users/services/users.service';
 import { PermissionOverrideRepository } from './repositories/permission-override.repository';
@@ -132,16 +131,15 @@ export class StaffAdminManageService {
     @InjectModel(USER_MODEL) private readonly userModel: Model<User>,
     @InjectModel(STAFF_INVITATION_MODEL) private readonly invitationModel: Model<StaffInvitation>,
     @InjectModel(AUTH_SESSION_MODEL) private readonly sessionModel: Model<AuthSession>,
-    private readonly userRepo: UserRepository,
     private readonly usersService: UsersService,
     private readonly roleRepo: RoleRepository,
-    private readonly overrideRepo: PermissionOverrideRepository,
     private readonly sessionsService: SessionsService,
     private readonly messageSender: MessageSenderService,
     private readonly hasher: PasswordHasher,
     private readonly config: AppConfigService,
     private readonly transactions: TransactionRunner,
     private readonly auditedChanges: AuditedChangeRunner,
+    @Optional() private readonly overrideRepo?: PermissionOverrideRepository,
   ) {}
 
   private get adminBaseUrl(): string {
@@ -215,13 +213,15 @@ export class StaffAdminManageService {
     const userIds = users.map((u) => u._id);
 
     // Aggregate overrides count per user
-    const overrideCounts = await this.overrideRepo['model'].aggregate<{ _id: Types.ObjectId; count: number }>([
-      { $match: { userId: { $in: userIds } } },
-      { $group: { _id: '$userId', count: { $sum: 1 } } },
-    ]);
     const overrideMap = new Map<string, number>();
-    for (const entry of overrideCounts) {
-      overrideMap.set(entry._id.toHexString(), entry.count);
+    if (this.overrideRepo?.['model']) {
+      const overrideCounts = await this.overrideRepo['model'].aggregate<{ _id: Types.ObjectId; count: number }>([
+        { $match: { userId: { $in: userIds } } },
+        { $group: { _id: '$userId', count: { $sum: 1 } } },
+      ]);
+      for (const entry of overrideCounts) {
+        overrideMap.set(entry._id.toHexString(), entry.count);
+      }
     }
 
     // Load roles map
@@ -276,7 +276,7 @@ export class StaffAdminManageService {
       }
     }
 
-    const overrides = await this.overrideRepo.findForUser(user._id);
+    const overrides = this.overrideRepo ? await this.overrideRepo.findForUser(user._id) : [];
 
     return {
       id: user._id.toHexString(),
@@ -298,27 +298,12 @@ export class StaffAdminManageService {
     _client: ClientRequestInfo,
   ): Promise<StaffView> {
     const email = input.email.trim().toLowerCase();
-    const existing = await this.userRepo.findByEmail(email);
+    const existing = await this.userModel.findOne({ email }).lean().exec();
     if (existing) {
       throw new ApiException('ALREADY_REGISTERED', 'This email already has an account.');
     }
 
-    let role = await this.roleRepo.findByKey(input.role);
-    if (!role && input.role === 'ACCOUNTS') {
-      try {
-        await this.roleRepo.upsertSystemRole({
-          key: 'ACCOUNTS',
-          name: 'Accounts',
-          description: 'Handles financial commissions, payouts and audit reporting.',
-          userType: 'STAFF',
-          dataScopeType: 'ALL',
-          permissionKeys: ['commissions.read', 'commissions.export', 'audit.read'],
-        });
-        role = await this.roleRepo.findByKey('ACCOUNTS');
-      } catch {
-        role = await this.roleRepo.findByKey('ACCOUNTS');
-      }
-    }
+    const role = await this.roleRepo.findByKey(input.role);
     if (!role) {
       throw new ApiException('VALIDATION_FAILED', `Role '${input.role}' does not exist.`);
     }
@@ -329,20 +314,25 @@ export class StaffAdminManageService {
     const actorId = new Types.ObjectId(actor.userId);
 
     const created = await this.transactions.run(async (session) => {
-      const user = await this.userRepo.insert(
-        {
-          name: input.name.trim(),
-          email,
-          userType: 'STAFF',
-          roleIds: [role._id],
-          dataScope: { type: 'ALL', operatorIds: [] },
-          status: 'INVITED',
-          permissionVersion: 1,
-          mfa: { enabled: false, recoveryCodeHashes: [] },
-          preferredLanguage: 'en',
-        },
+      const [user] = await this.userModel.create(
+        [
+          {
+            name: input.name.trim(),
+            email,
+            userType: 'STAFF',
+            roleIds: [role._id],
+            dataScope: { type: 'ALL', operatorIds: [] },
+            status: 'INVITED',
+            permissionVersion: 1,
+            mfa: { enabled: false, recoveryCodeHashes: [] },
+            preferredLanguage: 'en',
+          },
+        ],
         { session },
       );
+      if (!user) {
+        throw new ApiException('INTERNAL_ERROR', 'Failed to create staff user document');
+      }
 
       await this.invitationModel.create(
         [
@@ -420,21 +410,6 @@ export class StaffAdminManageService {
         throw new ApiException('PERMISSION_DENIED', 'You cannot change your own role');
       }
       nextRole = await this.roleRepo.findByKey(input.role);
-      if (!nextRole && input.role === 'ACCOUNTS') {
-        try {
-          await this.roleRepo.upsertSystemRole({
-            key: 'ACCOUNTS',
-            name: 'Accounts',
-            description: 'Handles financial commissions, payouts and audit reporting.',
-            userType: 'STAFF',
-            dataScopeType: 'ALL',
-            permissionKeys: ['commissions.read', 'commissions.export', 'audit.read'],
-          });
-          nextRole = await this.roleRepo.findByKey('ACCOUNTS');
-        } catch {
-          nextRole = await this.roleRepo.findByKey('ACCOUNTS');
-        }
-      }
       if (!nextRole) {
         throw new ApiException('VALIDATION_FAILED', `Role '${input.role}' does not exist.`);
       }
