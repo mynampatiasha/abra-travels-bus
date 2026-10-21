@@ -531,7 +531,13 @@ void main() {
       );
 
       expect(find.text('Go'), findsNothing);
-      expect(find.byType(FilledButton), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byType(HomeBannerCarousel),
+          matching: find.byType(FilledButton),
+        ),
+        findsNothing,
+      );
       await tester.tap(find.text('Banner title 1'), warnIfMissed: false);
       await tester.pumpAndSettle();
       expect(locationOf(tester).path, '/home');

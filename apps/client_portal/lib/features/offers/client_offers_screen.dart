@@ -17,44 +17,7 @@ class _ClientOffersScreenState extends State<ClientOffersScreen> {
   @override
   void initState() {
     super.initState();
-    _offers = [
-      {
-        'id': 'OF1',
-        'code': 'KAVERI10',
-        'desc': '10% off on all Hyderabad to Bengaluru weekend trips',
-        'type': 'PERCENT',
-        'value': 1000,
-        'maxDisc': 20000,
-        'to': '2026-11-15',
-        'used': 42,
-        'limit': 500,
-        'status': 'ACTIVE',
-      },
-      {
-        'id': 'OF2',
-        'code': 'FESTIVE50',
-        'desc': 'Flat ₹50 off on festival bookings for Kaveri Gold buses',
-        'type': 'FLAT',
-        'value': 5000,
-        'maxDisc': 5000,
-        'to': '2026-10-31',
-        'used': 118,
-        'limit': 200,
-        'status': 'ACTIVE',
-      },
-      {
-        'id': 'OF3',
-        'code': 'DIWALI20',
-        'desc': '20% off for early bird sleeper bookings',
-        'type': 'PERCENT',
-        'value': 2000,
-        'maxDisc': 30000,
-        'to': '2026-11-20',
-        'used': 0,
-        'limit': 300,
-        'status': 'PENDING',
-      },
-    ];
+    _offers = const [];
   }
 
   @override
@@ -86,23 +49,16 @@ class _ClientOffersScreenState extends State<ClientOffersScreen> {
               boxShadow: AbraShadows.soft,
             ),
             child: _offers.isEmpty
-                ? Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+                ? const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 48, horizontal: 24),
                     child: Center(
                       child: Column(
                         children: [
-                          const Icon(Icons.discount_outlined, size: 48, color: AbraColors.textDisabled),
-                          const SizedBox(height: 12),
-                          const Text('No offers yet', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AbraColors.textPrimary)),
-                          const SizedBox(height: 4),
-                          const Text('Request an offer to fill empty seats.', style: TextStyle(fontSize: 13, color: AbraColors.textSecondary)),
-                          const SizedBox(height: 16),
-                          FilledButton.icon(
-                            icon: const Icon(Icons.add, size: 16),
-                            label: const Text('Request an offer'),
-                            style: FilledButton.styleFrom(backgroundColor: AbraColors.blue),
-                            onPressed: () => _openRequestOfferDialog(context),
-                          ),
+                          Icon(Icons.discount_outlined, size: 48, color: AbraColors.textDisabled),
+                          SizedBox(height: 12),
+                          Text('Not connected yet - built in Phase 3', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AbraColors.textPrimary)),
+                          SizedBox(height: 4),
+                          Text('When connected, your discount offers will appear here.', style: TextStyle(fontSize: 13, color: AbraColors.textSecondary)),
                         ],
                       ),
                     ),
@@ -173,7 +129,7 @@ class _ClientOffersScreenState extends State<ClientOffersScreen> {
     final validTillCtrl = TextEditingController(text: '2026-11-30');
     String type = 'FLAT';
 
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDlgState) {
@@ -192,7 +148,7 @@ class _ClientOffersScreenState extends State<ClientOffersScreen> {
                       controller: codeCtrl,
                       decoration: const InputDecoration(
                         labelText: 'Offer Code *',
-                        hintText: 'e.g. KAVERI10',
+                        hintText: 'e.g. FESTIVE10',
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -277,41 +233,12 @@ class _ClientOffersScreenState extends State<ClientOffersScreen> {
             ),
             actions: [
               TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-              FilledButton(
-                onPressed: () {
-                  final code = codeCtrl.text.trim().toUpperCase();
-                  final desc = descCtrl.text.trim();
-                  if (code.isEmpty || desc.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please enter offer code and description')),
-                    );
-                    return;
-                  }
-
-                  final val = int.tryParse(valCtrl.text) ?? 10;
-                  final maxD = int.tryParse(maxDiscCtrl.text) ?? val;
-
-                  setState(() {
-                    _offers.insert(0, {
-                      'id': 'OF${_offers.length + 1}',
-                      'code': code,
-                      'desc': desc,
-                      'type': type,
-                      'value': val * 100,
-                      'maxDisc': maxD * 100,
-                      'to': validTillCtrl.text.trim(),
-                      'used': 0,
-                      'limit': int.tryParse(limitCtrl.text) ?? 500,
-                      'status': 'PENDING',
-                    });
-                  });
-
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Offer request sent to Abra for approval')),
-                  );
-                },
-                child: const Text('Send to Abra'),
+              const Tooltip(
+                message: 'Not connected yet',
+                child: FilledButton(
+                  onPressed: null,
+                  child: Text('Send to Abra'),
+                ),
               ),
             ],
           );

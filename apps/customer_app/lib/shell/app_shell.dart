@@ -125,12 +125,10 @@ class AppShell extends ConsumerWidget {
       ],
     );
 
-    final isHome = current == 0;
-
     if (CustomerLayout.usesNavigationRail(context)) {
       final extended = CustomerLayout.usesExtendedRail(context);
       return Scaffold(
-        appBar: isHome ? null : appBar,
+        appBar: appBar,
         floatingActionButton: const FloatingAiButton(),
         body: SafeArea(
           top: false,
@@ -221,7 +219,7 @@ class AppShell extends ConsumerWidget {
     }
 
     return Scaffold(
-      appBar: isHome ? null : appBar,
+      appBar: appBar,
       body: content,
       floatingActionButton: const FloatingAiButton(),
       bottomNavigationBar: Semantics(

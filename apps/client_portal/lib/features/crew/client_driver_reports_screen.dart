@@ -17,98 +17,7 @@ class _ClientDriverReportsScreenState extends State<ClientDriverReportsScreen> {
   String _filterStatus = 'ALL';
   String _searchQuery = '';
 
-  final List<Map<String, dynamic>> _reports = [
-    {
-      'id': 'REP1001',
-      'driver': 'Ramesh K',
-      'bus': 'TS09 UB 4521',
-      'trip': 'BLR → HYD (21:30)',
-      'date': '2026-10-14 21:00',
-      'odometer': '142,580 km',
-      'status': 'PASSED',
-      'notes': 'All systems green. Tyres and emergency doors checked.',
-      'checks': {
-        'Tyres & Pressure': true,
-        'Service & Hand Brakes': true,
-        'Headlights & Indicators': true,
-        'AC & Ventilation': true,
-        'Emergency Exit & Hammers': true,
-        'First Aid Box Stocked': true,
-      },
-    },
-    {
-      'id': 'REP1002',
-      'driver': 'Suresh M',
-      'bus': 'TS09 UB 4522',
-      'trip': 'BLR → MAA (22:00)',
-      'date': '2026-10-14 21:15',
-      'odometer': '98,340 km',
-      'status': 'PASSED',
-      'notes': 'Normal pre-trip check completed.',
-      'checks': {
-        'Tyres & Pressure': true,
-        'Service & Hand Brakes': true,
-        'Headlights & Indicators': true,
-        'AC & Ventilation': true,
-        'Emergency Exit & Hammers': true,
-        'First Aid Box Stocked': true,
-      },
-    },
-    {
-      'id': 'REP1003',
-      'driver': 'Anand R',
-      'bus': 'KA01 CD 5678',
-      'trip': 'BLR → MYS (18:00)',
-      'date': '2026-10-13 17:30',
-      'odometer': '210,120 km',
-      'status': 'OVERDUE',
-      'notes': 'Post-trip log pending from driver.',
-      'checks': {
-        'Tyres & Pressure': false,
-        'Service & Hand Brakes': false,
-        'Headlights & Indicators': false,
-        'AC & Ventilation': false,
-        'Emergency Exit & Hammers': false,
-        'First Aid Box Stocked': false,
-      },
-    },
-    {
-      'id': 'REP1004',
-      'driver': 'Priya D',
-      'bus': 'TS09 UB 4521',
-      'trip': 'HYD → BLR (06:00)',
-      'date': '2026-10-13 05:40',
-      'odometer': '141,920 km',
-      'status': 'PASSED',
-      'notes': 'Clean cabin, passenger seatbelts checked.',
-      'checks': {
-        'Tyres & Pressure': true,
-        'Service & Hand Brakes': true,
-        'Headlights & Indicators': true,
-        'AC & Ventilation': true,
-        'Emergency Exit & Hammers': true,
-        'First Aid Box Stocked': true,
-      },
-    },
-    {
-      'id': 'REP1005',
-      'driver': 'Ramesh K',
-      'bus': 'KA05 AB 1234',
-      'trip': 'BLR → HYD (21:30)',
-      'date': '2026-10-12 20:50',
-      'odometer': '45,210 km',
-      'status': 'FLAGGED',
-      'notes': 'Left front wiper blade worn; replaced before departure.',
-      'checks': {
-        'Tyres & Pressure': true,
-        'Service & Hand Brakes': true,
-        'Headlights & Indicators': true,
-        'AC & Ventilation': true,
-        'Emergency Exit & Hammers': true,
-        'First Aid Box Stocked': true,
-      },
-    },
-  ];
+  final List<Map<String, dynamic>> _reports = const [];
 
   @override
   Widget build(BuildContext context) {
@@ -134,14 +43,19 @@ class _ClientDriverReportsScreenState extends State<ClientDriverReportsScreen> {
             subtitle: 'Pre-trip safety inspections, duty checklists and punctuality logs',
             breadcrumbs: const ['Fleet', 'Driver reports'],
             actions: [
-              OutlinedButton.icon(
-                icon: const Icon(Icons.download, size: 16),
-                label: const Text('Export CSV'),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Exported 5 inspection reports to CSV')),
-                  );
-                },
+              const Tooltip(
+                message: 'Not connected yet',
+                child: OutlinedButton(
+                  onPressed: null,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.download, size: 16),
+                      SizedBox(width: 8),
+                      Text('Export CSV'),
+                    ],
+                  ),
+                ),
               ),
               FilledButton.icon(
                 icon: const Icon(Icons.add, size: 16),
@@ -169,24 +83,24 @@ class _ClientDriverReportsScreenState extends State<ClientDriverReportsScreen> {
                 children: const [
                   PortalKpiCard(
                     icon: Icons.checklist_rtl_outlined,
-                    value: '18',
+                    value: 'Not connected yet - built in Phase 9',
                     label: 'Reports this week',
                   ),
                   PortalKpiCard(
                     icon: Icons.verified_outlined,
-                    value: '96%',
+                    value: 'Not connected yet - built in Phase 9',
                     label: 'Checklist compliance',
                     iconColor: AbraColors.teal,
                   ),
                   PortalKpiCard(
                     icon: Icons.warning_amber_outlined,
-                    value: '1',
+                    value: 'Not connected yet - built in Phase 9',
                     label: 'Overdue reports',
                     iconColor: AbraColors.danger,
                   ),
                   PortalKpiCard(
                     icon: Icons.timer_outlined,
-                    value: '94.2%',
+                    value: 'Not connected yet - built in Phase 9',
                     label: 'On-time departure',
                     iconColor: AbraColors.orange,
                   ),
@@ -212,7 +126,7 @@ class _ClientDriverReportsScreenState extends State<ClientDriverReportsScreen> {
                       prefixIcon: const Icon(Icons.search, size: 20),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AbraRadius.md),
-                        borderSide: BorderSide(color: AbraColors.border),
+                        borderSide: const BorderSide(color: AbraColors.border),
                       ),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       isDense: true,
@@ -246,42 +160,63 @@ class _ClientDriverReportsScreenState extends State<ClientDriverReportsScreen> {
               border: Border.all(color: AbraColors.border),
               boxShadow: AbraShadows.soft,
             ),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                headingRowColor: WidgetStateProperty.all(AbraColors.lightGray),
-                columns: const [
-                  DataColumn(label: Text('Report ID', style: TextStyle(fontWeight: FontWeight.w700))),
-                  DataColumn(label: Text('Driver', style: TextStyle(fontWeight: FontWeight.w700))),
-                  DataColumn(label: Text('Bus Reg', style: TextStyle(fontWeight: FontWeight.w700))),
-                  DataColumn(label: Text('Trip', style: TextStyle(fontWeight: FontWeight.w700))),
-                  DataColumn(label: Text('Submitted At', style: TextStyle(fontWeight: FontWeight.w700))),
-                  DataColumn(label: Text('Odometer', style: TextStyle(fontWeight: FontWeight.w700))),
-                  DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.w700))),
-                  DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.w700))),
-                ],
-                rows: filtered.map((r) {
-                  return DataRow(
-                    cells: [
-                      DataCell(Text(r['id'] as String, style: const TextStyle(fontWeight: FontWeight.w700, color: AbraColors.blue))),
-                      DataCell(Text(r['driver'] as String)),
-                      DataCell(Text(r['bus'] as String, style: const TextStyle(fontFamily: 'monospace'))),
-                      DataCell(Text(r['trip'] as String)),
-                      DataCell(Text(r['date'] as String, style: const TextStyle(fontSize: 12, color: AbraColors.textSecondary))),
-                      DataCell(Text(r['odometer'] as String)),
-                      DataCell(PortalStatusChip(status: r['status'] as String)),
-                      DataCell(
-                        IconButton(
-                          icon: const Icon(Icons.visibility_outlined, size: 18),
-                          tooltip: 'View inspection details',
-                          onPressed: () => _showReportDetails(context, r),
-                        ),
+            child: filtered.isEmpty
+                ? const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(Icons.checklist_rtl_outlined, size: 48, color: AbraColors.textDisabled),
+                          SizedBox(height: 12),
+                          Text(
+                            'Not connected yet - built in Phase 9',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AbraColors.textPrimary),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'When connected, driver inspection reports will appear here.',
+                            style: TextStyle(fontSize: 13, color: AbraColors.textSecondary),
+                          ),
+                        ],
                       ),
-                    ],
-                  );
-                }).toList(),
-              ),
-            ),
+                    ),
+                  )
+                : SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      headingRowColor: WidgetStateProperty.all(AbraColors.lightGray),
+                      columns: const [
+                        DataColumn(label: Text('Report ID', style: TextStyle(fontWeight: FontWeight.w700))),
+                        DataColumn(label: Text('Driver', style: TextStyle(fontWeight: FontWeight.w700))),
+                        DataColumn(label: Text('Bus Reg', style: TextStyle(fontWeight: FontWeight.w700))),
+                        DataColumn(label: Text('Trip', style: TextStyle(fontWeight: FontWeight.w700))),
+                        DataColumn(label: Text('Submitted At', style: TextStyle(fontWeight: FontWeight.w700))),
+                        DataColumn(label: Text('Odometer', style: TextStyle(fontWeight: FontWeight.w700))),
+                        DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.w700))),
+                        DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.w700))),
+                      ],
+                      rows: filtered.map((r) {
+                        return DataRow(
+                          cells: [
+                            DataCell(Text(r['id'] as String, style: const TextStyle(fontWeight: FontWeight.w700, color: AbraColors.blue))),
+                            DataCell(Text(r['driver'] as String)),
+                            DataCell(Text(r['bus'] as String, style: const TextStyle(fontFamily: 'monospace'))),
+                            DataCell(Text(r['trip'] as String)),
+                            DataCell(Text(r['date'] as String, style: const TextStyle(fontSize: 12, color: AbraColors.textSecondary))),
+                            DataCell(Text(r['odometer'] as String)),
+                            DataCell(PortalStatusChip(status: r['status'] as String)),
+                            DataCell(
+                              IconButton(
+                                icon: const Icon(Icons.visibility_outlined, size: 18),
+                                tooltip: 'View inspection details',
+                                onPressed: () => _showReportDetails(context, r),
+                              ),
+                            ),
+                          ],
+                        );
+                      }).toList(),
+                    ),
+                  ),
           ),
         ],
       ),
@@ -363,28 +298,27 @@ class _ClientDriverReportsScreenState extends State<ClientDriverReportsScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButtonFormField<String>(
-                initialValue: 'Ramesh K',
+                initialValue: 'Driver 1',
                 decoration: const InputDecoration(labelText: 'Driver'),
                 items: const [
-                  DropdownMenuItem(value: 'Ramesh K', child: Text('Ramesh K')),
-                  DropdownMenuItem(value: 'Suresh M', child: Text('Suresh M')),
-                  DropdownMenuItem(value: 'Priya D', child: Text('Priya D')),
+                  DropdownMenuItem(value: 'Driver 1', child: Text('Driver 1')),
+                  DropdownMenuItem(value: 'Driver 2', child: Text('Driver 2')),
                 ],
                 onChanged: (_) {},
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                initialValue: 'TS09 UB 4521',
+                initialValue: 'Bus 1',
                 decoration: const InputDecoration(labelText: 'Bus'),
                 items: const [
-                  DropdownMenuItem(value: 'TS09 UB 4521', child: Text('TS09 UB 4521 (Kaveri Gold 1)')),
-                  DropdownMenuItem(value: 'TS09 UB 4522', child: Text('TS09 UB 4522 (Kaveri Silver 2)')),
+                  DropdownMenuItem(value: 'Bus 1', child: Text('Bus 1')),
+                  DropdownMenuItem(value: 'Bus 2', child: Text('Bus 2')),
                 ],
                 onChanged: (_) {},
               ),
               const SizedBox(height: 12),
               TextFormField(
-                initialValue: '142,600',
+                initialValue: '0',
                 decoration: const InputDecoration(labelText: 'Odometer Reading (km)'),
               ),
             ],
@@ -392,14 +326,12 @@ class _ClientDriverReportsScreenState extends State<ClientDriverReportsScreen> {
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Inspection report recorded successfully')),
-              );
-            },
-            child: const Text('Save report'),
+          const Tooltip(
+            message: 'Not connected yet',
+            child: FilledButton(
+              onPressed: null,
+              child: Text('Save report'),
+            ),
           ),
         ],
       ),

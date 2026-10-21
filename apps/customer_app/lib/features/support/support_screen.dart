@@ -10,18 +10,12 @@ import '../../core/ui/section_header.dart';
 import '../../routing/app_routes.dart';
 import '../authentication/gate/require_sign_in.dart';
 import '../authentication/gate/sign_in_intent.dart';
-import '../booking/controllers/url_launcher_provider.dart';
 import 'controllers/support_controller.dart';
-import 'create_ticket_sheet.dart';
 import 'models/support_models.dart';
 import 'ticket_details_screen.dart';
 
 class SupportScreen extends ConsumerWidget {
   const SupportScreen({super.key});
-
-  Future<void> _call(WidgetRef ref, String number) => ref.read(
-        urlLauncherProvider,
-      )(Uri(scheme: 'tel', path: number.replaceAll(RegExp(r'[^\d+]'), '')));
 
   Color _statusColor(String status) {
     switch (status) {
@@ -65,6 +59,34 @@ class SupportScreen extends ConsumerWidget {
               child: Text('Could not load FAQs: $e'),
             ),
             data: (List<FaqItem> faqs) {
+              if (faqs.isEmpty) {
+                return const AbraCard(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: AbraSpacing.lg),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Coming soon',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          SizedBox(height: AbraSpacing.xs),
+                          Text(
+                            'Not connected yet - built in Phase 4',
+                            style: TextStyle(
+                              color: AbraColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
               final categories = <String, List<FaqItem>>{};
               for (final f in faqs) {
                 categories.putIfAbsent(f.category, () => <FaqItem>[]).add(f);
@@ -154,33 +176,41 @@ class SupportScreen extends ConsumerWidget {
                     const Divider(height: AbraSpacing.lg),
                     _infoRow(Icons.access_time, 'Hours', contact.hours),
                     const SizedBox(height: AbraSpacing.lg),
-                    Row(
+                    const Wrap(
+                      spacing: AbraSpacing.md,
+                      runSpacing: AbraSpacing.sm,
                       children: <Widget>[
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            icon: const Icon(Icons.phone, size: 16),
-                            label: const Text('Call'),
-                            onPressed: () => _call(ref, contact.phone),
+                        Tooltip(
+                          message: 'Not connected yet',
+                          child: OutlinedButton(
+                            onPressed: null,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.phone, size: 16),
+                                SizedBox(width: 8),
+                                Text('Call'),
+                              ],
+                            ),
                           ),
                         ),
-                        const SizedBox(width: AbraSpacing.md),
-                        Expanded(
-                          child: FilledButton.icon(
-                            style: FilledButton.styleFrom(
-                              backgroundColor: AbraColors.blue,
+                        Tooltip(
+                          message: 'Not connected yet',
+                          child: FilledButton(
+                            onPressed: null,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.support_agent, size: 16),
+                                SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    'Create a ticket',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
                             ),
-                            icon: const Icon(Icons.support_agent, size: 16),
-                            label: const Text('Create a ticket'),
-                            onPressed: () {
-                              if (auth is! AuthSignedIn) {
-                                requireSignIn(
-                                  context,
-                                  const SignInIntent(returnLocation: AppRoutes.support),
-                                );
-                                return;
-                              }
-                              CreateTicketSheet.show(context);
-                            },
                           ),
                         ),
                       ],
@@ -212,7 +242,7 @@ class SupportScreen extends ConsumerWidget {
                           ),
                           SizedBox(height: AbraSpacing.sm),
                           Text(
-                            'No support tickets yet',
+                            'Not connected yet - built in Phase 4',
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: AbraColors.textSecondary,
@@ -319,13 +349,17 @@ class SupportScreen extends ConsumerWidget {
             fontSize: 13,
           ),
         ),
-        const Spacer(),
-        Text(
-          value,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: AbraColors.textPrimary,
-            fontSize: 13,
+        const SizedBox(width: AbraSpacing.md),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: AbraColors.textPrimary,
+              fontSize: 13,
+            ),
           ),
         ),
       ],
