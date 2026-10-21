@@ -1220,15 +1220,15 @@ class _StaffAdminManageScreenState extends ConsumerState<StaffAdminManageScreen>
         borderRadius: BorderRadius.circular(10),
         side: BorderSide(color: Colors.grey.shade300),
       ),
-      child: const Padding(
-        padding: EdgeInsets.all(48),
+      child: Padding(
+        padding: const EdgeInsets.all(48),
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.devices_outlined, size: 48, color: AbraColors.navy),
-              SizedBox(height: 16),
-              Text(
+              const Icon(Icons.devices_outlined, size: 48, color: AbraColors.navy),
+              const SizedBox(height: 16),
+              const Text(
                 'Active staff sessions',
                 style: TextStyle(
                   fontSize: 18,
@@ -1236,10 +1236,19 @@ class _StaffAdminManageScreenState extends ConsumerState<StaffAdminManageScreen>
                   color: AbraColors.navy,
                 ),
               ),
-              SizedBox(height: 8),
-              Text(
+              const SizedBox(height: 8),
+              const Text(
                 'Not connected yet (built in Step 4: Active staff sessions)',
                 style: TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+              const SizedBox(height: 16),
+              Tooltip(
+                message: 'Not connected yet',
+                child: OutlinedButton.icon(
+                  onPressed: null,
+                  icon: const Icon(Icons.logout, size: 16),
+                  label: const Text('Sign out'),
+                ),
               ),
             ],
           ),
