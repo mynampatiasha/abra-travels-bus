@@ -5,6 +5,7 @@ import 'package:shared_theme/shared_theme.dart';
 
 import '../../app/providers.dart';
 import '../../core/ui/gradient_header.dart';
+import '../home/widgets/home_offers_slider.dart';
 
 class ProfileEditScreen extends ConsumerStatefulWidget {
   const ProfileEditScreen({super.key});
@@ -17,15 +18,13 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _emailController;
-  bool _saving = false;
-
   @override
   void initState() {
     super.initState();
     final auth = ref.read(authStateProvider);
     final user = auth is AuthSignedIn ? auth.user : null;
-    _nameController = TextEditingController(text: user?.name ?? 'Traveller');
-    _emailController = TextEditingController(text: user?.email ?? 'traveller@example.com');
+    _nameController = TextEditingController(text: user?.name ?? '');
+    _emailController = TextEditingController(text: user?.email ?? '');
   }
 
   @override
@@ -35,25 +34,10 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     super.dispose();
   }
 
-  Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _saving = true);
-    await Future<void>.delayed(const Duration(milliseconds: 400));
-    if (!mounted) return;
-    setState(() => _saving = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Profile updated successfully'),
-        backgroundColor: AbraColors.teal,
-      ),
-    );
-    Navigator.of(context).pop();
-  }
-
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(authStateProvider);
-    final phone = (auth is AuthSignedIn) ? auth.user.phone : '+91 98480 12345';
+    final phone = (auth is AuthSignedIn) ? auth.user.phone : '';
 
     return Scaffold(
       appBar: const GradientAppBar(
@@ -66,6 +50,11 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
           child: ListView(
             padding: const EdgeInsets.all(AbraSpacing.lg),
             children: [
+              const HomeNotConnectedCard(
+                icon: Icons.cloud_off_outlined,
+                text: 'Not connected yet - built in Phase 7',
+              ),
+              const SizedBox(height: AbraSpacing.lg),
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(
@@ -114,17 +103,9 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                   backgroundColor: AbraColors.blue,
                   minimumSize: const Size.fromHeight(48),
                 ),
-                onPressed: _saving ? null : _save,
-                child: _saving
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text('Save Changes'),
+                // Saving needs the server: not connected yet.
+                onPressed: null,
+                child: const Text('Save Changes'),
               ),
             ],
           ),

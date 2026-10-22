@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:shared_theme/shared_theme.dart';
 
-import '../../app/providers.dart';
 import '../../core/ui/gradient_header.dart';
-import '../../routing/app_routes.dart';
+import '../home/widgets/home_offers_slider.dart';
 import '../my_trips/controllers/trips_controller.dart';
 import '../my_trips/models/trip_models.dart';
 
@@ -19,21 +17,6 @@ class DeleteAccountScreen extends ConsumerStatefulWidget {
 
 class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
   bool _confirmed = false;
-  bool _deleting = false;
-
-  Future<void> _delete() async {
-    if (!_confirmed || _deleting) return;
-    setState(() => _deleting = true);
-    await ref.read(sessionManagerProvider).signOut();
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Your account has been deleted.'),
-        backgroundColor: AbraColors.danger,
-      ),
-    );
-    context.go(AppRoutes.home);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -120,26 +103,21 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
               ),
             ),
-            const SizedBox(height: AbraSpacing.xxl),
+            const SizedBox(height: AbraSpacing.lg),
+            const HomeNotConnectedCard(
+                icon: Icons.cloud_off_outlined,
+                text: 'Not connected yet - built in Phase 7',
+              ),
+            const SizedBox(height: AbraSpacing.lg),
 
             FilledButton(
               style: FilledButton.styleFrom(
                 backgroundColor: AbraColors.danger,
                 minimumSize: const Size.fromHeight(48),
               ),
-              onPressed: (_confirmed && upcomingCount == 0 && !_deleting)
-                  ? _delete
-                  : null,
-              child: _deleting
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text('Delete My Account'),
+              // Deleting needs the server: not connected yet.
+              onPressed: null,
+              child: const Text('Delete My Account'),
             ),
           ],
         ),

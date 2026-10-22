@@ -11,7 +11,6 @@ import '../../home/home_banner_carousel.dart';
 import '../../home/home_banners_repository.dart';
 import '../../home/widgets/active_trip_banner.dart';
 import '../../home/widgets/home_offers_slider.dart';
-import '../../home/widgets/home_promo_banners.dart';
 import '../../home/widgets/popular_routes_section.dart';
 import '../controllers/search_form_controller.dart';
 import '../controllers/travel_dates.dart';
@@ -394,7 +393,6 @@ class SearchFormView extends ConsumerWidget {
     final content = ListView(
       padding: EdgeInsets.zero,
       children: <Widget>[
-        if (showBanners) const HomeBannerCarousel(),
         // Hero Header matching the demo model:
         Container(
           decoration: const BoxDecoration(
@@ -496,7 +494,8 @@ class SearchFormView extends ConsumerWidget {
         // Promotional Banners, Offers, Popular Routes:
         if (showBanners) ...[
           const SizedBox(height: AbraSpacing.sm),
-          centered(const HomePromoBanners()),
+          // Full width, like the demo's banner strip.
+          const HomeBannerCarousel(),
           const SizedBox(height: AbraSpacing.lg),
           centered(const HomeOffersSlider()),
           const SizedBox(height: AbraSpacing.lg),
