@@ -6,7 +6,6 @@ import 'package:excel/excel.dart' as xlsx;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:shared_localization/shared_localization.dart';
 import 'package:shared_models/shared_models.dart';
 import 'package:shared_network/shared_network.dart';
@@ -17,7 +16,6 @@ import 'package:shared_ui/shared_ui.dart';
 import '../../app/providers.dart';
 import '../../core/browser_files.dart';
 import '../../core/failure_text.dart';
-import '../../routing/admin_routes.dart';
 
 // Both administration tabs, editing, bulk tools and the checklist preview live
 // in this file. Authentication, networking and the document catalogue are shared.
@@ -407,11 +405,6 @@ class _AdminKycConfigurationPageState
   int _tab = 0;
   int _page = 0;
   String _search = '';
-  String _subjectFilter = 'ALL';
-  String _statusFilter = 'ALL';
-  String _requiredFilter = 'ALL';
-  String _documentFilter = 'ALL';
-  String _sortBy = 'DEFAULT';
   final _searchController = TextEditingController();
 
   @override
@@ -538,24 +531,90 @@ class _AdminKycConfigurationPageState
       confirmLabel: _t(context, 'Delete'),
     );
     if (!confirmed || !mounted) return;
+    final before = kycExportData(_data!);
     final config = kycExportData(_data!);
     config[_tab == 0 ? 'questions' : 'rules'] = _rows(
       config[_tab == 0 ? 'questions' : 'rules'],
     ).where((r) => r['key'] != record['key']).toList();
+    final kind = _tab == 0 ? 'question' : 'rule';
+    final messenger = ScaffoldMessenger.of(context);
     try {
-      await _save(
-        config,
-        'Deleted KYC ${_tab == 0 ? 'question' : 'rule'} ${record['key']}',
+      await _save(config, 'Deleted KYC $kind ${record['key']}');
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Deleted. ${record['label'] ?? record['name']}'),
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () =>
+                _undo(before, 'Restored KYC $kind ${record['key']}'),
+          ),
+        ),
       );
     } on Object catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
             content: Text(failureText(AbraLocalizations.of(context), error)),
           ),
         );
       }
     }
+  }
+
+  /// Puts the document back as it was before a delete.
+  Future<void> _undo(JsonMap before, String reason) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await _save(before, reason);
+    } on Object catch (error) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(failureText(AbraLocalizations.of(context), error)),
+          ),
+        );
+      }
+    }
+  }
+
+  /// The Active switch of a row.
+  Future<void> _toggle(JsonMap record, bool active) async {
+    final config = kycExportData(_data!);
+    final field = _tab == 0 ? 'questions' : 'rules';
+    config[field] = _rows(config[field])
+        .map(
+          (r) => r['key'] == record['key']
+              ? <String, Object?>{...r, 'active': active}
+              : r,
+        )
+        .toList();
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await _save(
+        config,
+        '${active ? 'Enabled' : 'Disabled'} KYC ${_tab == 0 ? 'question' : 'rule'} ${record['key']}',
+      );
+    } on Object catch (error) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(failureText(AbraLocalizations.of(context), error)),
+          ),
+        );
+      }
+    }
+  }
+
+  /// "Export config": the questions and the document rules as one file.
+  void _exportConfig() {
+    downloadTextFile(
+      'kyc_configuration.json',
+      const JsonEncoder.withIndent('  ').convert(kycExportData(_data!)),
+    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Configuration exported')));
   }
 
   Future<void> _import() => showDialog<void>(
@@ -597,15 +656,6 @@ class _AdminKycConfigurationPageState
     change();
     _page = 0;
   });
-  void _clearFilters() => _filter(() {
-    _search = '';
-    _searchController.clear();
-    _subjectFilter = 'ALL';
-    _statusFilter = 'ALL';
-    _requiredFilter = 'ALL';
-    _documentFilter = 'ALL';
-    _sortBy = 'DEFAULT';
-  });
 
   @override
   Widget build(BuildContext context) {
@@ -626,39 +676,18 @@ class _AdminKycConfigurationPageState
         .watch(accessProvider)
         .can(PermissionKeys.documentsManage);
     final collection = _tab == 0 ? questions : rules;
+    final query = _search.trim().toLowerCase();
     final filtered =
         collection.where((r) {
           final searchable =
               '${r['key']} ${r['label'] ?? r['name']} ${r['documentKey'] ?? ''}'
                   .toLowerCase();
-          return searchable.contains(_search.toLowerCase()) &&
-              (_subjectFilter == 'ALL' || r['appliesTo'] == _subjectFilter) &&
-              (_statusFilter == 'ALL' ||
-                  r['active'] == (_statusFilter == 'ACTIVE')) &&
-              (_requiredFilter == 'ALL' ||
-                  r['required'] == (_requiredFilter == 'REQUIRED')) &&
-              (_tab == 0 ||
-                  _documentFilter == 'ALL' ||
-                  r['documentKey'] == _documentFilter);
-        }).toList()..sort((a, b) {
-          String name(JsonMap r) =>
-              '${r['label'] ?? r['name'] ?? ''}'.toLowerCase();
-          switch (_sortBy) {
-            case 'NAME':
-              return name(a).compareTo(name(b));
-            case 'STATUS':
-              final byStatus = '${b['active']}'.compareTo('${a['active']}');
-              return byStatus != 0 ? byStatus : name(a).compareTo(name(b));
-            case 'DOCUMENT':
-              final byDocument = '${a['documentKey']}'.compareTo(
-                '${b['documentKey']}',
-              );
-              return byDocument != 0 ? byDocument : name(a).compareTo(name(b));
-          }
-          return _tab == 0
+          return searchable.contains(query);
+        }).toList()..sort(
+          (a, b) => _tab == 0
               ? (a['sortOrder'] as num).compareTo(b['sortOrder'] as num)
-              : '${a['name']}'.compareTo('${b['name']}');
-        });
+              : '${a['name']}'.compareTo('${b['name']}'),
+        );
     final pages = (filtered.length / 10).ceil().clamp(1, 1000);
     final page = _page.clamp(0, pages - 1);
     final visible = filtered.skip(page * 10).take(10).toList();
@@ -669,12 +698,6 @@ class _AdminKycConfigurationPageState
           final narrow = constraints.maxWidth < 600;
           final contentWidth = (constraints.maxWidth - (narrow ? 32 : 48))
               .clamp(0.0, 1240.0);
-          // Room left for the dropdowns once search and Clear filters have theirs.
-          final choiceCount = _tab == 1 ? 5 : 4;
-          final filterWidth =
-              ((contentWidth - 32 - 220 - 110 - 12 * (choiceCount + 1)) /
-                      choiceCount)
-                  .clamp(150.0, 200.0);
           return SingleChildScrollView(
             padding: EdgeInsets.all(narrow ? 16 : 24),
             child: Center(
@@ -684,7 +707,7 @@ class _AdminKycConfigurationPageState
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'KYC configuration',
+                      'KYC questionnaire',
                       style: Theme.of(context).textTheme.headlineSmall
                           ?.copyWith(
                             fontWeight: FontWeight.w800,
@@ -693,405 +716,30 @@ class _AdminKycConfigurationPageState
                     ),
                     const SizedBox(height: 6),
                     const Text(
-                      'Set the questions clients answer and which documents each answer requires.',
+                      'Questions the owner answers, and the rules that decide which documents are asked.',
                       style: TextStyle(color: Color(0xFF66798A)),
                     ),
                     const SizedBox(height: 20),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: [
-                        for (final stat in <(String, int, IconData)>[
-                          (
-                            _t(context, 'Questions'),
-                            questions.length,
-                            Icons.help_outline,
-                          ),
-                          (
-                            _t(context, 'Rules'),
-                            rules.length,
-                            Icons.rule_outlined,
-                          ),
-                          (
-                            _t(context, 'ActiveRules'),
-                            rules.where((r) => r['active'] == true).length,
-                            Icons.check_circle_outline,
-                          ),
-                          (
-                            'Documents covered',
-                            rules
-                                .where((r) => r['active'] == true)
-                                .map((r) => r['documentKey'])
-                                .toSet()
-                                .length,
-                            Icons.folder_outlined,
-                          ),
-                        ])
-                          SizedBox(
-                            width:
-                                (contentWidth -
-                                    (contentWidth < 760 ? 12 : 36)) /
-                                (contentWidth < 760 ? 2 : 4),
-                            child: _stat(
-                              context,
-                              stat.$1,
-                              stat.$2,
-                              stat.$3,
-                              tint: stat.$3 == Icons.check_circle_outline
-                                  ? const Color(0xFFE1F4EA)
-                                  : stat.$3 == Icons.folder_outlined
-                                  ? const Color(0xFFFEF3C7)
-                                  : const Color(0xFFE8F6FD),
-                              tintForeground:
-                                  stat.$3 == Icons.check_circle_outline
-                                  ? const Color(0xFF12663F)
-                                  : stat.$3 == Icons.folder_outlined
-                                  ? const Color(0xFF7A4B00)
-                                  : const Color(0xFF1677C8),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      _t(context, 'Intro'),
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: AbraSpacing.md),
-                    Wrap(
-                      spacing: AbraSpacing.sm,
-                      runSpacing: AbraSpacing.sm,
-                      children: [
-                        if (canManage)
-                          AbraButton(
-                            label: _t(
-                              context,
-                              _tab == 0 ? 'AddQuestion' : 'AddRule',
-                            ),
-                            icon: Icons.add,
-                            onPressed: _saving ? null : () => _edit(null),
-                          ),
-                        AbraButton(
-                          label: _t(context, 'Preview'),
-                          icon: Icons.preview_outlined,
-                          variant: AbraButtonVariant.secondary,
-                          onPressed: _saving
-                              ? null
-                              : () => showDialog<void>(
-                                  context: context,
-                                  builder: (_) => _PreviewDialog(
-                                    questions: questions,
-                                    preview: (body) =>
-                                        _request('/preview', body),
-                                  ),
-                                ),
-                        ),
-                        AbraButton(
-                          label: _t(context, 'Export'),
-                          icon: Icons.download_outlined,
-                          variant: AbraButtonVariant.secondary,
-                          onPressed: _saving
-                              ? null
-                              : () => _export(data, documents),
-                        ),
-                        if (canManage)
-                          AbraButton(
-                            label: _t(context, 'Import'),
-                            icon: Icons.upload_file_outlined,
-                            variant: AbraButtonVariant.secondary,
-                            onPressed: _saving ? null : _import,
-                          ),
-                        IconButton(
-                          tooltip: _t(context, 'Refresh'),
-                          onPressed: _saving ? null : _load,
-                          icon: const Icon(Icons.refresh),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AbraSpacing.md),
-                    if (!canManage) Text(_t(context, 'ReadOnly')),
-                    if (_saving) const LinearProgressIndicator(),
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AbraSpacing.lg,
-                          vertical: AbraSpacing.sm,
-                        ),
-                        child: Wrap(
-                          spacing: AbraSpacing.md,
-                          runSpacing: AbraSpacing.xs,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          alignment: WrapAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.folder_copy_outlined,
-                                  color: AbraColors.tealDark,
-                                ),
-                                const SizedBox(width: AbraSpacing.md),
-                                ConstrainedBox(
-                                  constraints: BoxConstraints(
-                                    maxWidth: narrow
-                                        ? contentWidth - 100
-                                        : contentWidth - 260,
-                                  ),
-                                  child: Text(_t(context, 'DocumentHelp')),
-                                ),
-                              ],
-                            ),
-                            TextButton(
-                              style: TextButton.styleFrom(
-                                minimumSize: const Size(44, 44),
-                              ),
-                              onPressed: () =>
-                                  context.go(AdminRoutes.documentTypes),
-                              child: Text(_t(context, 'ManageDocuments')),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: AbraSpacing.md),
-                    Container(
-                      decoration: const BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(color: Color(0xFFD7E0E7)),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          for (final tab in <(String, IconData)>[
-                            (_t(context, 'Questions'), Icons.help_outline),
-                            (_t(context, 'Rules'), Icons.rule_outlined),
-                          ].indexed)
-                            Flexible(
-                              child: InkWell(
-                                onTap: _saving
-                                    ? null
-                                    : () => _filter(() => _tab = tab.$1),
-                                child: Semantics(
-                                  selected: _tab == tab.$1,
-                                  button: true,
-                                  child: AnimatedContainer(
-                                    duration:
-                                        MediaQuery.disableAnimationsOf(context)
-                                        ? Duration.zero
-                                        : const Duration(milliseconds: 160),
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 15,
-                                      horizontal: 18,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      border: Border(
-                                        bottom: BorderSide(
-                                          width: 3,
-                                          color: _tab == tab.$1
-                                              ? const Color(0xFF1677C8)
-                                              : Colors.transparent,
-                                        ),
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          tab.$2.$2,
-                                          size: 18,
-                                          color: _tab == tab.$1
-                                              ? const Color(0xFF1677C8)
-                                              : const Color(0xFF66798A),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Flexible(
-                                          child: Text(
-                                            tab.$2.$1,
-                                            style: TextStyle(
-                                              fontWeight: _tab == tab.$1
-                                                  ? FontWeight.w800
-                                                  : FontWeight.w600,
-                                              color: _tab == tab.$1
-                                                  ? const Color(0xFF0B4EA2)
-                                                  : const Color(0xFF66798A),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
+                    _tabStrip(questions.length, rules.length),
                     const SizedBox(height: 16),
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Wrap(
-                          spacing: AbraSpacing.md,
-                          runSpacing: AbraSpacing.md,
-                          children: [
-                            SizedBox(
-                              width: narrow ? contentWidth - 32 : 220,
-                              child: TextField(
-                                controller: _searchController,
-                                decoration: InputDecoration(
-                                  labelText: _t(context, 'Search'),
-                                  prefixIcon: const Icon(Icons.search),
-                                ),
-                                onChanged: (value) =>
-                                    _filter(() => _search = value),
-                              ),
-                            ),
-                            _choice(
-                              context,
-                              'Subject',
-                              _subjectFilter,
-                              {
-                                'ALL': _t(context, 'AllSubjects'),
-                                'OPERATOR': _t(context, 'Company'),
-                                'BUS': _t(context, 'Bus'),
-                              },
-                              (v) => _filter(() => _subjectFilter = v),
-                              width: filterWidth,
-                            ),
-                            _choice(
-                              context,
-                              'Status',
-                              _statusFilter,
-                              {
-                                'ALL': _t(context, 'AllStatuses'),
-                                'ACTIVE': _t(context, 'Active'),
-                                'INACTIVE': _t(context, 'Inactive'),
-                              },
-                              (v) => _filter(() => _statusFilter = v),
-                              width: filterWidth,
-                            ),
-                            _choice(
-                              context,
-                              'Requirement',
-                              _requiredFilter,
-                              {
-                                'ALL': _t(context, 'AllRequirements'),
-                                'REQUIRED': _t(context, 'Required'),
-                                'OPTIONAL': _t(context, 'Optional'),
-                              },
-                              (v) => _filter(() => _requiredFilter = v),
-                              width: filterWidth,
-                            ),
-                            if (_tab == 1)
-                              _choice(
-                                context,
-                                'Document',
-                                _documentFilter,
-                                {
-                                  'ALL': _t(context, 'AllDocuments'),
-                                  for (final d in documents)
-                                    '${d['key']}': '${d['name']}',
-                                },
-                                (v) => _filter(() => _documentFilter = v),
-                                width: filterWidth,
-                              ),
-                            _choice(
-                              context,
-                              'SortBy',
-                              _sortBy,
-                              _tab == 0
-                                  ? {
-                                      'DEFAULT': 'Display order',
-                                      'NAME': 'Question A-Z',
-                                      'STATUS': 'Status',
-                                    }
-                                  : {
-                                      'DEFAULT': 'Rule name',
-                                      'DOCUMENT': 'Document',
-                                      'STATUS': 'Status',
-                                    },
-                              (v) => _filter(() => _sortBy = v),
-                              width: filterWidth,
-                            ),
-                            TextButton(
-                              style: TextButton.styleFrom(
-                                minimumSize: const Size(44, 48),
-                              ),
-                              onPressed: _clearFilters,
-                              child: Text(_t(context, 'ClearFilters')),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: AbraSpacing.lg),
-                    Text(
-                      '${filtered.length} ${_t(context, 'Results')}',
-                      style: Theme.of(context).textTheme.labelLarge,
-                    ),
-                    const SizedBox(height: 10),
-                    if (visible.isEmpty)
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32),
-                          child: Column(
-                            children: [
-                              const Icon(
-                                Icons.fact_check_outlined,
-                                size: 36,
-                                color: Color(0xFF66798A),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                _t(
-                                  context,
-                                  collection.isEmpty ? 'Empty' : 'NoMatches',
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    Wrap(
-                      spacing: 16,
-                      runSpacing: 16,
-                      children: [
-                        for (final record in visible)
-                          SizedBox(
-                            width: contentWidth >= 900
-                                ? (contentWidth - 16) / 2
-                                : contentWidth,
-                            child: _recordCard(
-                              record,
-                              questions,
-                              documents,
-                              canManage,
-                            ),
-                          ),
-                      ],
-                    ),
-                    if (filtered.isNotEmpty)
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          IconButton(
-                            tooltip: _t(context, 'Previous'),
-                            onPressed: page > 0
-                                ? () => setState(() => _page = page - 1)
-                                : null,
-                            icon: const Icon(Icons.chevron_left),
-                          ),
-                          Text('${page + 1} / $pages'),
-                          IconButton(
-                            tooltip: _t(context, 'Next'),
-                            onPressed: page + 1 < pages
-                                ? () => setState(() => _page = page + 1)
-                                : null,
-                            icon: const Icon(Icons.chevron_right),
-                          ),
-                        ],
+                    if (_saving) const LinearProgressIndicator(),
+                    if (_tab == 2)
+                      _PreviewPanel(
+                        questions: questions,
+                        wide: contentWidth >= 900,
+                        preview: (body) => _request('/preview', body),
+                      )
+                    else
+                      _listCard(
+                        filtered: filtered,
+                        visible: visible,
+                        empty: collection.isEmpty,
+                        page: page,
+                        pages: pages,
+                        questions: questions,
+                        documents: documents,
+                        canManage: canManage,
+                        narrow: narrow,
                       ),
                   ],
                 ),
@@ -1101,6 +749,336 @@ class _AdminKycConfigurationPageState
         },
       ),
     );
+  }
+
+  /// Questions | Document rules | Preview checklist, each with its count.
+  Widget _tabStrip(int questionCount, int ruleCount) => Container(
+    decoration: const BoxDecoration(
+      border: Border(bottom: BorderSide(color: Color(0xFFD7E0E7))),
+    ),
+    child: SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final tab in <(String, int?)>[
+            ('Questions', questionCount),
+            ('Document rules', ruleCount),
+            ('Preview checklist', null),
+          ].indexed)
+            InkWell(
+              onTap: _saving ? null : () => _filter(() => _tab = tab.$1),
+              child: Semantics(
+                selected: _tab == tab.$1,
+                button: true,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 15,
+                    horizontal: 18,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        width: 3,
+                        color: _tab == tab.$1
+                            ? const Color(0xFF1677C8)
+                            : Colors.transparent,
+                      ),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        tab.$2.$1,
+                        style: TextStyle(
+                          fontWeight: _tab == tab.$1
+                              ? FontWeight.w800
+                              : FontWeight.w600,
+                          color: _tab == tab.$1
+                              ? const Color(0xFF0B4EA2)
+                              : const Color(0xFF66798A),
+                        ),
+                      ),
+                      if (tab.$2.$2 != null) ...[
+                        const SizedBox(width: 8),
+                        _badge('${tab.$2.$2}'),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
+
+  /// The table of the Questions or the Document rules tab, with its tools.
+  Widget _listCard({
+    required List<JsonMap> filtered,
+    required List<JsonMap> visible,
+    required bool empty,
+    required int page,
+    required int pages,
+    required List<JsonMap> questions,
+    required List<JsonMap> documents,
+    required bool canManage,
+    required bool narrow,
+  }) {
+    final isQuestions = _tab == 0;
+    final heading = TextStyle(
+      color: Colors.white,
+      fontWeight: FontWeight.w700,
+      fontSize: Theme.of(context).textTheme.labelLarge?.fontSize,
+    );
+    DataColumn column(String label, {bool numeric = false}) => DataColumn(
+      label: Text(label, style: heading),
+      numeric: numeric,
+    );
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AbraSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Wrap(
+              spacing: AbraSpacing.sm,
+              runSpacing: AbraSpacing.sm,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                SizedBox(
+                  width: narrow ? double.infinity : 260,
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      labelText: _t(context, 'Search'),
+                      prefixIcon: const Icon(Icons.search),
+                    ),
+                    onChanged: (value) => _filter(() => _search = value),
+                  ),
+                ),
+                if (canManage)
+                  AbraButton(
+                    label: _t(context, isQuestions ? 'AddQuestion' : 'AddRule'),
+                    icon: Icons.add,
+                    onPressed: _saving ? null : () => _edit(null),
+                  ),
+                AbraButton(
+                  label: 'Export CSV',
+                  icon: Icons.download_outlined,
+                  variant: AbraButtonVariant.secondary,
+                  onPressed: _saving ? null : () => _export(_data!, documents),
+                ),
+                if (isQuestions)
+                  AbraButton(
+                    label: 'Export config',
+                    icon: Icons.data_object,
+                    variant: AbraButtonVariant.secondary,
+                    onPressed: _saving ? null : _exportConfig,
+                  ),
+                if (canManage)
+                  AbraButton(
+                    label: _t(context, 'Import'),
+                    icon: Icons.upload_file_outlined,
+                    variant: AbraButtonVariant.secondary,
+                    onPressed: _saving ? null : _import,
+                  ),
+              ],
+            ),
+            const SizedBox(height: AbraSpacing.md),
+            if (visible.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(32),
+                child: Text(
+                  _t(context, empty ? 'Empty' : 'NoMatches'),
+                  textAlign: TextAlign.center,
+                ),
+              )
+            else
+              LayoutBuilder(
+                builder: (context, box) => SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minWidth: box.maxWidth),
+                    child: DataTable(
+                      headingRowColor: const WidgetStatePropertyAll<Color>(
+                        Color(0xFF12304A),
+                      ),
+                      dataRowMinHeight: 56,
+                      dataRowMaxHeight: 72,
+                      columns: isQuestions
+                          ? [
+                              column('Question'),
+                              column('Answer type'),
+                              column('Required'),
+                              column('Active'),
+                              column(''),
+                            ]
+                          : [
+                              column('Rule'),
+                              column('When'),
+                              column('Document asked'),
+                              column('Required'),
+                              column('Active'),
+                              column(''),
+                            ],
+                      rows: [
+                        for (final record in visible)
+                          _row(record, questions, documents, canManage),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            if (filtered.isNotEmpty)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text('${filtered.length}'),
+                  IconButton(
+                    tooltip: _t(context, 'Previous'),
+                    onPressed: page > 0
+                        ? () => setState(() => _page = page - 1)
+                        : null,
+                    icon: const Icon(Icons.chevron_left),
+                  ),
+                  Text('${page + 1} / $pages'),
+                  IconButton(
+                    tooltip: _t(context, 'Next'),
+                    onPressed: page + 1 < pages
+                        ? () => setState(() => _page = page + 1)
+                        : null,
+                    icon: const Icon(Icons.chevron_right),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  DataRow _row(
+    JsonMap r,
+    List<JsonMap> questions,
+    List<JsonMap> documents,
+    bool canManage,
+  ) {
+    final isQuestion = _tab == 0;
+    final conditions = _rows(r['conditions']);
+    final doc = documents
+        .where((d) => d['key'] == r['documentKey'])
+        .firstOrNull;
+    final when = conditions.isEmpty
+        ? _t(context, 'Always')
+        : conditions
+              .map((c) {
+                final q = questions
+                    .where((q) => q['key'] == c['questionKey'])
+                    .firstOrNull;
+                final labels = _options(q ?? {})
+                    .where((o) => (c['values'] as List).contains(o['value']))
+                    .map((o) => '${o['label']}')
+                    .join(', ');
+                return '${q?['label'] ?? c['questionKey']}: $labels';
+              })
+              .join(
+                r['match'] == 'ANY'
+                    ? ' ${_t(context, 'Or')} '
+                    : ' ${_t(context, 'And')} ',
+              );
+    final options = _options(r).map((o) => '${o['label']}').join(', ');
+    Widget twoLines(String title, String sub) => Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF12304A),
+          ),
+        ),
+        if (sub.isNotEmpty)
+          Text(
+            sub,
+            style: const TextStyle(fontSize: 12, color: Color(0xFF66798A)),
+          ),
+      ],
+    );
+    final active = DataCell(
+      Switch(
+        value: r['active'] == true,
+        onChanged: canManage && !_saving ? (v) => _toggle(r, v) : null,
+      ),
+    );
+    final actions = DataCell(
+      canManage
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  tooltip: _t(context, 'Edit'),
+                  onPressed: _saving ? null : () => _edit(r),
+                  icon: const Icon(Icons.edit_outlined),
+                ),
+                IconButton(
+                  tooltip: _t(context, 'Delete'),
+                  onPressed: _saving ? null : () => _delete(r),
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: Color(0xFFB91C1C),
+                  ),
+                ),
+              ],
+            )
+          : const SizedBox.shrink(),
+    );
+    return isQuestion
+        ? DataRow(
+            cells: [
+              DataCell(
+                twoLines(
+                  '${r['label']}',
+                  [
+                    '${r['key']}',
+                    _subject(context, r['appliesTo']),
+                    if (options.isNotEmpty) options,
+                  ].join(' - '),
+                ),
+              ),
+              DataCell(_badge(_typeName(r['type']))),
+              DataCell(Text(_yes(r['required']))),
+              active,
+              actions,
+            ],
+          )
+        : DataRow(
+            cells: [
+              DataCell(
+                twoLines(
+                  '${r['name']}',
+                  doc?['isActive'] == false
+                      ? _t(context, 'DocumentInactive')
+                      : '',
+                ),
+              ),
+              DataCell(
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 320),
+                  child: Text(when),
+                ),
+              ),
+              DataCell(_badge('${doc?['name'] ?? r['documentKey']}')),
+              DataCell(
+                Text(
+                  _t(context, r['required'] == true ? 'Required' : 'Optional'),
+                ),
+              ),
+              active,
+              actions,
+            ],
+          );
   }
 
   Future<void> _export(
@@ -1148,134 +1126,6 @@ class _AdminKycConfigurationPageState
       ],
     ),
   );
-
-  Widget _recordCard(
-    JsonMap r,
-    List<JsonMap> questions,
-    List<JsonMap> documents,
-    bool editable,
-  ) {
-    final isQuestion = _tab == 0;
-    final conditions = _rows(r['conditions']);
-    final name = isQuestion ? '${r['label']}' : '${r['name']}';
-    final summary = isQuestion
-        ? _options(r).map((o) => '${o['label']}').join(' · ')
-        : conditions.isEmpty
-        ? _t(context, 'Always')
-        : conditions
-              .map((c) {
-                final q = questions
-                    .where((q) => q['key'] == c['questionKey'])
-                    .firstOrNull;
-                final labels = _options(q ?? {})
-                    .where((o) => (c['values'] as List).contains(o['value']))
-                    .map((o) => '${o['label']}')
-                    .join(', ');
-                return '${q?['label'] ?? c['questionKey']}: $labels';
-              })
-              .join(
-                r['match'] == 'ANY'
-                    ? ' ${_t(context, 'Or')} '
-                    : ' ${_t(context, 'And')} ',
-              );
-    final doc = documents
-        .where((d) => d['key'] == r['documentKey'])
-        .firstOrNull;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AbraSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: const Color(0xFF12304A),
-                            ),
-                      ),
-                      Text(
-                        _subject(context, r['appliesTo']),
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ),
-                if (editable) ...[
-                  IconButton(
-                    tooltip: _t(context, 'Edit'),
-                    onPressed: _saving ? null : () => _edit(r),
-                    icon: const Icon(Icons.edit_outlined),
-                  ),
-                  IconButton(
-                    tooltip: _t(context, 'Delete'),
-                    onPressed: _saving ? null : () => _delete(r),
-                    icon: const Icon(
-                      Icons.delete_outline,
-                      color: Color(0xFFB91C1C),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            const SizedBox(height: AbraSpacing.sm),
-            Wrap(
-              spacing: AbraSpacing.sm,
-              runSpacing: AbraSpacing.xs,
-              children: [
-                _badge(
-                  _t(context, r['active'] == true ? 'Active' : 'Inactive'),
-                  color: r['active'] == true
-                      ? const Color(0xFF12663F)
-                      : const Color(0xFF12304A),
-                  background: r['active'] == true
-                      ? const Color(0xFFE1F4EA)
-                      : const Color(0xFFE5EAEE),
-                ),
-                _badge(
-                  _t(context, r['required'] == true ? 'Required' : 'Optional'),
-                  color: r['required'] == true
-                      ? const Color(0xFF0B4EA2)
-                      : const Color(0xFF12304A),
-                  background: r['required'] == true
-                      ? const Color(0xFFDDF3FC)
-                      : const Color(0xFFE5EAEE),
-                ),
-                if (isQuestion)
-                  _badge(switch (r['type']) {
-                    'MULTI_CHOICE' => 'Choose several',
-                    'BOOLEAN' => 'Yes or No',
-                    _ => 'Choose one',
-                  }),
-                if (!isQuestion) _badge('${doc?['name'] ?? r['documentKey']}'),
-              ],
-            ),
-            const SizedBox(height: 10),
-            if (summary.isNotEmpty)
-              Text(
-                summary,
-                style: const TextStyle(color: Color(0xFF66798A), height: 1.5),
-              ),
-            if (!isQuestion && doc?['isActive'] == false)
-              Text(
-                _t(context, 'DocumentInactive'),
-                style: const TextStyle(color: AbraColors.danger),
-              ),
-            if (isQuestion && '${r['help'] ?? ''}'.isNotEmpty)
-              Text('${r['help']}'),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 ThemeData _kycTheme(BuildContext context) => Theme.of(context).copyWith(
@@ -1353,54 +1203,6 @@ Widget _badge(String label, {Color? color, Color? background}) => Container(
       fontSize: 12,
       fontWeight: FontWeight.w800,
       color: color ?? const Color(0xFF66798A),
-    ),
-  ),
-);
-
-Widget _stat(
-  BuildContext c,
-  String label,
-  int count,
-  IconData icon, {
-  Color tint = const Color(0xFFE8F6FD),
-  Color tintForeground = const Color(0xFF1677C8),
-}) => Card(
-  child: Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    child: Row(
-      children: [
-        if (MediaQuery.sizeOf(c).width >= 600) ...[
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: tint,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: tintForeground, size: 22),
-          ),
-          const SizedBox(width: 12),
-        ],
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '$count',
-                style: const TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF12304A),
-                ),
-              ),
-              Text(
-                label,
-                style: const TextStyle(fontSize: 12, color: Color(0xFF66798A)),
-              ),
-            ],
-          ),
-        ),
-      ],
     ),
   ),
 );
@@ -2252,15 +2054,20 @@ class _ImportDialogState extends State<_ImportDialog> {
   );
 }
 
-class _PreviewDialog extends StatefulWidget {
-  const _PreviewDialog({required this.questions, required this.preview});
+class _PreviewPanel extends StatefulWidget {
+  const _PreviewPanel({
+    required this.questions,
+    required this.preview,
+    required this.wide,
+  });
+  final bool wide;
   final List<JsonMap> questions;
   final Future<JsonMap> Function(JsonMap) preview;
   @override
-  State<_PreviewDialog> createState() => _PreviewDialogState();
+  State<_PreviewPanel> createState() => _PreviewPanelState();
 }
 
-class _PreviewDialogState extends State<_PreviewDialog> {
+class _PreviewPanelState extends State<_PreviewPanel> {
   String _subjectValue = 'OPERATOR';
   final JsonMap _answers = {};
   JsonMap? _result;
@@ -2297,105 +2104,125 @@ class _PreviewDialogState extends State<_PreviewDialog> {
           ..sort(
             (a, b) => (a['sortOrder'] as num).compareTo(b['sortOrder'] as num),
           );
-    return _dialog(
-      context,
-      _t(context, 'Preview'),
-      [
-        IgnorePointer(
-          ignoring: _busy,
-          child: _choice(
-            context,
-            'Subject',
-            _subjectValue,
-            {'OPERATOR': _t(context, 'Company'), 'BUS': _t(context, 'Bus')},
-            (v) => setState(() {
-              _subjectValue = v;
-              _answers.clear();
-              _result = null;
-            }),
-          ),
+    final answers = <Widget>[
+      IgnorePointer(
+        ignoring: _busy,
+        child: _choice(
+          context,
+          'Subject',
+          _subjectValue,
+          {'OPERATOR': _t(context, 'Company'), 'BUS': _t(context, 'Bus')},
+          (v) => setState(() {
+            _subjectValue = v;
+            _answers.clear();
+            _result = null;
+          }),
         ),
-        if (questions.isEmpty) Text(_t(context, 'NoQuestions')),
-        for (final q in questions)
-          Column(
+      ),
+      if (questions.isEmpty) Text(_t(context, 'NoQuestions')),
+      for (final q in questions)
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${q['label']}${q['required'] == true ? ' *' : ''}',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            if ('${q['help'] ?? ''}'.isNotEmpty) Text('${q['help']}'),
+            Wrap(
+              spacing: AbraSpacing.sm,
+              children: [
+                for (final o in _options(q))
+                  FilterChip(
+                    label: Text('${o['label']}'),
+                    selected: q['type'] == 'MULTI_CHOICE'
+                        ? ((_answers[q['key']] as List?) ?? []).contains(
+                            o['value'],
+                          )
+                        : _answers[q['key']] == o['value'],
+                    onSelected: _busy
+                        ? null
+                        : (selected) => setState(() {
+                            _result = null;
+                            if (q['type'] == 'MULTI_CHOICE') {
+                              final values = List<String>.from(
+                                (_answers[q['key']] as List?) ?? [],
+                              );
+                              selected
+                                  ? values.add('${o['value']}')
+                                  : values.remove(o['value']);
+                              _answers['${q['key']}'] = values;
+                            } else if (selected) {
+                              _answers['${q['key']}'] = o['value'];
+                            } else {
+                              _answers.remove(q['key']);
+                            }
+                          }),
+                  ),
+              ],
+            ),
+          ],
+        ),
+    ];
+    final checklist = <Widget>[
+      if (_result == null)
+        const Text('Choose the answers, then press Show checklist.'),
+      if (_result != null) ...[
+        if ((_result!['missingQuestions'] as List).isNotEmpty)
+          Text(
+            '${_t(context, 'MissingAnswers')}: ${questions.where((q) => (_result!['missingQuestions'] as List).contains(q['key'])).map((q) => q['label']).join(', ')}',
+          ),
+        if (_rows(_result!['documents']).isEmpty)
+          Text(_t(context, 'NoApplicableDocuments')),
+        for (final d in _rows(_result!['documents']))
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.description_outlined),
+            title: Text('${d['name']}'),
+            subtitle: Text('${d['instructions'] ?? ''}'),
+            trailing: Text(
+              _t(context, d['isRequired'] == true ? 'Required' : 'Optional'),
+            ),
+          ),
+      ],
+      if (_error != null)
+        Text(_error!, style: const TextStyle(color: AbraColors.danger)),
+    ];
+    Widget card(String title, List<Widget> children) => Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AbraSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(title, style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: AbraSpacing.md),
+            for (final child in children) ...[
+              child,
+              const SizedBox(height: AbraSpacing.md),
+            ],
+          ],
+        ),
+      ),
+    );
+    final left = card('Try answers', [
+      ...answers,
+      AbraButton(
+        label: _t(context, 'ShowChecklist'),
+        icon: Icons.visibility_outlined,
+        isLoading: _busy,
+        onPressed: _preview,
+      ),
+    ]);
+    final right = card('The owner would see this checklist', checklist);
+    return widget.wide
+        ? Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '${q['label']}${q['required'] == true ? ' *' : ''}',
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
-              if ('${q['help'] ?? ''}'.isNotEmpty) Text('${q['help']}'),
-              Wrap(
-                spacing: AbraSpacing.sm,
-                children: [
-                  for (final o in _options(q))
-                    FilterChip(
-                      label: Text('${o['label']}'),
-                      selected: q['type'] == 'MULTI_CHOICE'
-                          ? ((_answers[q['key']] as List?) ?? []).contains(
-                              o['value'],
-                            )
-                          : _answers[q['key']] == o['value'],
-                      onSelected: _busy
-                          ? null
-                          : (selected) => setState(() {
-                              _result = null;
-                              if (q['type'] == 'MULTI_CHOICE') {
-                                final values = List<String>.from(
-                                  (_answers[q['key']] as List?) ?? [],
-                                );
-                                selected
-                                    ? values.add('${o['value']}')
-                                    : values.remove(o['value']);
-                                _answers['${q['key']}'] = values;
-                              } else if (selected) {
-                                _answers['${q['key']}'] = o['value'];
-                              } else {
-                                _answers.remove(q['key']);
-                              }
-                            }),
-                    ),
-                ],
-              ),
+              Expanded(child: left),
+              const SizedBox(width: AbraSpacing.lg),
+              Expanded(child: right),
             ],
-          ),
-        if (_result != null) ...[
-          const Divider(),
-          Text(
-            _t(context, 'ApplicableDocuments'),
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          if ((_result!['missingQuestions'] as List).isNotEmpty)
-            Text(
-              '${_t(context, 'MissingAnswers')}: ${questions.where((q) => (_result!['missingQuestions'] as List).contains(q['key'])).map((q) => q['label']).join(', ')}',
-            ),
-          if (_rows(_result!['documents']).isEmpty)
-            Text(_t(context, 'NoApplicableDocuments')),
-          for (final d in _rows(_result!['documents']))
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.description_outlined),
-              title: Text('${d['name']}'),
-              subtitle: Text('${d['instructions'] ?? ''}'),
-              trailing: Text(
-                _t(context, d['isRequired'] == true ? 'Required' : 'Optional'),
-              ),
-            ),
-        ],
-        if (_error != null)
-          Text(_error!, style: const TextStyle(color: AbraColors.danger)),
-      ],
-      [
-        TextButton(
-          onPressed: _busy ? null : () => Navigator.pop(context),
-          child: Text(_t(context, 'Close')),
-        ),
-        AbraButton(
-          label: _t(context, 'ShowChecklist'),
-          isLoading: _busy,
-          onPressed: _preview,
-        ),
-      ],
-    );
+          )
+        : Column(children: [left, const SizedBox(height: 16), right]);
   }
 }
