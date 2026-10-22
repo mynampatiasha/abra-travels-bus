@@ -57,7 +57,7 @@ class _AdminRefundsPageState extends ConsumerState<AdminRefundsPage> {
                 const Text(
                   'Not connected yet - built in Phase 4',
                   style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),

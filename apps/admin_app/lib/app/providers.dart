@@ -27,16 +27,39 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
 }
 
 /// Dynamic badge counts for navigation items matching demo model state.
-final navBadgeCountsProvider = Provider<Map<String, int>>((ref) {
-  return const <String, int>{
-    'kyc': 3,
-    'sos': 0,
-    'payments': 1,
-    'tickets': 4,
-    'places': 1,
-    'refunds': 2,
-  };
-});
+/// The numbers on the side navigation: what waits for an admin, counted by the
+/// server. Keyed by the page the admin is on, so it is read again on every move.
+/// Only pages whose backend exists have a number (KYC reviews and place
+/// requests); payments, refunds, tickets and SOS get theirs in later phases.
+/// A count that cannot be read is simply not shown.
+final navBadgeCountsProvider = FutureProvider.autoDispose
+    .family<Map<String, int>, String>((ref, currentPath) async {
+      final access = ref.watch(accessProvider);
+      final client = ref.watch(appDependenciesProvider).apiClient;
+      final counts = <String, int>{};
+      if (access.can(PermissionKeys.documentsView)) {
+        try {
+          final response = await client.get(
+            'onboarding/submissions',
+            query: <String, Object?>{'status': 'PENDING', 'pageSize': 1},
+          );
+          counts['kyc'] = response.page?.total ?? 0;
+        } on Object {
+          // No number rather than a wrong one.
+        }
+      }
+      if (access.can(PermissionKeys.catalogueRead)) {
+        try {
+          final response = await client.get('admin/place-requests/pending-count');
+          final data = response.data;
+          final pending = data is Map ? data['pending'] : null;
+          counts['places'] = pending is num ? pending.toInt() : 0;
+        } on Object {
+          // No number rather than a wrong one.
+        }
+      }
+      return counts;
+    });
 
 /// Overridden in `bootstrap` (and in tests).
 final appDependenciesProvider = Provider<AppDependencies>(

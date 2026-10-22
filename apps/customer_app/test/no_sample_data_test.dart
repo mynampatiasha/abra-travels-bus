@@ -23,6 +23,10 @@ void main() {
       RegExp(r'ABR\d{3,}', caseSensitive: false),
       RegExp(r'SOS-\d+', caseSensitive: false),
       RegExp(r'Random\('),
+      // Fixed numbers on menu badges, made-up activity times and demo sign-in.
+      RegExp(r"'(kyc|payments|refunds|tickets|places|sos|bookings)':\s*[1-9]"),
+      RegExp(r"'\d+ (min|mins|hour|hours) ago'"),
+      RegExp(r'Demo Session|signInDemo|enterDemoSession'),
     ];
 
     final violations = <String>[];

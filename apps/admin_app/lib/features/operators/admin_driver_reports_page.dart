@@ -50,7 +50,7 @@ class _AdminDriverReportsPageState
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                   ),
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),

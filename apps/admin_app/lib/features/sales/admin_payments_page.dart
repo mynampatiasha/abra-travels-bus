@@ -66,7 +66,7 @@ class _AdminPaymentsPageState extends ConsumerState<AdminPaymentsPage> with Sing
                 const Text(
                   'Not connected yet - built in Phase 3',
                   style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),

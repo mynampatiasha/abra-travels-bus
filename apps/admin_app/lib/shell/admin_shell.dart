@@ -469,7 +469,9 @@ class _AdminShellState extends ConsumerState<AdminShell> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final access = ref.watch(accessProvider);
-    final badgeCounts = ref.watch(navBadgeCountsProvider);
+    final badgeCounts =
+        ref.watch(navBadgeCountsProvider(widget.currentPath)).value ??
+        const <String, int>{};
     final navGroups = AdminNavigationRegistry.visibleGroups(access);
     final breakpoint = AbraBreakpoint.of(context);
     final isWide = breakpoint == AbraBreakpoint.desktop;
