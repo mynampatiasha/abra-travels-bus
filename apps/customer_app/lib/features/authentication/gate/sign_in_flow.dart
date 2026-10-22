@@ -160,43 +160,40 @@ class _PhoneStepState extends ConsumerState<PhoneStep>
             SizedBox(
               width: 48,
               height: 48,
-              child: Tooltip(
-                message: 'Continue with Google',
-                child: OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: null,
-                  child: const Text(
-                    'G',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF4285F4),
-                    ),
-                  ),
-                ),
+              child: GoogleSignInButton(
+                iconOnly: true,
+                showTerms: false,
+                termsAccepted: _socialTerms,
+                enabled: !signIn.isBusy,
+                provider: SocialSignInProvider.google,
+                exchange: (token, password) async {
+                  final manager = ref.read(sessionManagerProvider);
+                  await manager.signInWithGoogle(
+                    token,
+                    audience: 'CUSTOMER',
+                    linkPassword: password,
+                  );
+                },
               ),
             ),
             const SizedBox(width: 16),
             SizedBox(
               width: 48,
               height: 48,
-              child: Tooltip(
-                message: 'Continue with Apple',
-                child: OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: null,
-                  child: const Icon(Icons.apple, size: 26, color: Colors.black),
-                ),
+              child: GoogleSignInButton(
+                iconOnly: true,
+                showTerms: false,
+                termsAccepted: _socialTerms,
+                enabled: !signIn.isBusy,
+                provider: SocialSignInProvider.apple,
+                exchange: (token, password) async {
+                  final manager = ref.read(sessionManagerProvider);
+                  await manager.signInWithApple(
+                    token,
+                    audience: 'CUSTOMER',
+                    linkPassword: password,
+                  );
+                },
               ),
             ),
           ],

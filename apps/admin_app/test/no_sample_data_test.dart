@@ -9,8 +9,6 @@ void main() {
       'features/operations/admin_trips_page.dart': 'Phase 2 session (phase2-supply-v2)',
       'features/operations/admin_inventory_page.dart': 'Phase 2 session (phase2-supply-v2)',
       'features/sales/sales_mock_store.dart': 'Phase 2 session (admin_trips_page.dart imports BookingRecord until connected)',
-      'features/support/support_mock_store.dart': 'CONNECT session (connect-group-a) connects admin_messages_page',
-      'features/support/admin_messages_page.dart': 'CONNECT session (connect-group-a)',
       'features/commission/admin_payout_page.dart': 'Session A (branch phase2-payout)',
       'features/staff/admin_staff_page.dart': 'Staff session (phase7-staff)',
     };

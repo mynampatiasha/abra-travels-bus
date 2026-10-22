@@ -251,10 +251,18 @@ class _GoogleSignInButtonState extends State<GoogleSignInButton> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : widget.provider == SocialSignInProvider.apple
-                  ? const Icon(Icons.apple, size: 24, color: Colors.black)
-                  : const CustomPaint(
-                      size: Size(22, 22),
-                      painter: _GoogleIconPainter(),
+                  ? const Icon(
+                      Icons.apple,
+                      size: 24,
+                      color: Colors.black,
+                      semanticLabel: 'Continue with Apple',
+                    )
+                  : Semantics(
+                      label: 'Continue with Google',
+                      child: const CustomPaint(
+                        size: Size(22, 22),
+                        painter: _GoogleIconPainter(),
+                      ),
                     ),
             ),
           ),

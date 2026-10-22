@@ -4,12 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('Customer app contains no sample data outside allow list', () {
     // Files still using sample data or containing mock in name, each with the session responsible for removing it.
-    const allowList = <String, String>{
-      'features/notifications/repositories/mock_notifications_repositories.dart':
-          'CONNECT session (notifications)',
-      'features/ai_assistant/services/ai_nlp_service.dart':
-          'CONNECT session (ai assistant nlp parser)',
-    };
+    const allowList = <String, String>{};
 
     final libDir = Directory('lib');
     expect(libDir.existsSync(), isTrue, reason: 'lib directory must exist');

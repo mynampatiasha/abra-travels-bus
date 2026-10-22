@@ -107,6 +107,7 @@ class ResourcePage extends ConsumerStatefulWidget {
     this.filters = const <FilterSpec>[],
     this.onCreate,
     this.rowActions,
+    this.onRowTap,
     this.stats = const <StatSpec>[],
     this.exportName,
     this.importSpec,
@@ -114,8 +115,14 @@ class ResourcePage extends ConsumerStatefulWidget {
     this.exportPath,
     this.serverImport,
     this.footer,
+    this.emptyTitle,
+    this.emptyMessage,
     super.key,
   });
+
+  /// Specific empty title and message matching the demo
+  final String? emptyTitle;
+  final String? emptyMessage;
 
   /// Something shown under the table, inside the same card (the Amenities of
   /// the bus types page).
@@ -156,6 +163,9 @@ class ResourcePage extends ConsumerStatefulWidget {
   /// published, a cancelled trip cannot).
   final List<RowAction> Function(JsonMap record)? rowActions;
 
+  /// Called when a row or block is tapped.
+  final void Function(BuildContext context, JsonMap record)? onRowTap;
+
   @override
   ConsumerState<ResourcePage> createState() => _ResourcePageState();
 }
@@ -165,6 +175,7 @@ class _ResourcePageState extends ConsumerState<ResourcePage> {
   final Map<String, String> _filters = <String, String>{};
   Timer? _searchPause;
   int _filterEpoch = 0;
+  bool _isListView = false;
 
   @override
   void dispose() {
@@ -440,18 +451,16 @@ class _ResourcePageState extends ConsumerState<ResourcePage> {
       content = _TableSkeleton(columns: shown.length);
     } else if (page.items.isEmpty) {
       final isFiltered = _filters.isNotEmpty;
+      final defaultEmptyTitle = widget.emptyTitle ?? l10n.text(AdminStrings.listEmptyTitle);
+      final defaultEmptyMessage = widget.emptyMessage ?? l10n.text(AdminStrings.listEmptyMessage);
       content = AbraStateView(
         kind: AbraStateKind.empty,
-        title: l10n.text(
-          isFiltered
-              ? AdminStrings.listEmptyFilteredTitle
-              : AdminStrings.listEmptyTitle,
-        ),
-        message: l10n.text(
-          isFiltered
-              ? AdminStrings.listEmptyFiltered
-              : AdminStrings.listEmptyMessage,
-        ),
+        title: isFiltered
+            ? l10n.text(AdminStrings.listEmptyFilteredTitle)
+            : defaultEmptyTitle,
+        message: isFiltered
+            ? l10n.text(AdminStrings.listEmptyFiltered)
+            : defaultEmptyMessage,
         actionLabel: isFiltered
             ? l10n.text(AdminStrings.listClearFilters)
             : l10n.text(AdminStrings.listEmptyAction),
@@ -462,7 +471,9 @@ class _ResourcePageState extends ConsumerState<ResourcePage> {
         columns: shown,
         records: page.items,
         actionsOf: widget.rowActions,
+        isListView: _isListView,
         onAction: (action, record) => _run(() => action.run(context, record)),
+        onRowTap: widget.onRowTap,
       );
     }
 
@@ -531,10 +542,13 @@ class _ResourcePageState extends ConsumerState<ResourcePage> {
                             child: _filter(filter),
                           ),
                         if (_filters.isNotEmpty)
-                          AbraButton(
-                            label: l10n.text(AdminStrings.listClearFilters),
-                            icon: Icons.filter_alt_off_outlined,
-                            variant: AbraButtonVariant.text,
+                          TextButton.icon(
+                            icon: const Icon(Icons.close, size: 14),
+                            label: const Text('Clear'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: AbraColors.navySecondary,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            ),
                             onPressed: _clearFilters,
                           ),
                       ],
@@ -578,7 +592,7 @@ class _ResourcePageState extends ConsumerState<ResourcePage> {
                         ],
                         if (widget.exportPath != null) ...<Widget>[
                           PopupMenuButton<String>(
-                            tooltip: '',
+                            tooltip: 'Export CSV',
                             onSelected: _serverExport,
                             itemBuilder: (context) => <PopupMenuEntry<String>>[
                               PopupMenuItem<String>(
@@ -619,6 +633,68 @@ class _ResourcePageState extends ConsumerState<ResourcePage> {
                             onPressed: create,
                           ),
                         ],
+                        const SizedBox(width: AbraSpacing.xs),
+                        Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AbraColors.border),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              InkWell(
+                                onTap: () => setState(() => _isListView = false),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                                  decoration: BoxDecoration(
+                                    color: !_isListView ? AbraColors.navy : Colors.transparent,
+                                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(5)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: <Widget>[
+                                      Icon(Icons.grid_view, size: 14, color: !_isListView ? Colors.white : AbraColors.textSecondary),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Table',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: !_isListView ? Colors.white : AbraColors.textSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              InkWell(
+                                onTap: () => setState(() => _isListView = true),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                                  decoration: BoxDecoration(
+                                    color: _isListView ? AbraColors.navy : Colors.transparent,
+                                    borderRadius: const BorderRadius.horizontal(right: Radius.circular(5)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: <Widget>[
+                                      Icon(Icons.view_list, size: 14, color: _isListView ? Colors.white : AbraColors.textSecondary),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'List',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: _isListView ? Colors.white : AbraColors.textSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -666,34 +742,74 @@ class _ResourcePageState extends ConsumerState<ResourcePage> {
                     horizontal: AbraSpacing.lg,
                     vertical: AbraSpacing.xs,
                   ),
-                  child: Row(
+                  child: Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    runSpacing: AbraSpacing.xs,
                     children: <Widget>[
-                      Expanded(
-                        child: Semantics(
-                          liveRegion: true,
-                          child: Text(
-                            l10n.text(AdminStrings.listRange, <String, Object?>{
-                              'from': l10n.formatters.number(page.firstIndex),
-                              'to': l10n.formatters.number(page.lastIndex),
-                              'total': l10n.formatters.number(page.total),
-                            }),
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
+                      Semantics(
+                        liveRegion: true,
+                        child: Text(
+                          page.total == 1
+                              ? l10n.text(AdminStrings.commResultOne)
+                              : l10n.text(AdminStrings.commResults, <String, Object?>{
+                                  'n': l10n.formatters.number(page.total),
+                                }),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: AbraColors.textSecondary,
+                              ),
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.chevron_left),
-                        tooltip: l10n.text(AdminStrings.listPrevious),
-                        onPressed: page.hasPrevious
-                            ? () => setState(() => _page -= 1)
-                            : null,
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.chevron_right),
-                        tooltip: l10n.text(AdminStrings.listNext),
-                        onPressed: page.hasNext
-                            ? () => setState(() => _page += 1)
-                            : null,
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: <Widget>[
+                          TextButton(
+                            onPressed: page.hasPrevious
+                                ? () => setState(() => _page -= 1)
+                                : null,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                const Icon(Icons.chevron_left, size: 16),
+                                const SizedBox(width: 4),
+                                Text(l10n.text(AdminStrings.commPrevious)),
+                              ],
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AbraSpacing.sm,
+                            ),
+                            child: Text(
+                              l10n.text(AdminStrings.commPage, <String, Object?>{
+                                'page': l10n.formatters.number(_page),
+                                'pages': l10n.formatters.number(
+                                  page.total == 0
+                                      ? 1
+                                      : ((page.total - 1) ~/
+                                              (page.pageSize > 0
+                                                  ? page.pageSize
+                                                  : 20)) +
+                                          1,
+                                ),
+                              }),
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: page.hasNext
+                                ? () => setState(() => _page += 1)
+                                : null,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                Text(l10n.text(AdminStrings.commNext)),
+                                const SizedBox(width: 4),
+                                const Icon(Icons.chevron_right, size: 16),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -725,12 +841,16 @@ class _ResourceTable extends StatefulWidget {
     required this.records,
     required this.actionsOf,
     required this.onAction,
+    this.onRowTap,
+    this.isListView = false,
   });
 
   final List<ColumnSpec> columns;
   final List<JsonMap> records;
   final List<RowAction> Function(JsonMap record)? actionsOf;
   final void Function(RowAction action, JsonMap record) onAction;
+  final void Function(BuildContext context, JsonMap record)? onRowTap;
+  final bool isListView;
 
   @override
   State<_ResourceTable> createState() => _ResourceTableState();
@@ -759,8 +879,14 @@ class _ResourceTableState extends State<_ResourceTable> {
       children: <Widget>[
         for (final action in widget.actionsOf!(record))
           IconButton(
-            icon: Icon(action.icon, size: 20),
-            color: AbraColors.navySecondary,
+            icon: Icon(
+              action.icon,
+              size: 18,
+              color: action.icon == Icons.delete_outline ||
+                      action.icon == Icons.delete
+                  ? AbraColors.danger
+                  : AbraColors.navy,
+            ),
             tooltip: l10n.text(action.labelKey),
             constraints: const BoxConstraints.tightFor(
               width: _actionSize,
@@ -774,17 +900,18 @@ class _ResourceTableState extends State<_ResourceTable> {
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) => constraints.maxWidth < _compactBelow
+    builder: (context, constraints) => (constraints.maxWidth < _compactBelow || widget.isListView)
         ? _blocks()
         : _table(constraints.maxWidth),
   );
 
-  TextStyle? get _headingStyle =>
-      Theme.of(context).textTheme.labelMedium?.copyWith(
-        color: AbraColors.white,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0.4,
-      );
+  TextStyle get _headingStyle => TextStyle(
+    color: Theme.of(context).brightness == Brightness.dark
+        ? const Color(0xFF94A3B8)
+        : const Color(0xFF475569),
+    fontWeight: FontWeight.w700,
+    fontSize: 12,
+  );
 
   Widget _table(double width) {
     final l10n = AbraLocalizations.of(context);
@@ -820,14 +947,17 @@ class _ResourceTableState extends State<_ResourceTable> {
           child: ConstrainedBox(
             constraints: BoxConstraints(minWidth: width - actionsWidth),
             child: DataTable(
+              showCheckboxColumn: false,
               headingRowHeight: _headingHeight,
               dataRowMinHeight: _rowHeight,
               dataRowMaxHeight: _rowHeight,
               horizontalMargin: AbraSpacing.lg,
               columnSpacing: AbraSpacing.xl,
               dividerThickness: 1,
-              headingRowColor: const WidgetStatePropertyAll<Color>(
-                AbraColors.navy,
+              headingRowColor: WidgetStatePropertyAll<Color>(
+                Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF1E293B)
+                    : const Color(0xFFF1F5F9),
               ),
               headingTextStyle: _headingStyle,
               dataTextStyle: Theme.of(context).textTheme.bodyMedium,
@@ -842,9 +972,17 @@ class _ResourceTableState extends State<_ResourceTable> {
               rows: <DataRow>[
                 for (final record in widget.records)
                   DataRow(
+                    onSelectChanged: widget.onRowTap == null
+                        ? null
+                        : (_) => widget.onRowTap!(context, record),
                     cells: <DataCell>[
                       for (final column in widget.columns)
-                        DataCell(column.cell(context, record)),
+                        DataCell(
+                          column.cell(context, record),
+                          onTap: widget.onRowTap == null
+                              ? null
+                              : () => widget.onRowTap!(context, record),
+                        ),
                     ],
                   ),
               ],
@@ -878,7 +1016,9 @@ class _ResourceTableState extends State<_ResourceTable> {
           children: <Widget>[
             Container(
               height: _headingHeight,
-              color: AbraColors.navy,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF1E293B)
+                  : const Color(0xFFF1F5F9),
               alignment: AlignmentDirectional.centerStart,
               padding: const EdgeInsets.symmetric(horizontal: AbraSpacing.lg),
               child: Text(
@@ -918,7 +1058,7 @@ class _ResourceTableState extends State<_ResourceTable> {
       separatorBuilder: (context, _) => const Divider(),
       itemBuilder: (context, index) {
         final record = widget.records[index];
-        return Padding(
+        final item = Padding(
           padding: const EdgeInsets.all(AbraSpacing.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -958,6 +1098,12 @@ class _ResourceTableState extends State<_ResourceTable> {
             ],
           ),
         );
+        return widget.onRowTap == null
+            ? item
+            : InkWell(
+                onTap: () => widget.onRowTap!(context, record),
+                child: item,
+              );
       },
     );
   }

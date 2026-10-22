@@ -38,25 +38,14 @@ class CitiesPage extends ConsumerWidget {
     return ResourcePage(
       path: 'cities',
       exportPath: access.can(PermissionKeys.catalogueExport) ? 'cities' : null,
-      stats: const <StatSpec>[
-        StatSpec(
-          AdminStrings.statusActive,
-          <String, String>{'active': 'true'},
-          Icons.check_circle_outline,
-          AbraColors.tealDark,
-        ),
-        StatSpec(
-          AdminStrings.statusInactive,
-          <String, String>{'active': 'false'},
-          Icons.pause_circle_outline,
-          AbraColors.navySecondary,
-        ),
-      ],
       serverImport: canManage
           ? const ServerImport('cities', AdminStrings.impsWhatCities)
           : null,
+      emptyTitle: 'Nothing here yet',
+      emptyMessage: 'New items will appear here.',
       filters: const <FilterSpec>[
         SearchFilter('query', AdminStrings.listSearch),
+        SearchFilter('state', AdminStrings.fieldState),
         ChoiceFilter(
           'active',
           AdminStrings.fieldStatus,
@@ -66,7 +55,35 @@ class CitiesPage extends ConsumerWidget {
       columns: <ColumnSpec>[
         ColumnSpec(
           AdminStrings.fieldName,
-          (_, r) => textCell(r['name']),
+          (_, r) {
+            final te = r['te'] as String?;
+            final hi = r['hi'] as String?;
+            final sub = [
+              if (te != null && te.isNotEmpty) te,
+              if (hi != null && hi.isNotEmpty) hi,
+            ].join(' ');
+            return sub.isNotEmpty
+                ? Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        '${r['name'] ?? ''}',
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      Text(
+                        sub,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AbraColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  )
+                : textCell(r['name']);
+          },
           text: (r) => plainText(r['name']),
         ),
         ColumnSpec(
@@ -75,27 +92,19 @@ class CitiesPage extends ConsumerWidget {
           text: (r) => plainText(r['state']),
         ),
         ColumnSpec(
-          AdminStrings.fieldCountryCode,
-          (_, r) => textCell(r['countryCode']),
-          text: (r) => plainText(r['countryCode']),
-        ),
-        ColumnSpec(
-          AdminStrings.fieldSlug,
-          (_, r) => textCell(r['slug']),
-          text: (r) => plainText(r['slug']),
+          AdminStrings.placesTabPlaces,
+          (_, r) => Text('${r['placesCount'] ?? r['places'] ?? 0}'),
+          isNumeric: true,
+          text: (r) => '${r['placesCount'] ?? r['places'] ?? 0}',
         ),
         ColumnSpec(
           AdminStrings.fieldPopular,
           (context, r) => Text(
-            l10n.text(
-              r['isPopular'] == true
-                  ? AdminStrings.formYes
-                  : AdminStrings.formNo,
-            ),
+            r['isPopular'] == true ? l10n.text(AdminStrings.formYes) : '-',
           ),
-          text: (r) => l10n.text(
-            r['isPopular'] == true ? AdminStrings.formYes : AdminStrings.formNo,
-          ),
+          text: (r) => r['isPopular'] == true
+              ? l10n.text(AdminStrings.formYes)
+              : '-',
         ),
         ColumnSpec(
           AdminStrings.fieldStatus,

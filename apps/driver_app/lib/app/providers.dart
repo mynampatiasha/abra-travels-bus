@@ -1,6 +1,53 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_core/shared_core.dart';
+import 'package:shared_network/shared_network.dart';
+import 'package:shared_notifications/shared_notifications.dart';
 import '../core/mock/driver_mock_db.dart';
+
+class DriverTokenSource implements AuthTokenSource {
+  String? token;
+
+  @override
+  Future<String?> accessToken() async => token;
+
+  @override
+  Future<bool> refreshAccessToken() async => false;
+
+  @override
+  Future<void> onSessionRejected() async {
+    token = null;
+  }
+}
+
+final driverTokenSourceProvider = Provider<DriverTokenSource>((ref) {
+  return DriverTokenSource();
+});
+
+final driverApiClientProvider = Provider<ApiClient>((ref) {
+  const baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://localhost:4003',
+  );
+  final config = AppConfig(
+    environment: AppEnvironment.development,
+    appKind: AppKind.driver,
+    apiBaseUrl: Uri.parse(baseUrl),
+    clientType: ClientType.mobile,
+  );
+  final client = ApiClient(
+    config: config,
+    logger: DeveloperLogger(),
+    languageTag: () => ref.watch(driverLanguageProvider),
+  );
+  client.attachTokenSource(ref.watch(driverTokenSourceProvider));
+  return client;
+});
+
+final driverNotificationsRepositoryProvider =
+    Provider<NotificationsRepository>((ref) {
+  return NotificationsRepository(ref.watch(driverApiClientProvider));
+});
 
 final driverMockDbProvider = Provider<DriverMockDb>((ref) {
   final db = DriverMockDb.instance;

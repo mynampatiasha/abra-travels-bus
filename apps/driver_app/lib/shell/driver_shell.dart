@@ -27,8 +27,8 @@ class DriverShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final notifs = ref.watch(notificationsDriverProvider);
-    final unreadNotifs = notifs.where((n) => n['read'] == false).length;
+    final notifs = ref.watch(driverNotificationsProvider);
+    final unreadNotifs = notifs.value?.where((n) => !n.read).length ?? 0;
     final db = ref.watch(driverMockDbProvider);
     final currentTrip = db.currentTrip;
     final hasActiveTrip = currentTrip != null &&

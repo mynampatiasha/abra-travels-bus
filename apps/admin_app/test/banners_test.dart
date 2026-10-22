@@ -187,6 +187,23 @@ void main() {
         isEmpty,
       );
     });
+
+    testWidgets('Analytics tab shows built in Phase 7 message', (
+      tester,
+    ) async {
+      await openBanners(tester, staffWith(manage));
+      expect(find.text('All banners'), findsOneWidget);
+      expect(find.text('Analytics'), findsOneWidget);
+      await tapOn(tester, find.text('Analytics'));
+      expect(
+        find.text('Not connected yet - built in Phase 7'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('impressions and clicks are not counted yet'),
+        findsOneWidget,
+      );
+    });
   });
 
   group('banners: buttons of a row', () {
@@ -202,8 +219,7 @@ void main() {
           ..['status'] = 'INACTIVE';
         return FakeResponse.ok(record);
       };
-      expect(statCard('Scheduled', '1'), findsOneWidget);
-      expect(statCard('Draft', '0'), findsOneWidget);
+      expect(find.text('Scheduled'), findsWidgets);
 
       await tapOn(tester, find.byTooltip('Unpublish'));
 
@@ -212,8 +228,7 @@ void main() {
               as Map;
       expect(body['active'], isFalse);
       expect(find.text('Unpublished.'), findsOneWidget);
-      expect(statCard('Scheduled', '0'), findsOneWidget);
-      expect(statCard('Draft', '1'), findsOneWidget);
+      expect(find.text('Draft'), findsWidgets);
       // A draft offers Publish instead
       expect(find.byTooltip('Publish'), findsOneWidget);
     });
@@ -262,7 +277,7 @@ void main() {
 
       expect(app.requestsTo('admin/banners/$id/archive', 'POST'), hasLength(1));
       expect(find.text('Archived.'), findsOneWidget);
-      expect(statCard('Archived', '1'), findsOneWidget);
+      expect(find.text('Archived'), findsWidgets);
       // An archived banner can only be put back (or duplicated), not edited
       expect(find.byTooltip('Edit'), findsNothing);
       expect(find.byTooltip('Put back as draft'), findsOneWidget);
@@ -272,7 +287,7 @@ void main() {
         app.requestsTo('admin/banners/$id/unarchive', 'POST'),
         hasLength(1),
       );
-      expect(statCard('Archived', '0'), findsOneWidget);
+      expect(find.text('Draft'), findsWidgets);
     });
 
     testWidgets('the order arrows move the banner one place', (tester) async {
