@@ -17,6 +17,7 @@ abstract final class AdminRouteGuard {
     required String path,
     String? from,
   }) {
+    if (path == AdminRoutes.staffInvitation) return null;
     switch (access.level) {
       case AccessLevel.signedOut:
         return path == AdminRoutes.signIn

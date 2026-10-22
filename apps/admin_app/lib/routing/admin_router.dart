@@ -43,7 +43,7 @@ import '../features/sales/admin_refunds_page.dart';
 import '../features/sales/admin_settlements_page.dart';
 import '../features/settings/admin_feature_flags_page.dart';
 import '../features/settings/settings_page.dart';
-import '../features/staff/admin_staff_page.dart';
+import '../features/staff/staff_admin_manage_screen.dart';
 import '../features/support/admin_content_page.dart';
 import '../features/support/admin_messages_page.dart';
 import '../features/support/admin_tickets_page.dart';
@@ -116,7 +116,7 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
 
     // 11. System
     AdminRoutes.settings: const SettingsPage(),
-    AdminRoutes.staff: const AdminStaffPage(),
+    AdminRoutes.staff: const StaffAdminManageScreen(),
     AdminRoutes.featureFlags: const AdminFeatureFlagsPage(),
     AdminRoutes.audit: const AuditAdminManageScreen(),
   };
@@ -139,6 +139,12 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AdminRoutes.signIn,
         builder: (context, state) => const SignInScreen(),
+      ),
+      GoRoute(
+        path: AdminRoutes.staffInvitation,
+        builder: (context, state) => StaffSetPasswordScreen(
+          token: state.uri.queryParameters['token'] ?? '',
+        ),
       ),
       GoRoute(
         path: AdminRoutes.home,

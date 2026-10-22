@@ -16,7 +16,7 @@ function role(key: string): RoleDefinition {
 }
 
 describe('system roles', () => {
-  it('defines exactly the twelve roles of the platform specification', () => {
+  it('defines the roles of the platform specification', () => {
     expect(SYSTEM_ROLES.map((definition) => definition.key).sort()).toEqual(
       [
         'SUPER_ADMIN',

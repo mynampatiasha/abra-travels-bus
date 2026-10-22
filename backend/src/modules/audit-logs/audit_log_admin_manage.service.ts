@@ -83,6 +83,16 @@ export const AUDIT_ACTION_LABELS: Readonly<Record<AuditAction, string>> = {
   'trip.crew-assigned': 'Assigned crew to a trip',
   'seat.blocked': 'Blocked a seat',
   'seat.unblocked': 'Unblocked a seat',
+  'staff.invited': 'Invited staff',
+  'staff.invitation-resent': 'Sent staff invitation again',
+  'staff.updated': 'Changed staff details',
+  'staff.deactivated': 'Deactivated staff',
+  'staff.activated': 'Activated staff',
+  'staff.session.revoked': 'Signed out staff session',
+  'portal-user.invited': 'Invited portal user',
+  'portal-user.updated': 'Changed portal user',
+  'portal-user.deactivated': 'Deactivated portal user',
+  'portal-user.activated': 'Activated portal user',
 };
 
 /**
@@ -129,6 +139,9 @@ export const SENSITIVE_ACTIONS: ReadonlySet<AuditAction> = new Set<AuditAction>(
   'catalogue.deleted',
   'banner.deleted',
   'trip.cancelled',
+  'staff.deactivated',
+  'staff.session.revoked',
+  'portal-user.deactivated',
 ]);
 
 /** What an operator's people see instead of the name of a member of the Abra team. */

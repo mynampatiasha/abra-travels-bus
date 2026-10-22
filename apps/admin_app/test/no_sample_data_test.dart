@@ -6,7 +6,6 @@ void main() {
     // Files still using sample data or containing mock in name, each with the session responsible for removing it.
     const allowList = <String, String>{
       'features/commission/admin_payout_page.dart': 'Session A (branch phase2-payout)',
-      'features/staff/admin_staff_page.dart': 'Staff session (phase7-staff)',
     };
 
     final libDir = Directory('lib');

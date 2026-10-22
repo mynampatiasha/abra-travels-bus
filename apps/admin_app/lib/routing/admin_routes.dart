@@ -4,6 +4,7 @@ import 'package:shared_permissions/shared_permissions.dart';
 abstract final class AdminRoutes {
   static const splash = '/splash';
   static const signIn = '/sign-in';
+  static const staffInvitation = '/staff-invitation';
   static const home = '/';
 
   // 1. Overview

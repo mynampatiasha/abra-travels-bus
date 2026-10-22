@@ -5,6 +5,7 @@ import { SessionsModule } from './sessions/sessions.module';
 import { RbacModule } from './rbac/rbac.module';
 import { OperatorsModule } from './operators/operators.module';
 import { OperatorStaffModule } from './operator-staff/crew_client_manage';
+import { OperatorPortalUsersModule } from './operator-staff/operator-staff.module';
 import { BusesModule } from './buses/buses.module';
 import { BusTypesModule } from './bus-types/bus-types.module';
 import { DocumentTypesModule } from './document-types/document-types.module';
@@ -56,6 +57,7 @@ import { SystemSettingsModule } from './system-settings/system-settings.module';
 import { FeatureFlagsModule } from './feature-flags/flags_admin_manage';
 import { ReportsModule } from './reports/reports.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { StaffAdminManageModule } from './rbac/staff_admin_manage';
 
 /**
  * Every domain module of the modular monolith, grouped as in architecture.md �5.
@@ -71,6 +73,7 @@ export const DOMAIN_MODULES = [
   // Supply
   OperatorsModule,
   OperatorStaffModule,
+  OperatorPortalUsersModule,
   BusesModule,
   BusTypesModule,
   DocumentTypesModule,
@@ -128,4 +131,5 @@ export const DOMAIN_MODULES = [
   OperatorsAdminModule,
   CompanyClientModule,
   EventRouterModule,
+  StaffAdminManageModule,
 ];

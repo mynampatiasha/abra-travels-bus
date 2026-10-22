@@ -38,7 +38,7 @@ const ADMIN_EXCLUDED: readonly PermissionKey[] = [
 ];
 
 /**
- * The twelve roles of the platform specification (documentation/authorization.md §3). These
+ * The platform specification system roles (documentation/authorization.md §3). These
  * definitions are the source of truth for system roles; SystemRolesSynchronizer mirrors them into
  * the `roles` collection at start-up so users can reference them by id. Business code never
  * checks a role name — only permission keys and data scope.
