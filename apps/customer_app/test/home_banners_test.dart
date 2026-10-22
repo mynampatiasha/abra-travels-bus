@@ -46,6 +46,33 @@ Finder dot(int current, int total) =>
 bool isSelected(WidgetTester tester, Finder finder) =>
     tester.getSemantics(finder).flagsCollection.isSelected;
 
+/// The banners sit below the search form (demo order), so scroll them into view.
+Future<void> showCarousel(WidgetTester tester) async {
+  final pager = find.byType(PageView);
+  final home = find
+      .ancestor(
+        of: find.text('Where are you travelling?'),
+        matching: find.byType(Scrollable),
+      )
+      .first;
+  if (home.evaluate().isEmpty) return;
+  final position = tester.state<ScrollableState>(home).position;
+  // Home builds its sections lazily: step down until the banners exist.
+  for (var i = 0; i < 20 && pager.evaluate().isEmpty; i++) {
+    if (position.pixels >= position.maxScrollExtent) break;
+    position.jumpTo(position.pixels + 300);
+    await tester.pump();
+  }
+  if (pager.evaluate().isEmpty) {
+    // No banners on this Home: go back to the top as it opened.
+    position.jumpTo(0);
+    await tester.pump();
+    return;
+  }
+  await tester.ensureVisible(pager);
+  await tester.pump();
+}
+
 void main() {
   group('banners repository', () {
     test(
@@ -142,6 +169,7 @@ void main() {
     }) async {
       final app = TestApp(banners: banners, handler: handler);
       await app.pump(tester);
+      await showCarousel(tester);
       return app;
     }
 
@@ -368,6 +396,19 @@ void main() {
       expect(repository.calls, 1);
 
       repository.banners = <HomeBanner>[banner(2)];
+      // Back to the top of Home, where pulling down refreshes.
+      tester
+          .state<ScrollableState>(
+            find
+                .ancestor(
+                  of: find.byType(PageView),
+                  matching: find.byType(Scrollable),
+                )
+                .first,
+          )
+          .position
+          .jumpTo(0);
+      await tester.pump();
       await tester.fling(
         find.text('Where are you travelling?'),
         const Offset(0, 400),
@@ -397,6 +438,7 @@ void main() {
       ) async {
         final app = TestApp(banners: FakeHomeBannersRepository(banners));
         await app.pump(tester, size: size);
+        await showCarousel(tester);
       }
 
       Finder bannerImage() => find.descendant(
@@ -531,7 +573,13 @@ void main() {
       );
 
       expect(find.text('Go'), findsNothing);
-      expect(find.byType(FilledButton), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byType(HomeBannerCarousel),
+          matching: find.byType(FilledButton),
+        ),
+        findsNothing,
+      );
       await tester.tap(find.text('Banner title 1'), warnIfMissed: false);
       await tester.pumpAndSettle();
       expect(locationOf(tester).path, '/home');

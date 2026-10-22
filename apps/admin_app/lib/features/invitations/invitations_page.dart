@@ -162,37 +162,23 @@ class InvitationsPage extends ConsumerWidget {
       exportPath: access.can(PermissionKeys.operatorsExport)
           ? 'onboarding/invitations'
           : null,
-      stats: const <StatSpec>[
-        StatSpec(
-          AdminStrings.invStatusPending,
-          <String, String>{'status': 'PENDING'},
-          Icons.mark_email_unread_outlined,
-          AbraColors.orangeDark,
-        ),
-        StatSpec(
-          AdminStrings.invStatusAccepted,
-          <String, String>{'status': 'ACCEPTED'},
-          Icons.how_to_reg_outlined,
-          AbraColors.tealDark,
-        ),
-        StatSpec(
-          AdminStrings.invStatusExpired,
-          <String, String>{'status': 'EXPIRED'},
-          Icons.timer_off_outlined,
-          AbraColors.danger,
-        ),
-        StatSpec(
-          AdminStrings.invStatusRevoked,
-          <String, String>{'status': 'REVOKED'},
-          Icons.block,
-          AbraColors.navySecondary,
-        ),
-      ],
+      emptyTitle: 'No invitations yet',
+      emptyMessage: 'Invite your first operator.',
       filters: const <FilterSpec>[
         SearchFilter('search', AdminStrings.invSearch),
         ChoiceFilter('status', AdminStrings.invColStatus, _statuses),
       ],
       columns: <ColumnSpec>[
+        ColumnSpec(
+          'ID',
+          (_, r) => Text(
+            r['id'] != null
+                ? '#${r['id'].toString().length > 6 ? r['id'].toString().substring(0, 6) : r['id']}'
+                : '',
+            style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+          ),
+          text: (r) => '${r['id'] ?? ''}',
+        ),
         ColumnSpec(
           AdminStrings.invColCompany,
           (_, r) => textCell(r['companyName']),
@@ -219,25 +205,16 @@ class InvitationsPage extends ConsumerWidget {
           text: statusText,
         ),
         ColumnSpec(
-          AdminStrings.invColMail,
-          (_, r) => Text(
-            l10n.text(switch ('${r['emailStatus']}') {
-              'SENT' => AdminStrings.invMailSent,
-              'FAILED' => AdminStrings.invMailFailed,
-              _ => AdminStrings.invMailNotSent,
-            }),
-          ),
-          text: (r) => '${r['emailStatus']}',
+          AdminStrings.invColCreated,
+          (_, r) => Text(dateOf(r['createdAt'] ?? r['sentAt'])),
+          text: (r) => dateOf(r['createdAt'] ?? r['sentAt']),
         ),
         ColumnSpec(
           AdminStrings.invColExpires,
-          (_, r) => Text(dateOf(r['expiresAt'])),
+          (_, r) => Text(
+            r['status'] == 'PENDING' ? dateOf(r['expiresAt']) : '-',
+          ),
           text: (r) => dateOf(r['expiresAt']),
-        ),
-        ColumnSpec(
-          AdminStrings.invColCreated,
-          (_, r) => Text(dateOf(r['createdAt'])),
-          text: (r) => dateOf(r['createdAt']),
         ),
       ],
       onCreate: (context) => inviteOwner(context, repository),

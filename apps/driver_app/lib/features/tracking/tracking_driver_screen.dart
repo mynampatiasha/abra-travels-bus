@@ -137,7 +137,21 @@ class TrackingDriverWidget extends ConsumerWidget {
     );
     final route = db.routeOfTrip(trip['routeId'] as String? ?? '');
 
-    if (trip.isEmpty || route == null) return const SizedBox.shrink();
+    if (trip.isEmpty || route == null) {
+      return Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: const Padding(
+          padding: EdgeInsets.all(20),
+          child: Center(
+            child: Text(
+              'Not connected yet - built in Phase 5',
+              style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+            ),
+          ),
+        ),
+      );
+    }
 
     final progress = ((gps?['progress'] as num?) ?? 0).toDouble();
     final speed = (gps?['speed'] as num?)?.toInt() ?? 0;

@@ -1,13 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:shared_theme/shared_theme.dart';
 
-import '../../routing/app_routes.dart';
-import '../booking/controllers/url_launcher_provider.dart';
 import 'controllers/ai_assistant_controller.dart';
-import 'models/ai_models.dart';
 
 class AiAssistantSheet extends ConsumerStatefulWidget {
   const AiAssistantSheet({super.key});
@@ -52,53 +47,11 @@ class _AiAssistantSheetState extends ConsumerState<AiAssistantSheet> {
     });
   }
 
-  void _handleAction(AiAction action) {
-    switch (action.actionType) {
-      case 'call':
-        if (action.payload != null) {
-          ref.read(urlLauncherProvider)(
-            Uri(scheme: 'tel', path: action.payload),
-          );
-        }
-        break;
-      case 'copy':
-        if (action.payload != null) {
-          Clipboard.setData(ClipboardData(text: action.payload!));
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Copied ${action.payload!}'),
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        }
-        break;
-      case 'track':
-        Navigator.of(context).pop();
-        context.push(AppRoutes.myTrips);
-        break;
-      case 'route':
-        Navigator.of(context).pop();
-        context.push(AppRoutes.home);
-        break;
-      case 'cancel':
-        Navigator.of(context).pop();
-        context.push(AppRoutes.myTrips);
-        break;
-      case 'map':
-        if (action.payload != null) {
-          ref.read(urlLauncherProvider)(
-            Uri.parse(
-              'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(action.payload!)}',
-            ),
-          );
-        }
-        break;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final messages = ref.watch(aiAssistantMessagesProvider);
+    final statusAsync = ref.watch(aiAssistantStatusProvider);
+    final isAvailable = statusAsync.value ?? true;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
@@ -109,7 +62,7 @@ class _AiAssistantSheetState extends ConsumerState<AiAssistantSheet> {
       ),
       child: Column(
         children: [
-          // Drag handle & title bar
+          // Header
           Container(
             padding: const EdgeInsets.symmetric(
               horizontal: AbraSpacing.md,
@@ -148,7 +101,27 @@ class _AiAssistantSheetState extends ConsumerState<AiAssistantSheet> {
             ),
           ),
 
-          // Message history list
+          // Server unavailable banner if applicable
+          if (!isAvailable)
+            Container(
+              width: double.infinity,
+              color: const Color(0xFFFEF2F2),
+              padding: const EdgeInsets.symmetric(horizontal: AbraSpacing.md, vertical: 8),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, size: 18, color: Color(0xFFDC2626)),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'AI Assistant is currently unavailable on this server.',
+                      style: TextStyle(fontSize: 12, color: Color(0xFFDC2626)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          // Message history
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
@@ -166,7 +139,7 @@ class _AiAssistantSheetState extends ConsumerState<AiAssistantSheet> {
                       margin: const EdgeInsets.symmetric(vertical: 4),
                       padding: const EdgeInsets.all(AbraSpacing.md),
                       constraints: BoxConstraints(
-                        maxWidth: MediaQuery.of(context).size.width * 0.82,
+                        maxWidth: MediaQuery.of(context).size.width * 0.85,
                       ),
                       decoration: BoxDecoration(
                         color: isUser
@@ -183,28 +156,70 @@ class _AiAssistantSheetState extends ConsumerState<AiAssistantSheet> {
                                     : AbraColors.border,
                               ),
                       ),
-                      child: Text(
-                        m.text,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isUser
-                              ? Colors.white
-                              : m.isDanger
-                                  ? AbraColors.danger
-                                  : AbraColors.textPrimary,
-                          height: 1.35,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            m.text,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: isUser
+                                  ? Colors.white
+                                  : m.isDanger
+                                      ? AbraColors.danger
+                                      : AbraColors.textPrimary,
+                              height: 1.35,
+                            ),
+                          ),
+                          if (!isUser && m.turnId != null) ...[
+                            const SizedBox(height: 6),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                InkWell(
+                                  onTap: () => ref
+                                      .read(aiAssistantMessagesProvider.notifier)
+                                      .sendFeedback(m.turnId!, 'UP'),
+                                  child: Icon(
+                                    m.feedback == 'UP'
+                                        ? Icons.thumb_up
+                                        : Icons.thumb_up_alt_outlined,
+                                    size: 16,
+                                    color: m.feedback == 'UP'
+                                        ? AbraColors.blue
+                                        : AbraColors.textSecondary,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                InkWell(
+                                  onTap: () => ref
+                                      .read(aiAssistantMessagesProvider.notifier)
+                                      .sendFeedback(m.turnId!, 'DOWN'),
+                                  child: Icon(
+                                    m.feedback == 'DOWN'
+                                        ? Icons.thumb_down
+                                        : Icons.thumb_down_alt_outlined,
+                                    size: 16,
+                                    color: m.feedback == 'DOWN'
+                                        ? AbraColors.danger
+                                        : AbraColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
                       ),
                     ),
 
-                    // Cards attached to AI message
-                    if (m.cards.isNotEmpty) ...[
+                    // Proposed Actions
+                    if (m.proposals.isNotEmpty) ...[
                       const SizedBox(height: 4),
-                      for (final card in m.cards)
+                      for (final p in m.proposals)
                         Container(
-                          width: MediaQuery.of(context).size.width * 0.82,
+                          width: MediaQuery.of(context).size.width * 0.85,
                           margin: const EdgeInsets.only(bottom: 6),
-                          padding: const EdgeInsets.all(AbraSpacing.sm),
+                          padding: const EdgeInsets.all(AbraSpacing.sm + 2),
                           decoration: BoxDecoration(
                             color: AbraColors.white,
                             borderRadius: AbraRadius.medium,
@@ -215,46 +230,78 @@ class _AiAssistantSheetState extends ConsumerState<AiAssistantSheet> {
                             children: [
                               Row(
                                 children: [
+                                  const Icon(Icons.rule_rounded, size: 16, color: AbraColors.blue),
+                                  const SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
-                                      card.title,
+                                      p.description,
                                       style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
                                         fontSize: 13,
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
                                   ),
-                                  if (card.price != null)
-                                    Text(
-                                      card.price!,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w800,
-                                        color: AbraColors.blueDark,
-                                      ),
-                                    ),
                                 ],
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                card.subtitle,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: AbraColors.textSecondary,
-                                ),
-                              ),
-                              if (card.action != null) ...[
-                                const SizedBox(height: 6),
-                                Align(
-                                  alignment: AlignmentDirectional.centerEnd,
-                                  child: OutlinedButton(
-                                    style: OutlinedButton.styleFrom(
-                                      visualDensity: VisualDensity.compact,
-                                      side: const BorderSide(color: AbraColors.blue),
-                                      foregroundColor: AbraColors.blue,
+                              if (p.status == 'WAITING') ...[
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    OutlinedButton(
+                                      style: OutlinedButton.styleFrom(
+                                        visualDensity: VisualDensity.compact,
+                                        foregroundColor: AbraColors.textSecondary,
+                                      ),
+                                      onPressed: () => ref
+                                          .read(aiAssistantMessagesProvider.notifier)
+                                          .declineAction(p.id),
+                                      child: const Text('Decline', style: TextStyle(fontSize: 12)),
                                     ),
-                                    onPressed: () => _handleAction(card.action!),
-                                    child: Text(card.action!.label, style: const TextStyle(fontSize: 12)),
-                                  ),
+                                    const SizedBox(width: 8),
+                                    FilledButton(
+                                      style: FilledButton.styleFrom(
+                                        visualDensity: VisualDensity.compact,
+                                        backgroundColor: AbraColors.blue,
+                                      ),
+                                      onPressed: () => ref
+                                          .read(aiAssistantMessagesProvider.notifier)
+                                          .confirmAction(p.id),
+                                      child: const Text('Confirm', style: TextStyle(fontSize: 12)),
+                                    ),
+                                  ],
+                                ),
+                              ] else ...[
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      p.status == 'DONE'
+                                          ? Icons.check_circle_outline
+                                          : p.status == 'DECLINED'
+                                              ? Icons.cancel_outlined
+                                              : Icons.error_outline,
+                                      size: 14,
+                                      color: p.status == 'DONE'
+                                          ? const Color(0xFF16A34A)
+                                          : p.status == 'DECLINED'
+                                              ? AbraColors.textSecondary
+                                              : AbraColors.danger,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      p.resultMessage ?? p.status,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: p.status == 'DONE'
+                                            ? const Color(0xFF16A34A)
+                                            : p.status == 'DECLINED'
+                                                ? AbraColors.textSecondary
+                                                : AbraColors.danger,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ],
@@ -280,7 +327,7 @@ class _AiAssistantSheetState extends ConsumerState<AiAssistantSheet> {
                             ),
                             backgroundColor: AbraColors.lightBlue,
                             side: BorderSide.none,
-                            onPressed: () => _send(chipText),
+                            onPressed: isAvailable ? () => _send(chipText) : null,
                           );
                         }).toList(),
                       ),
@@ -292,7 +339,7 @@ class _AiAssistantSheetState extends ConsumerState<AiAssistantSheet> {
             ),
           ),
 
-          // Bottom prompt input field
+          // Prompt input bar
           Container(
             padding: EdgeInsets.fromLTRB(
               AbraSpacing.md,
@@ -309,8 +356,11 @@ class _AiAssistantSheetState extends ConsumerState<AiAssistantSheet> {
                 Expanded(
                   child: TextField(
                     controller: _inputController,
+                    enabled: isAvailable,
                     decoration: InputDecoration(
-                      hintText: 'Ask in English, Telugu, or Hindi...',
+                      hintText: isAvailable
+                          ? 'Ask Abra Assistant...'
+                          : 'Assistant not available...',
                       hintStyle: const TextStyle(fontSize: 13),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: AbraSpacing.md,
@@ -323,14 +373,14 @@ class _AiAssistantSheetState extends ConsumerState<AiAssistantSheet> {
                       filled: true,
                       fillColor: AbraColors.lightGray,
                     ),
-                    onSubmitted: (val) => _send(val),
+                    onSubmitted: isAvailable ? (val) => _send(val) : null,
                   ),
                 ),
                 const SizedBox(width: AbraSpacing.sm),
                 IconButton.filled(
                   style: IconButton.styleFrom(backgroundColor: AbraColors.blue),
                   icon: const Icon(Icons.arrow_upward, size: 18),
-                  onPressed: () => _send(_inputController.text),
+                  onPressed: isAvailable ? () => _send(_inputController.text) : null,
                 ),
               ],
             ),

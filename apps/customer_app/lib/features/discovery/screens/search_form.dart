@@ -1,21 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_authentication/shared_authentication.dart';
 import 'package:shared_localization/shared_localization.dart';
-import 'package:shared_notifications/shared_notifications.dart';
 import 'package:shared_theme/shared_theme.dart';
 import 'package:shared_ui/shared_ui.dart';
 
-import '../../../app/providers.dart';
 import '../../../l10n/customer_strings.dart';
 import '../../../routing/app_routes.dart';
-import '../../authentication/gate/require_sign_in.dart';
-import '../../authentication/gate/sign_in_intent.dart';
+import '../../home/home_banner_carousel.dart';
 import '../../home/home_banners_repository.dart';
 import '../../home/widgets/active_trip_banner.dart';
 import '../../home/widgets/home_offers_slider.dart';
-import '../../home/widgets/home_promo_banners.dart';
 import '../../home/widgets/popular_routes_section.dart';
 import '../controllers/search_form_controller.dart';
 import '../controllers/travel_dates.dart';
@@ -101,10 +96,6 @@ class SearchFormView extends ConsumerWidget {
         : const <SearchFormProblem>[];
     final today = TravelDates.today(ref.read(discoveryClockProvider)());
     final tomorrow = today.add(const Duration(days: 1));
-    final auth = ref.watch(authStateProvider);
-    final center = auth is AuthSignedIn
-        ? ref.watch(appDependenciesProvider).notifications
-        : null;
 
     String? problemFor(Set<SearchFormProblem> relevant) {
       final problem = problems.where(relevant.contains).firstOrNull;
@@ -112,7 +103,7 @@ class SearchFormView extends ConsumerWidget {
     }
 
     final screenWidth = MediaQuery.sizeOf(context).width;
-    final isTabletOrDesktop = screenWidth >= 720;
+    final isTabletOrDesktop = screenWidth >= 800;
     final contentMaxWidth = screenWidth >= 1100 ? 1040.0 : (screenWidth >= 800 ? 760.0 : 560.0);
     final gutter = AbraResponsive.gutter(context);
 
@@ -208,39 +199,48 @@ class SearchFormView extends ConsumerWidget {
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(99),
-                          onTap: () => _pickDate(context, ref),
-                          child: Container(
-                            height: 42,
-                            decoration: BoxDecoration(
-                              color: AbraColors.white,
-                              borderRadius: BorderRadius.circular(99),
-                              border: Border.all(color: AbraColors.divider),
-                            ),
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            alignment: Alignment.center,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.calendar_today_outlined,
-                                  size: 15,
-                                  color: AbraColors.blueDark,
+                        child: Semantics(
+                          button: true,
+                          label:
+                              '${l10n.text(CustomerStrings.searchDateLabel)}, ${text.date(form.date)}',
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(99),
+                            onTap: () => _pickDate(context, ref),
+                            child: ExcludeSemantics(
+                              child: Container(
+                                constraints: const BoxConstraints(
+                                  minHeight: AbraSizes.minTouchTarget,
                                 ),
-                                const SizedBox(width: 6),
-                                Flexible(
-                                  child: Text(
-                                    text.date(form.date),
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: AbraColors.textPrimary,
+                                decoration: BoxDecoration(
+                                  color: AbraColors.white,
+                                  borderRadius: BorderRadius.circular(99),
+                                  border: Border.all(color: AbraColors.divider),
+                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                alignment: Alignment.center,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Icons.calendar_today_outlined,
+                                      size: 15,
+                                      color: AbraColors.blueDark,
                                     ),
-                                  ),
+                                    const SizedBox(width: 6),
+                                    Flexible(
+                                      child: Text(
+                                        text.date(form.date),
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: AbraColors.textPrimary,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
                           ),
                         ),
@@ -314,54 +314,63 @@ class SearchFormView extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: AbraSpacing.sm),
-                  Row(
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: <Widget>[
                       ChoiceChip(
                         label: Text(l10n.text(CustomerStrings.searchToday)),
                         selected: form.date == today,
                         onSelected: (_) => controller.setDate(today),
                       ),
-                      const SizedBox(width: 8),
                       ChoiceChip(
                         label: Text(l10n.text(CustomerStrings.searchTomorrow)),
                         selected: form.date == tomorrow,
                         onSelected: (_) => controller.setDate(tomorrow),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
+                      Semantics(
+                        button: true,
+                        label:
+                            '${l10n.text(CustomerStrings.searchDateLabel)}, ${text.date(form.date)}',
                         child: InkWell(
                           borderRadius: BorderRadius.circular(99),
                           onTap: () => _pickDate(context, ref),
-                          child: Container(
-                            height: 38,
-                            decoration: BoxDecoration(
-                              color: AbraColors.white,
-                              borderRadius: BorderRadius.circular(99),
-                              border: Border.all(color: AbraColors.divider),
-                            ),
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
-                            alignment: Alignment.center,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.calendar_today_outlined,
-                                  size: 14,
-                                  color: AbraColors.blueDark,
-                                ),
-                                const SizedBox(width: 6),
-                                Flexible(
-                                  child: Text(
-                                    text.date(form.date),
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: AbraColors.textPrimary,
+                          child: ExcludeSemantics(
+                            child: Container(
+                              constraints: const BoxConstraints(
+                                minHeight: AbraSizes.minTouchTarget,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AbraColors.white,
+                                borderRadius: BorderRadius.circular(99),
+                                border: Border.all(color: AbraColors.divider),
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              alignment: Alignment.center,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.calendar_today_outlined,
+                                    size: 14,
+                                    color: AbraColors.blueDark,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Flexible(
+                                    child: Text(
+                                      text.date(form.date),
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: AbraColors.textPrimary,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -389,69 +398,11 @@ class SearchFormView extends ConsumerWidget {
           decoration: const BoxDecoration(
             gradient: AbraGradients.brandDeep,
           ),
-          padding: EdgeInsets.fromLTRB(gutter, 16, gutter, 44),
+          padding: EdgeInsets.fromLTRB(gutter, 16, gutter, 20),
           child: centered(
             Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.directions_bus,
-                          color: AbraColors.white,
-                          size: 24,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          l10n.text(CustomerStrings.appName),
-                          style: const TextStyle(
-                            color: AbraColors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (center != null)
-                          NotificationBell(
-                            center: center,
-                            color: AbraColors.white,
-                            onOpen: (item) {
-                              final route = item.route;
-                              if (route != null && route.isNotEmpty) {
-                                context.go(route);
-                              }
-                            },
-                          ),
-                        IconButton(
-                          icon: const Icon(Icons.language, color: AbraColors.white),
-                          tooltip: l10n.text(CustomerStrings.languageChangeAction),
-                          onPressed: () => context.push(AppRoutes.language),
-                        ),
-                        if (auth is AuthSignedOut)
-                          TextButton.icon(
-                            style: TextButton.styleFrom(
-                              foregroundColor: AbraColors.white,
-                            ),
-                            icon: const Icon(Icons.login, size: 18),
-                            onPressed: () => requireSignIn(
-                              context,
-                              SignInIntent(returnLocation: currentLocation(context)),
-                            ),
-                            label: Text(l10n.text(CustomerStrings.gateActionShort)),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
                 Semantics(
                   header: true,
                   child: Text(
@@ -470,6 +421,8 @@ class SearchFormView extends ConsumerWidget {
                     fontSize: 13,
                   ),
                 ),
+                const SizedBox(height: AbraSpacing.md),
+                searchCard,
               ],
             ),
           ),
@@ -480,13 +433,9 @@ class SearchFormView extends ConsumerWidget {
           centered(const ActiveTripBanner()),
         ],
 
-        // Search Card:
-        const SizedBox(height: AbraSpacing.sm),
-        centered(AbraEntrance(child: searchCard)),
-
         // Recent searches:
         if (form.recent.isNotEmpty) ...[
-          const SizedBox(height: AbraSpacing.xs),
+          const SizedBox(height: AbraSpacing.md),
           centered(
             Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -503,21 +452,40 @@ class SearchFormView extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: AbraSpacing.xs),
-                SizedBox(
-                  height: 38,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: form.recent.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 8),
-                    itemBuilder: (context, index) {
-                      final r = form.recent[index];
-                      return ActionChip(
-                        label: Text('${r.from.name} → ${r.to.name}'),
-                        onPressed: () => controller.useRecent(r),
-                      );
-                    },
+                for (final recent in form.recent)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AbraSpacing.xs,
+                    ),
+                    child: Material(
+                      color: AbraColors.white,
+                      borderRadius: AbraRadius.medium,
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: AbraSpacing.md,
+                        ),
+                        minTileHeight: AbraSizes.minTouchTarget,
+                        leading: const ExcludeSemantics(
+                          child: Icon(
+                            Icons.history,
+                            color: AbraColors.navy,
+                          ),
+                        ),
+                        title: Text(
+                          text.route(recent.from.name, recent.to.name),
+                          style: textTheme.bodyLarge,
+                        ),
+                        trailing: const ExcludeSemantics(
+                          child: Icon(
+                            Icons.north_west,
+                            size: AbraSizes.iconSmall,
+                            color: AbraColors.textSecondary,
+                          ),
+                        ),
+                        onTap: () => controller.useRecent(recent),
+                      ),
+                    ),
                   ),
-                ),
               ],
             ),
           ),
@@ -526,7 +494,8 @@ class SearchFormView extends ConsumerWidget {
         // Promotional Banners, Offers, Popular Routes:
         if (showBanners) ...[
           const SizedBox(height: AbraSpacing.sm),
-          centered(const HomePromoBanners()),
+          // Full width, like the demo's banner strip.
+          const HomeBannerCarousel(),
           const SizedBox(height: AbraSpacing.lg),
           centered(const HomeOffersSlider()),
           const SizedBox(height: AbraSpacing.lg),

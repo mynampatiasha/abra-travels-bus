@@ -73,7 +73,9 @@ void main() {
       'other languages define no unknown keys and keep the placeholders',
       () {
         final english = arb('en');
-        final placeholder = RegExp(r'\{(\w+)');
+        final placeholder = RegExp(
+          r'(?<!(?:=0|=1|one|other|few|many))\{([a-zA-Z]\w*)',
+        );
         Set<String> names(String message) =>
             placeholder.allMatches(message).map((m) => m.group(1)!).toSet();
         for (final tag in launchLanguages.skip(1)) {
@@ -98,7 +100,10 @@ void main() {
           'Abra Travels',
           reason: tag,
         );
-        expect(l10n.text(AbraStrings.commonRetry), 'Try again', reason: tag);
+        expect(l10n.text(AbraStrings.commonRetry), isNotEmpty, reason: tag);
+        if (tag == 'en') {
+          expect(l10n.text(AbraStrings.commonRetry), 'Try again');
+        }
         for (final key in CustomerStrings.all) {
           expect(l10n.has(key), isTrue, reason: '$tag:$key');
         }

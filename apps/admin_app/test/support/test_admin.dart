@@ -203,11 +203,12 @@ class FakeBackend {
     'rules': <JsonMap>[],
   };
 
-  /// The settings the backend holds, by integration (`whatsapp`, `email`).
+  /// The settings the backend holds, by integration (`whatsapp`, `email`, etc.).
   /// Secrets are never in them: only whether one is set.
   final Map<String, JsonMap> settings = <String, JsonMap>{
     'whatsapp': <String, Object?>{
       'provider': 'meta',
+      'title': 'WhatsApp',
       'status': 'INCOMPLETE',
       'missing': <String>['accessToken', 'phoneNumberId'],
       'enabled': true,
@@ -224,6 +225,7 @@ class FakeBackend {
     },
     'email': <String, Object?>{
       'provider': 'smtp',
+      'title': 'Email (SMTP)',
       'status': 'INCOMPLETE',
       'missing': <String>['host', 'port'],
       'enabled': true,
@@ -236,6 +238,126 @@ class FakeBackend {
       'fromAddress': 'no-reply@abratravels.local',
       'replyTo': null,
     },
+    'sms': <String, Object?>{
+      'provider': 'MSG91',
+      'title': 'SMS',
+      'status': 'INCOMPLETE',
+      'missing': <String>['apiKey'],
+      'enabled': true,
+      'apiKey': <String, Object?>{'configured': false},
+      'senderId': null,
+    },
+    'razorpay': <String, Object?>{
+      'title': 'Razorpay',
+      'status': 'INCOMPLETE',
+      'missing': <String>['keyId', 'keySecret'],
+      'enabled': true,
+      'keyId': null,
+      'keySecret': <String, Object?>{'configured': false},
+      'webhookSecret': <String, Object?>{'configured': false},
+    },
+    'maps': <String, Object?>{
+      'provider': 'Google Maps',
+      'title': 'Maps',
+      'status': 'INCOMPLETE',
+      'missing': <String>['apiKey'],
+      'enabled': true,
+      'apiKey': <String, Object?>{'configured': false},
+    },
+    'push': <String, Object?>{
+      'title': 'Push (Firebase)',
+      'status': 'INCOMPLETE',
+      'missing': <String>['projectId'],
+      'enabled': true,
+      'projectId': null,
+      'serviceAccountJson': <String, Object?>{'configured': false},
+    },
+  };
+
+  final List<JsonMap> featureFlags = <JsonMap>[
+    <String, Object?>{
+      'key': 'live_tracking',
+      'name': 'Live tracking',
+      'description': 'Customers see the bus on a map',
+      'on': true,
+      'updatedAt': null,
+    },
+    <String, Object?>{
+      'key': 'whatsapp_chatbot',
+      'name': 'WhatsApp chatbot',
+      'description': 'Booking help on WhatsApp',
+      'on': false,
+      'updatedAt': null,
+    },
+    <String, Object?>{
+      'key': 'ai_support',
+      'name': 'AI support assistant',
+      'description': 'AI answers common questions',
+      'on': false,
+      'updatedAt': null,
+    },
+    <String, Object?>{
+      'key': 'women_safety',
+      'name': 'Women safety',
+      'description': 'SOS and trip sharing',
+      'on': true,
+      'updatedAt': null,
+    },
+    <String, Object?>{
+      'key': 'partner_api',
+      'name': 'Partner API',
+      'description': 'External agents',
+      'on': false,
+      'updatedAt': null,
+    },
+    <String, Object?>{
+      'key': 'dynamic_pricing',
+      'name': 'Dynamic pricing',
+      'description': 'Fares change with demand',
+      'on': false,
+      'updatedAt': null,
+    },
+    <String, Object?>{
+      'key': 'mobile_app',
+      'name': 'Mobile app booking',
+      'description': 'Booking in the customer app',
+      'on': true,
+      'updatedAt': null,
+    },
+    <String, Object?>{
+      'key': 'driver_app',
+      'name': 'Driver app',
+      'description': 'Driver check-in and GPS',
+      'on': true,
+      'updatedAt': null,
+    },
+    <String, Object?>{
+      'key': 'advanced_analytics',
+      'name': 'Advanced analytics',
+      'description': 'Extra reports',
+      'on': false,
+      'updatedAt': null,
+    },
+  ];
+
+  final JsonMap maintenance = <String, Object?>{
+    'scopes': <String, Object?>{
+      'global': false,
+      'customer': false,
+      'operator': false,
+      'partner': false,
+      'admin': false,
+    },
+    'message': 'We are improving Abra Travels. Back soon.',
+    'from': null,
+    'to': null,
+    'activeNow': <String, Object?>{
+      'customer': false,
+      'operator': false,
+      'partner': false,
+      'admin': false,
+    },
+    'updatedAt': null,
   };
 
   /// Replaces the answer to one request (`METHOD path`), for error cases.
@@ -304,9 +426,14 @@ class FakeBackend {
     }
     if (path.startsWith('audit-logs')) return _audit(request);
     if (path.startsWith('catalogue/')) return _catalogue(request);
+    if (path.startsWith('admin/feature-flags')) return _featureFlags(request);
+    if (path.startsWith('admin/maintenance')) return _maintenance(request);
     // The admin lists (`admin/banners`) behave like the catalogue ones.
     if (path.startsWith('admin/')) return _catalogue(request);
-    if (path.startsWith('settings/integrations/')) return _settings(request);
+    if (path == 'settings/integrations' ||
+        path.startsWith('settings/integrations/')) {
+      return _settings(request);
+    }
     if (path.startsWith('settings/kyc-configuration')) {
       return _kycConfiguration(request);
     }
@@ -551,6 +678,38 @@ class FakeBackend {
         ],
       });
 
+  /// A logged message sent to a customer.
+  JsonMap addMessage({
+    String channel = 'WHATSAPP',
+    String kind = 'BOOKING_CONFIRMED',
+    String recipientName = 'Priya Sharma',
+    String address = '+91 98765 43210',
+    String subject = 'Booking confirmed: Hyderabad to Bengaluru',
+    String body =
+        'Hi Priya, your seat 12A on Hyderabad to Bengaluru is confirmed. PNR ABRK1234A.',
+    String status = 'SENT',
+    String? bookingId = 'BK-1001',
+    String? at,
+  }) => add('messages', <String, Object?>{
+    'channel': channel,
+    'kind': kind,
+    'recipientName': recipientName,
+    'toName': recipientName,
+    'name': recipientName,
+    'address': address,
+    'subject': subject,
+    'body': body,
+    'status': status,
+    'bookingId': bookingId,
+    'at': at ?? DateTime.now().toUtc().toIso8601String(),
+    'sentAt':
+        status == 'SENT'
+            ? (at ?? DateTime.now().toUtc().toIso8601String())
+            : null,
+    'attempts': 1,
+    'detail': status == 'FAILED' ? 'Provider rejected the message.' : null,
+  });
+
   /// The notification list: nobody has any in these tests.
   FakeResponse _notifications(RecordedRequest request) =>
       request.path == 'notifications/unread-count'
@@ -571,10 +730,21 @@ class FakeBackend {
   /// `settings.update` may change or test, and a secret is never returned.
   FakeResponse _settings(RecordedRequest request) {
     final parts = request.path.split('/');
+    final method = request.options.method;
+    if (parts.length == 2 && method == 'GET') {
+      return FakeResponse.ok(<JsonMap>[
+        for (final entry in settings.entries)
+          <String, Object?>{
+            'key': entry.key,
+            'title': entry.value['title'] ?? entry.key,
+            'status': entry.value['status'] ?? 'INCOMPLETE',
+            'missing': entry.value['missing'] ?? <String>[],
+          },
+      ]);
+    }
     final channel = parts[2];
     final current = settings[channel];
     if (current == null) return FakeResponse.error(404, 'RESOURCE_NOT_FOUND');
-    final method = request.options.method;
     if (method == 'GET') return FakeResponse.ok(current);
     if (!persona.permissions.contains('settings.update')) {
       return FakeResponse.error(403, 'PERMISSION_DENIED');
@@ -589,6 +759,12 @@ class FakeBackend {
         return FakeResponse.ok(<String, Object?>{
           'ok': true,
           'message': 'A test email was sent to ${body['to']}.',
+        });
+      }
+      if (!['whatsapp', 'email'].contains(channel)) {
+        return FakeResponse.ok(<String, Object?>{
+          'ok': true,
+          'message': 'Connection works',
         });
       }
       final ready = isWhatsApp
@@ -640,6 +816,72 @@ class FakeBackend {
     return FakeResponse.ok(current);
   }
 
+  FakeResponse _featureFlags(RecordedRequest request) {
+    if (!persona.permissions.contains('settings.read')) {
+      return FakeResponse.error(403, 'PERMISSION_DENIED');
+    }
+    final method = request.options.method;
+    if (method == 'GET') {
+      return FakeResponse.ok(featureFlags);
+    }
+    if (!persona.permissions.contains('settings.update')) {
+      return FakeResponse.error(403, 'PERMISSION_DENIED');
+    }
+    final parts = request.path.split('/');
+    if (parts.length >= 3 && method == 'PUT') {
+      final key = parts[2];
+      final flag = featureFlags.where((f) => f['key'] == key).firstOrNull;
+      if (flag == null) return FakeResponse.error(404, 'RESOURCE_NOT_FOUND');
+      final body = asJsonMap(request.body! as Map);
+      flag['on'] = body['on'] == true;
+      flag['updatedAt'] = DateTime.now().toUtc().toIso8601String();
+      return FakeResponse.ok(flag);
+    }
+    return FakeResponse.error(404, 'RESOURCE_NOT_FOUND');
+  }
+
+  FakeResponse _maintenance(RecordedRequest request) {
+    if (!persona.permissions.contains('settings.read')) {
+      return FakeResponse.error(403, 'PERMISSION_DENIED');
+    }
+    final method = request.options.method;
+    if (method == 'GET') {
+      return FakeResponse.ok(maintenance);
+    }
+    if (!persona.permissions.contains('settings.update')) {
+      return FakeResponse.error(403, 'PERMISSION_DENIED');
+    }
+    if (method == 'PUT') {
+      final body = asJsonMap(request.body! as Map);
+      final scopes = maintenance['scopes']! as Map<String, Object?>;
+      if (body['scopes'] != null) {
+        final newScopes = body['scopes']! as Map;
+        for (final entry in newScopes.entries) {
+          scopes['${entry.key}'] = entry.value == true;
+        }
+      }
+      if (body.containsKey('message') && body['message'] != null) {
+        maintenance['message'] = body['message'];
+      }
+      if (body.containsKey('from')) {
+        maintenance['from'] = body['from'];
+      }
+      if (body.containsKey('to')) {
+        maintenance['to'] = body['to'];
+      }
+      if (maintenance['from'] != null && maintenance['to'] != null) {
+        final fromStr = '${maintenance['from']}';
+        final toStr = '${maintenance['to']}';
+        if (toStr.isNotEmpty && fromStr.isNotEmpty && toStr.compareTo(fromStr) <= 0) {
+          return FakeResponse.error(400, 'VALIDATION_FAILED', message: 'End must be after start');
+        }
+      }
+      maintenance['updatedAt'] = DateTime.now().toUtc().toIso8601String();
+      return FakeResponse.ok(maintenance);
+    }
+    return FakeResponse.error(404, 'RESOURCE_NOT_FOUND');
+  }
+
   /// Records the signed-in persona may see: operator staff get their own
   /// operator's records, plus shared locations.
   Iterable<JsonMap> _visible(String resource) {
@@ -667,6 +909,49 @@ class FakeBackend {
     final body = request.body == null
         ? <String, Object?>{}
         : asJsonMap(request.body! as Map);
+
+    if (resource == 'messages' &&
+        !persona.permissions.contains('messages.read')) {
+      return FakeResponse.error(403, 'PERMISSION_DENIED');
+    }
+
+    if (resource == 'messages' && parts.length == 1 && method == 'GET') {
+      final q = '${query['q'] ?? query['query'] ?? ''}'.trim().toLowerCase();
+      final channel = query['channel'];
+      final kind = query['kind'];
+      final status = query['status'];
+      var items =
+          of('messages').where((record) {
+            if (channel != null &&
+                '${record['channel']}'.toUpperCase() !=
+                    '$channel'.toUpperCase()) {
+              return false;
+            }
+            if (kind != null && '${record['kind']}' != '$kind') {
+              return false;
+            }
+            if (status != null &&
+                '${record['status']}'.toUpperCase() !=
+                    '$status'.toUpperCase()) {
+              return false;
+            }
+            if (q.isNotEmpty) {
+              final haystack =
+                  '${record['toName'] ?? record['recipientName'] ?? record['name'] ?? ''} ${record['address'] ?? ''} ${record['subject'] ?? ''} ${record['kind'] ?? ''} ${record['bookingId'] ?? ''}'
+                      .toLowerCase();
+              if (!haystack.contains(q)) return false;
+            }
+            return true;
+          }).toList();
+      final page = (query['page'] as int?) ?? 1;
+      final size = (query['pageSize'] as int?) ?? 15;
+      final total = items.length;
+      items = items.skip((page - 1) * size).take(size).toList();
+      return FakeResponse.ok(
+        items,
+        meta: <String, Object?>{'page': page, 'pageSize': size, 'total': total},
+      );
+    }
 
     if (parts.length == 1 && method == 'GET') {
       var items = _visible(resource).where((record) {
@@ -763,6 +1048,18 @@ class FakeBackend {
       case 'reject':
         record['status'] = 'REJECTED';
         record['reason'] = body['reason'];
+      case 'resend':
+        if (!persona.permissions.contains('messages.resend')) {
+          return FakeResponse.error(403, 'PERMISSION_DENIED');
+        }
+        final resent = Map<String, Object?>.from(record);
+        resent['id'] =
+            '66f0c0ffee0000000000${(_nextId++).toString().padLeft(4, '0')}';
+        resent['at'] = DateTime.now().toUtc().toIso8601String();
+        resent['status'] = 'SENT';
+        resent['attempts'] = ((record['attempts'] as int?) ?? 1) + 1;
+        of('messages').insert(0, resent);
+        return FakeResponse.ok(resent);
     }
     return FakeResponse.ok(record);
   }

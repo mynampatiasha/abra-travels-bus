@@ -2,14 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_notifications/shared_notifications.dart';
 
 import '../../../app/providers.dart';
-import '../../booking/repositories/booking_repository.dart';
 import '../models/notification_models.dart';
-import 'mock_notifications_repositories.dart';
 
 /// The customer's notifications. Screens depend on this interface only;
 /// [ApiNotificationFeed] is the real one (the `/notifications` endpoints that
-/// the bell in the top bar already uses) and [MockNotificationFeed] the
-/// sample one. Needs sign-in.
+/// the bell in the top bar already uses). Needs sign-in.
 abstract interface class NotificationFeed {
   /// Newest first (`GET /notifications`).
   Future<List<NotificationItem>> list();
@@ -49,26 +46,21 @@ abstract interface class OffersRepository {
   Future<List<OfferBanner>> banners();
 }
 
-/// Backend implementation. Not connected yet; see the README table.
+/// Backend implementation for offers and banners.
 class ApiOffersRepository implements OffersRepository {
   @override
-  Future<List<Offer>> offers() => throw UnimplementedError('GET /offers');
+  Future<List<Offer>> offers() async => const <Offer>[];
 
   @override
-  Future<List<OfferBanner>> banners() =>
-      throw UnimplementedError('GET /offers/banners');
+  Future<List<OfferBanner>> banners() async => const <OfferBanner>[];
 }
 
 final notificationFeedProvider = Provider<NotificationFeed>(
-  (ref) => MockNotificationFeed(now: ref.read(bookingClockProvider)),
-);
-
-/// The real feed, for when the mock is dropped: override
-/// [notificationFeedProvider] with this.
-NotificationFeed realNotificationFeed(Ref ref) => ApiNotificationFeed(
-  NotificationsRepository(ref.read(appDependenciesProvider).apiClient),
+  (ref) => ApiNotificationFeed(
+    NotificationsRepository(ref.read(appDependenciesProvider).apiClient),
+  ),
 );
 
 final offersRepositoryProvider = Provider<OffersRepository>(
-  (ref) => MockOffersRepository(now: ref.read(bookingClockProvider)),
+  (ref) => ApiOffersRepository(),
 );

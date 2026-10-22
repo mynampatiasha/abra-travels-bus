@@ -242,9 +242,9 @@ abstract final class AdminNavigationRegistry {
         ),
         AdminSection(
           path: AdminRoutes.messages,
-          title: 'Chat & messages',
-          hint: 'Customer WhatsApp chatbot and support conversations',
-          icon: Icons.chat_outlined,
+          title: 'Messages sent',
+          hint: 'Every WhatsApp message and email Abra sends to customers: booking, payment, cancellation, refund and delay.',
+          icon: Icons.mail_outline,
         ),
         AdminSection(
           path: AdminRoutes.content,
@@ -768,56 +768,7 @@ class _GlobalSearchDialogState extends State<_GlobalSearchDialog> {
   final _searchController = TextEditingController();
   String _query = '';
 
-  static const List<Map<String, String>> _mockEntities = <Map<String, String>>[
-    {
-      'type': 'Booking',
-      'title': 'ABRK1024A — Rahul Verma — Hyderabad to Bengaluru',
-      'route': AdminRoutes.bookings,
-      'icon': 'ticket',
-    },
-    {
-      'type': 'Operator',
-      'title': 'Kaveri Express — Bengaluru',
-      'route': AdminRoutes.operators,
-      'icon': 'business',
-    },
-    {
-      'type': 'Operator',
-      'title': 'Godavari Lines — Visakhapatnam',
-      'route': AdminRoutes.operators,
-      'icon': 'business',
-    },
-    {
-      'type': 'Bus',
-      'title': 'TS09 UB 4521 — Kaveri Express (AC Sleeper)',
-      'route': AdminRoutes.buses,
-      'icon': 'bus',
-    },
-    {
-      'type': 'Trip',
-      'title': 'TRP-3001 — Hyderabad to Bengaluru (Departs 21:00)',
-      'route': AdminRoutes.trips,
-      'icon': 'trip',
-    },
-    {
-      'type': 'Customer',
-      'title': 'Divya Iyer — +91 98450 11223 — divya@example.com',
-      'route': AdminRoutes.customers,
-      'icon': 'customer',
-    },
-    {
-      'type': 'Ticket',
-      'title': 'TKT-8001 — Refund not received for cancelled booking',
-      'route': AdminRoutes.tickets,
-      'icon': 'ticket',
-    },
-    {
-      'type': 'Place',
-      'title': 'Hosur Bus Stand Gate 2 — Bengaluru',
-      'route': AdminRoutes.places,
-      'icon': 'place',
-    },
-  ];
+  static const List<Map<String, String>> _mockEntities = <Map<String, String>>[];
 
   @override
   void dispose() {
@@ -832,11 +783,7 @@ class _GlobalSearchDialogState extends State<_GlobalSearchDialog> {
 
     final results = _query.length < 2
         ? const <Map<String, String>>[]
-        : _mockEntities.where((item) {
-            final q = _query.toLowerCase();
-            return (item['title'] ?? '').toLowerCase().contains(q) ||
-                (item['type'] ?? '').toLowerCase().contains(q);
-          }).toList();
+        : _mockEntities;
 
     return Dialog(
       backgroundColor: isDark ? const Color(0xFF13222F) : AbraColors.white,
@@ -898,7 +845,7 @@ class _GlobalSearchDialogState extends State<_GlobalSearchDialog> {
                   : (results.isEmpty
                       ? Center(
                           child: Text(
-                            'No matches found for "$_query"',
+                            'Not connected yet',
                             style: TextStyle(
                               color: isDark ? const Color(0xFF9FB6C9) : AbraColors.textSecondary,
                               fontSize: 13,

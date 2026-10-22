@@ -8,12 +8,10 @@ class DriverMockDb {
   String currentDriver = '';
 
   final List<Map<String, dynamic>> operators = [];
-  final List<Map<String, dynamic>> drivers = [];
   final List<Map<String, dynamic>> routes = [];
 
   List<Map<String, dynamic>> trips = [];
   List<Map<String, dynamic>> bookings = [];
-  List<Map<String, dynamic>> notifications = [];
   List<Map<String, dynamic>> driverReports = [];
   List<Map<String, dynamic>> tripChecks = [];
   List<Map<String, dynamic>> sosEvents = [];
@@ -25,7 +23,6 @@ class DriverMockDb {
     // All dummy data removed. Ready to be populated by real backend API.
     trips = [];
     bookings = [];
-    notifications = [];
     driverReports = [];
     tripChecks = [];
     sosEvents = [];
@@ -43,11 +40,10 @@ class DriverMockDb {
   }
 
   Map<String, dynamic>? get myProfile {
-    try {
-      return drivers.firstWhere((d) => d['name'] == currentDriver);
-    } catch (_) {
-      return null;
+    if (currentDriver.isNotEmpty) {
+      return {'name': currentDriver};
     }
+    return null;
   }
 
   List<Map<String, dynamic>> get myTrips =>
@@ -113,15 +109,7 @@ class DriverMockDb {
     required String reason,
     String? note,
   }) {
-    sosEvents.add({
-      'id': 'SOS-${DateTime.now().millisecondsSinceEpoch}',
-      'tripId': tripId,
-      'driver': currentDriver,
-      'reason': reason,
-      'note': note ?? '',
-      'at': DateTime.now().toIso8601String(),
-      'status': 'NEW',
-    });
+    // Phase 5: To be connected to backend emergency SOS API.
   }
 
   void dispose() {

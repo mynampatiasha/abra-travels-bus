@@ -3,6 +3,7 @@ import 'package:shared_theme/shared_theme.dart';
 import 'package:shared_ui/shared_ui.dart';
 
 import '../../core/ui/gradient_header.dart';
+import '../home/widgets/home_offers_slider.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
@@ -14,10 +15,10 @@ class NotificationSettingsScreen extends StatefulWidget {
 
 class _NotificationSettingsScreenState
     extends State<NotificationSettingsScreen> {
-  bool _booking = true;
-  bool _offers = true;
+  final bool _booking = true;
+  final bool _offers = true;
   final bool _safety = true; // locked always-on
-  bool _whatsapp = true;
+  final bool _whatsapp = true;
 
   @override
   Widget build(BuildContext context) {
@@ -33,6 +34,11 @@ class _NotificationSettingsScreenState
             vertical: AbraSpacing.lg,
           ),
           children: [
+            const HomeNotConnectedCard(
+              icon: Icons.cloud_off_outlined,
+              text: 'Not connected yet - built in Phase 7',
+            ),
+            const SizedBox(height: AbraSpacing.md),
             AbraCard(
               padding: EdgeInsets.zero,
               child: Column(
@@ -48,7 +54,7 @@ class _NotificationSettingsScreenState
                       style: TextStyle(color: AbraColors.textSecondary, fontSize: 13),
                     ),
                     value: _booking,
-                    onChanged: (val) => setState(() => _booking = val),
+                    onChanged: null, // saving needs the server: not connected yet
                   ),
                   const Divider(height: 1),
                   SwitchListTile(
@@ -62,7 +68,7 @@ class _NotificationSettingsScreenState
                       style: TextStyle(color: AbraColors.textSecondary, fontSize: 13),
                     ),
                     value: _offers,
-                    onChanged: (val) => setState(() => _offers = val),
+                    onChanged: null, // saving needs the server: not connected yet
                   ),
                   const Divider(height: 1),
                   SwitchListTile(
@@ -90,7 +96,7 @@ class _NotificationSettingsScreenState
                       style: TextStyle(color: AbraColors.textSecondary, fontSize: 13),
                     ),
                     value: _whatsapp,
-                    onChanged: (val) => setState(() => _whatsapp = val),
+                    onChanged: null, // saving needs the server: not connected yet
                   ),
                 ],
               ),

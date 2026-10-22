@@ -122,8 +122,10 @@ class _DriverPreTripChecklistScreenState extends ConsumerState<DriverPreTripChec
   bool get _hasBlockingFailure =>
       _items.any((i) => i.state == CheckItemState.fail && i.level == CheckItemLevel.block);
 
+  // ignore: unused_element
   bool get _hasPending => _items.any((i) => i.state == CheckItemState.pending);
 
+  // ignore: unused_element
   void _submitTripStart() {
     if (_hasBlockingFailure && _overrideReasonController.text.trim().length < 5) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -176,7 +178,7 @@ class _DriverPreTripChecklistScreenState extends ConsumerState<DriverPreTripChec
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${trip['id']} · ${trip['route']}',
+                      trip.isNotEmpty ? '${trip['id']} · ${trip['route']}' : 'Not connected yet - built in Phase 9',
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w700,
@@ -185,7 +187,7 @@ class _DriverPreTripChecklistScreenState extends ConsumerState<DriverPreTripChec
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Bus: ${trip['bus']} · ${trip['type']}',
+                      trip.isNotEmpty ? 'Bus: ${trip['bus']} · ${trip['type']}' : 'Trip details pending backend connection',
                       style: const TextStyle(color: Color(0xFFDDF3FC), fontSize: 13),
                     ),
                   ],
@@ -296,19 +298,22 @@ class _DriverPreTripChecklistScreenState extends ConsumerState<DriverPreTripChec
             ],
 
             const SizedBox(height: 24),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF10B981),
-                foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(56),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            Tooltip(
+              message: 'Not connected yet',
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF10B981),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(56),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                icon: const Icon(Icons.play_arrow_rounded, size: 28),
+                label: Text(
+                  _hasBlockingFailure ? 'Start Trip with Override' : 'Start Trip & Share GPS',
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
+                ),
+                onPressed: null,
               ),
-              icon: const Icon(Icons.play_arrow_rounded, size: 28),
-              label: Text(
-                _hasBlockingFailure ? 'Start Trip with Override' : 'Start Trip & Share GPS',
-                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
-              ),
-              onPressed: _hasPending ? null : _submitTripStart,
             ),
             const SizedBox(height: 32),
           ],
@@ -432,6 +437,7 @@ class _DriverEndTripChecklistScreenState extends ConsumerState<DriverEndTripChec
   bool _lostItemsChecked = true;
   bool _busParkedLocked = true;
 
+  // ignore: unused_element
   void _finishTrip() {
     final db = ref.read(driverMockDbProvider);
     db.setTripStatus(widget.tripId, 'ARRIVED');
@@ -507,17 +513,20 @@ class _DriverEndTripChecklistScreenState extends ConsumerState<DriverEndTripChec
               ),
             ),
             const SizedBox(height: 24),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF12304A),
-                foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(56),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            Tooltip(
+              message: 'Not connected yet',
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF12304A),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(56),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                icon: const Icon(Icons.flag_rounded),
+                label: const Text('Submit & Finish Trip',
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                onPressed: null,
               ),
-              icon: const Icon(Icons.flag_rounded),
-              label: const Text('Submit & Finish Trip',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-              onPressed: _finishTrip,
             ),
           ],
         ),

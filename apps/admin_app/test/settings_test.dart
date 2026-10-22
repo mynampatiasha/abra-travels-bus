@@ -56,8 +56,8 @@ void main() {
       );
       // one card for each connection, with where it stands
       expect(find.text('WhatsApp'), findsOneWidget);
-      expect(find.text('Email'), findsOneWidget);
-      expect(find.text('Not complete'), findsNWidgets(2));
+      expect(find.text('Email (SMTP)'), findsOneWidget);
+      expect(find.text('Not complete'), findsNWidgets(6));
       expect(button('Save'), findsNothing);
 
       await tapOn(tester, find.text('WhatsApp'));
@@ -73,7 +73,7 @@ void main() {
         'smtp',
       );
       await settle(tester);
-      expect(find.text('Email'), findsOneWidget);
+      expect(find.text('Email (SMTP)'), findsOneWidget);
       expect(find.text('WhatsApp'), findsNothing);
 
       await tester.enterText(
@@ -96,7 +96,7 @@ void main() {
       await tapOn(tester, button('Save'));
       await tapOn(tester, find.byTooltip('Close'));
       expect(find.text('Ready'), findsOneWidget);
-      expect(find.text('Not complete'), findsOneWidget);
+      expect(find.text('Not complete'), findsNWidgets(5));
     });
 
     testWidgets('a regular administrator can look but not change', (
@@ -305,7 +305,7 @@ void main() {
 
   group('settings: email', () {
     Future<TestAdmin> openEmail(WidgetTester tester) async {
-      return openSettings(tester, Persona.superAdmin, card: 'Email');
+      return openSettings(tester, Persona.superAdmin, card: 'Email (SMTP)');
     }
 
     testWidgets('starts with the address from the server and what is missing', (
