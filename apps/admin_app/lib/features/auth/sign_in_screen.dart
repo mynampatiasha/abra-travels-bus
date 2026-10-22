@@ -19,68 +19,13 @@ class StartupScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final failure = ref.watch(startupProvider);
-    if (failure == null) {
-      return const Scaffold(
-        body: AbraBrandSurface(child: AbraLoadingView(onDark: true)),
-      );
-    }
-
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 440),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.wifi_off_rounded,
-                  size: 64,
-                  color: Colors.orange,
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'No backend server connected',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AbraColors.navy,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'The live backend API server is offline. You can explore the full administration portal in the interactive Demo Session.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    ref.read(accessProvider.notifier).enterDemoSession();
-                  },
-                  icon: const Icon(Icons.play_arrow, size: 18),
-                  label: const Text('Enter Demo Session (Super Admin)'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AbraColors.blue,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(double.infinity, 44),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton(
-                  onPressed: ref.read(startupProvider.notifier).restore,
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 40),
-                  ),
-                  child: const Text('Retry server connection'),
-                ),
-              ],
+      body: failure == null
+          ? const AbraBrandSurface(child: AbraLoadingView(onDark: true))
+          : AbraFailureView(
+              failure: failure,
+              onRetry: ref.read(startupProvider.notifier).restore,
             ),
-          ),
-        ),
-      ),
     );
   }
 }
@@ -238,18 +183,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               expand: true,
               isLoading: state.isBusy,
               onPressed: _submitPassword,
-            ),
-            const SizedBox(height: AbraSpacing.md),
-            OutlinedButton.icon(
-              onPressed: () {
-                ref.read(accessProvider.notifier).enterDemoSession();
-              },
-              icon: const Icon(Icons.play_circle_outline, size: 18),
-              label: const Text('Explore Demo Session (Super Admin)'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AbraColors.blue,
-                minimumSize: const Size(double.infinity, 44),
-              ),
             ),
           ] else ...<Widget>[
             TextField(

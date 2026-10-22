@@ -31,14 +31,6 @@ class AuthStateNotifier extends Notifier<AuthState> {
     return manager.state;
   }
 
-  void signInDemo(UserProfile user) {
-    state = AuthSignedIn(
-      user: user,
-      sessionId: 'sess-${user.id}',
-      mfaEnrollmentRequired: false,
-    );
-  }
-
   void signOut() {
     state = const AuthSignedOut();
   }

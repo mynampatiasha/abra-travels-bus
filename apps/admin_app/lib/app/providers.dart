@@ -7,7 +7,6 @@ import 'package:shared_notifications/shared_notifications.dart';
 import 'package:shared_permissions/shared_permissions.dart';
 
 import '../bootstrap/app_dependencies.dart';
-import '../routing/admin_routes.dart';
 
 /// Active theme mode (Light or Dark).
 final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(
@@ -166,10 +165,6 @@ class AccessController extends Notifier<AccessState> {
     await _load(user);
   }
 
-  /// Instantly grants demo access matching the Super Admin demo experience.
-  void enterDemoSession() {
-    state = demoAdminAccessState();
-  }
 }
 
 /// Start-up check of the stored session.
@@ -191,59 +186,4 @@ class StartupController extends Notifier<AppFailure?> {
     if (!ref.mounted) return;
     state = result.failureOrNull;
   }
-}
-
-/// Generates a granted AccessState with full Super Admin permissions across all 11 modules.
-AccessState demoAdminAccessState() {
-  const user = UserProfile(
-    id: 'SF-DEMO-1',
-    userType: UserType.staff,
-    status: UserStatus.active,
-    preferredLanguage: 'en',
-    emailVerified: true,
-    phoneVerified: true,
-    hasPassword: true,
-    mfaEnabled: true,
-    name: 'Admin Super',
-    email: 'admin.super@abratravels.in',
-    phone: '+91 98450 11221',
-  );
-
-  final allPermissions = <String>{
-    ...AdminRoutes.requiredPermission.values,
-    PermissionKeys.usersRead,
-    PermissionKeys.usersCreate,
-    PermissionKeys.usersUpdate,
-    PermissionKeys.usersDelete,
-    PermissionKeys.usersRolesAssign,
-    PermissionKeys.usersPermissionsRead,
-    PermissionKeys.usersPermissionsManage,
-    PermissionKeys.usersDataScopeManage,
-    PermissionKeys.rolesRead,
-    PermissionKeys.bookingsRead,
-    PermissionKeys.tripsRead,
-    PermissionKeys.operatorsRead,
-  };
-
-  final perms = PermissionSet.fromMyPermissions(
-    MyPermissions(
-      userId: user.id,
-      userType: user.userType,
-      roles: const [
-        RoleSummary(
-          key: 'SUPER_ADMIN',
-          name: 'Super Admin',
-        ),
-      ],
-      permissionVersion: 1,
-      dataScope: const DataScope(type: DataScopeType.all),
-      permissions: allPermissions,
-    ),
-  );
-
-  return AccessState(
-    AccessLevel.granted,
-    permissions: perms,
-    user: user,
-  );
 }
