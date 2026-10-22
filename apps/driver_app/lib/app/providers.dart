@@ -26,7 +26,7 @@ final driverTokenSourceProvider = Provider<DriverTokenSource>((ref) {
 
 final driverApiClientProvider = Provider<ApiClient>((ref) {
   const baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
+    'ABRA_API_BASE_URL',
     defaultValue: 'http://localhost:4003',
   );
   final config = AppConfig(
