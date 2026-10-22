@@ -417,7 +417,7 @@ void main() {
   );
 
   testWidgets(
-    'import requires validation and explicit replacement confirmation',
+    'import requires validation before it can be saved',
     (tester) async {
       final app = await start(tester, backend());
       await tap(tester, button('Import'));
@@ -438,7 +438,6 @@ void main() {
       await tap(tester, find.text('Upload Excel or CSV'));
       expect(app.requestsTo('$path/validate-import', 'POST'), hasLength(1));
       expect(app.requestsTo(path, 'PUT'), isEmpty);
-      await tap(tester, find.byType(CheckboxListTile));
       await tap(tester, button('Import').last);
       expect(app.backend.kycConfiguration['questions'], hasLength(1));
       expect(find.byType(AlertDialog), findsNothing);
