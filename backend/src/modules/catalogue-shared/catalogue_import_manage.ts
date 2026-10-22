@@ -68,7 +68,7 @@ export function importController<Dto, Service>(
   @Controller(base)
   class ImportController {
     constructor(
-      private readonly importer: CatalogueImportService,
+      @Inject(CatalogueImportService) private readonly importer: CatalogueImportService,
       @Inject(description.service) private readonly service: Service,
     ) {}
 

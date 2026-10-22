@@ -5,10 +5,6 @@ void main() {
   test('Admin app contains no sample data outside allow list', () {
     // Files still using sample data or containing mock in name, each with the session responsible for removing it.
     const allowList = <String, String>{
-      'features/operations/operations_mock_store.dart': 'Phase 2 session (phase2-supply-v2)',
-      'features/operations/admin_trips_page.dart': 'Phase 2 session (phase2-supply-v2)',
-      'features/operations/admin_inventory_page.dart': 'Phase 2 session (phase2-supply-v2)',
-      'features/sales/sales_mock_store.dart': 'Phase 2 session (admin_trips_page.dart imports BookingRecord until connected)',
       'features/commission/admin_payout_page.dart': 'Session A (branch phase2-payout)',
       'features/staff/admin_staff_page.dart': 'Staff session (phase7-staff)',
     };

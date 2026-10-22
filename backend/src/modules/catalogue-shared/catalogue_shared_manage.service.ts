@@ -105,6 +105,13 @@ export const CATALOGUE_KINDS = {
     ],
     operatorIdOf: (record) => record._id as Types.ObjectId,
   },
+  bus: {
+    label: 'bus',
+    entityType: 'bus',
+    model: 'Bus',
+    usage: [rule('trip', 'trips', 'Trip', (id) => ({ busId: id }))],
+    operatorIdOf: (record) => record.operatorId as Types.ObjectId | undefined,
+  },
   banner: {
     label: 'banner',
     entityType: 'banner',

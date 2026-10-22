@@ -6,8 +6,6 @@ void main() {
     // Files still using sample data or containing mock in name, each with the session responsible for removing it.
     const allowList = <String, String>{
       'core/mock/abra_mock_db.dart': 'Phase 2 Supply (phase2-supply-v2) and Staff (phase7-staff) sessions',
-      'features/buses/client_buses_screen.dart': 'Phase 2 Supply session (phase2-supply-v2)',
-      'features/trips/client_trips_screen.dart': 'Phase 2 Supply session (phase2-supply-v2)',
       'features/staff/client_staff_roles_screen.dart': 'Staff session (phase7-staff)',
     };
 

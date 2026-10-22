@@ -75,6 +75,14 @@ export const AUDIT_ACTION_LABELS: Readonly<Record<AuditAction, string>> = {
   'commission.rule.deleted': 'Deleted a commission rule',
   'commission.rule.restored': 'Restored a deleted commission rule',
   'commission.default.changed': 'Changed the default commission',
+  'fare.created': 'Created a fare rule',
+  'fare.updated': 'Updated a fare rule',
+  'fare.versioned': 'Saved a new version of a fare rule',
+  'fare.deleted': 'Deleted a fare rule',
+  'trip.delayed': 'Delayed a trip',
+  'trip.crew-assigned': 'Assigned crew to a trip',
+  'seat.blocked': 'Blocked a seat',
+  'seat.unblocked': 'Unblocked a seat',
 };
 
 /**
@@ -94,6 +102,13 @@ export const SENSITIVE_ACTIONS: ReadonlySet<AuditAction> = new Set<AuditAction>(
   'commission.rule.deleted',
   'commission.rule.restored',
   'commission.default.changed',
+  'fare.created',
+  'fare.updated',
+  'fare.versioned',
+  'fare.deleted',
+  'trip.delayed',
+  'seat.blocked',
+  'seat.unblocked',
   'user.roles.changed',
   'user.permission-override.set',
   'user.permission-override.removed',

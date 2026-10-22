@@ -153,7 +153,7 @@ class _ClientOffersScreenState extends State<ClientOffersScreen> {
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
-                      value: type,
+                      initialValue: type,
                       decoration: const InputDecoration(labelText: 'Discount Type'),
                       items: const [
                         DropdownMenuItem(value: 'FLAT', child: Text('Flat amount (₹)')),

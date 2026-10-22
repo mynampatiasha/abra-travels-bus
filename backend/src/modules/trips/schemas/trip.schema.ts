@@ -69,6 +69,7 @@ export interface Trip {
   operatorId: Types.ObjectId;
   scheduleId?: Types.ObjectId;
   routeId: Types.ObjectId;
+  route?: string;
   busId: Types.ObjectId;
   seatLayoutVersionId?: Types.ObjectId;
   /** Date of departure in the trip's timezone, `YYYY-MM-DD`. */
@@ -98,6 +99,12 @@ export interface Trip {
   /** HH:mm local departure time as entered; kept so a draft can be edited. */
   departureTimeLocal?: string;
   seatCounts: TripSeatCounts;
+  delayMinutes?: number;
+  delayReason?: string;
+  driverId?: Types.ObjectId;
+  conductorId?: Types.ObjectId;
+  driverName?: string;
+  conductorName?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -131,6 +138,7 @@ export const tripSchema = new Schema<Trip>(
     operatorId: { type: Schema.Types.ObjectId, required: true },
     scheduleId: { type: Schema.Types.ObjectId },
     routeId: { type: Schema.Types.ObjectId, required: true },
+    route: { type: String, trim: true },
     busId: { type: Schema.Types.ObjectId, required: true },
     seatLayoutVersionId: { type: Schema.Types.ObjectId },
     travelDate: { type: String, required: true, match: /^\d{4}-\d{2}-\d{2}$/ },
@@ -168,6 +176,12 @@ export const tripSchema = new Schema<Trip>(
     cancelledAt: { type: Date },
     cancellationReason: { type: String, trim: true, maxlength: 300 },
     departureTimeLocal: { type: String, match: /^\d{2}:\d{2}$/ },
+    delayMinutes: { type: Number, min: 0 },
+    delayReason: { type: String, trim: true, maxlength: 300 },
+    driverId: { type: Schema.Types.ObjectId },
+    conductorId: { type: Schema.Types.ObjectId },
+    driverName: { type: String, trim: true, maxlength: 100 },
+    conductorName: { type: String, trim: true, maxlength: 100 },
     seatCounts: {
       type: new Schema<TripSeatCounts>(
         {

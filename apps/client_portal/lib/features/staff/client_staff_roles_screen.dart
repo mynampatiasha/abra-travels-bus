@@ -226,7 +226,7 @@ class _ClientStaffRolesScreenState extends State<ClientStaffRolesScreen> {
                 TextField(controller: emailCtrl, decoration: const InputDecoration(labelText: 'Email *', hintText: 'name@kaveriexpress.in')),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: role,
+                  initialValue: role,
                   decoration: const InputDecoration(labelText: 'Role'),
                   items: const [
                     DropdownMenuItem(value: 'ADMIN', child: Text('Manager (Admin)')),

@@ -4,7 +4,7 @@ import { CustomersModule } from './customers/customers.module';
 import { SessionsModule } from './sessions/sessions.module';
 import { RbacModule } from './rbac/rbac.module';
 import { OperatorsModule } from './operators/operators.module';
-import { OperatorStaffModule } from './operator-staff/operator-staff.module';
+import { OperatorStaffModule } from './operator-staff/crew_client_manage';
 import { BusesModule } from './buses/buses.module';
 import { BusTypesModule } from './bus-types/bus-types.module';
 import { DocumentTypesModule } from './document-types/document-types.module';
@@ -14,16 +14,12 @@ import { CatalogueSharedModule } from './catalogue-shared/catalogue_shared_manag
 import { PlaceRequestsModule } from './locations/places_admin_manage';
 import { CompanyClientModule } from './onboarding/kyc_client_manage';
 import { OperatorsAdminModule } from './operators/operators_admin_manage';
-import { SeatLayoutsModule } from './seat-layouts/seat-layouts.module';
 import { CitiesModule } from './cities/cities.module';
 import { LocationsModule } from './locations/locations.module';
 import { RoutesModule } from './routes/routes.module';
-import { BoardingPointsModule } from './boarding-points/boarding-points.module';
 import { SchedulesModule } from './schedules/schedules.module';
 import { TripsModule } from './trips/trips.module';
 import { FaresModule } from './fares/fares.module';
-import { DriversModule } from './drivers/drivers.module';
-import { InventoryModule } from './inventory/inventory.module';
 import { BookingsModule } from './bookings/bookings.module';
 import { PassengersModule } from './passengers/passengers.module';
 import { CouponsModule } from './coupons/coupons.module';
@@ -79,17 +75,13 @@ export const DOMAIN_MODULES = [
   BusTypesModule,
   DocumentTypesModule,
   OnboardingModule,
-  SeatLayoutsModule,
   CitiesModule,
   LocationsModule,
   RoutesModule,
-  BoardingPointsModule,
   SchedulesModule,
   TripsModule,
   FaresModule,
-  DriversModule,
   // Inventory & booking
-  InventoryModule,
   BookingsModule,
   PassengersModule,
   CouponsModule,

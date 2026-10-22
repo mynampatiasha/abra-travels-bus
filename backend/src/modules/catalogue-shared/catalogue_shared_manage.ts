@@ -42,6 +42,7 @@ export const DELETION_ROUTES: readonly DeletionRoute[] = [
   { kind: 'busType', base: 'catalogue/bus-types', permission: 'catalogue.delete' },
   { kind: 'documentType', base: 'catalogue/document-types', permission: 'documents.delete' },
   { kind: 'operator', base: 'catalogue/operators', permission: 'operators.delete' },
+  { kind: 'bus', base: 'catalogue/buses', permission: 'buses.delete' },
   { kind: 'invitation', base: 'onboarding/invitations', permission: 'operators.delete' },
   { kind: 'banner', base: 'admin/banners', permission: 'banners.delete' },
 ];

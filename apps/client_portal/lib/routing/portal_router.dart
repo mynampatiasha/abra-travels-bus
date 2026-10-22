@@ -8,26 +8,25 @@ import '../features/accept_invite/accept_invite_screen.dart';
 import '../features/auth/access_gate_screen.dart';
 import '../features/auth/sign_in_screen.dart';
 import '../features/bookings/client_bookings_screen.dart';
-import '../features/buses/client_buses_screen.dart';
-import '../features/buses/client_seat_layout_screen.dart';
+import '../features/buses/buses_client_manage_screen.dart';
 import '../features/commission/client_commission_screen.dart';
 import '../features/company/client_company_profile_screen.dart';
-import '../features/crew/client_crew_screen.dart';
 import '../features/crew/client_driver_reports_screen.dart';
 import '../features/crew/client_driver_rules_screen.dart';
+import '../features/crew/crew_client_manage_screen.dart';
 import '../features/dashboard/client_dashboard_screen.dart';
 import '../features/earnings/client_earnings_screen.dart';
-import '../features/fares/client_fares_screen.dart';
+import '../features/fares/fares_client_manage_screen.dart';
 import '../features/kyc/kyc_client_manage_screen.dart';
 import '../features/live/client_live_tracking_screen.dart';
 import '../features/notifications/client_notification_screen.dart';
 import '../features/offers/client_offers_screen.dart';
 import '../features/onboarding/onboarding_page.dart';
 import '../features/places/places_client_manage_screen.dart';
-import '../features/routes/client_routes_screen.dart';
-import '../features/schedules/client_schedules_screen.dart';
+import '../features/routes/routes_client_manage_screen.dart';
+import '../features/schedules/schedules_client_manage_screen.dart';
 import '../features/staff/client_staff_roles_screen.dart';
-import '../features/trips/client_trips_screen.dart';
+import '../features/trips/trips_client_manage_screen.dart';
 import '../shell/portal_shell.dart';
 import 'portal_route_guard.dart';
 import 'portal_routes.dart';
@@ -124,15 +123,15 @@ final portalRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: PortalRoutes.buses,
-            builder: (context, state) => const ClientBusesScreen(),
+            builder: (context, state) => const BusesClientManageScreen(initialTab: 0),
           ),
           GoRoute(
             path: PortalRoutes.seatLayouts,
-            builder: (context, state) => const ClientSeatLayoutScreen(),
+            builder: (context, state) => const BusesClientManageScreen(initialTab: 1),
           ),
           GoRoute(
             path: PortalRoutes.crew,
-            builder: (context, state) => const ClientCrewScreen(),
+            builder: (context, state) => const CrewClientManageScreen(),
           ),
           GoRoute(
             path: PortalRoutes.driverReports,

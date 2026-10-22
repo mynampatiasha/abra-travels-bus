@@ -9,8 +9,8 @@ import '../features/audit/audit_admin_manage_screen.dart';
 import '../features/auth/access_gate_screen.dart';
 import '../features/auth/sign_in_screen.dart';
 import '../features/banners/admin_banners_manage.dart';
+import '../features/buses/buses_admin_manage_screen.dart';
 import '../features/catalogue/pages/bus_types_page.dart';
-import '../features/catalogue/pages/buses_page.dart';
 import '../features/catalogue/pages/cities_page.dart';
 import '../features/catalogue/pages/document_types_page.dart';
 import '../features/catalogue/pages/locations_page.dart';
@@ -26,9 +26,7 @@ import '../features/marketing/admin_announcements_page.dart';
 import '../features/marketing/admin_offers_page.dart';
 import '../features/marketing/admin_popular_routes_page.dart';
 import '../features/notifications/admin_notification_screen.dart';
-import '../features/operations/admin_inventory_page.dart';
 import '../features/operations/admin_tracking_page.dart';
-import '../features/operations/admin_trips_page.dart';
 import '../features/operators/admin_driver_reports_page.dart';
 import '../features/operators/admin_driver_rules_page.dart';
 import '../features/operators/operators_admin_manage_screen.dart';
@@ -49,6 +47,7 @@ import '../features/staff/admin_staff_page.dart';
 import '../features/support/admin_content_page.dart';
 import '../features/support/admin_messages_page.dart';
 import '../features/support/admin_tickets_page.dart';
+import '../features/trips/trips_admin_manage_screen.dart';
 import '../shell/admin_shell.dart';
 import 'admin_route_guard.dart';
 import 'admin_routes.dart';
@@ -83,7 +82,7 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
     AdminRoutes.kycConfiguration: const AdminKycConfigurationPage(),
 
     // 5. Operations
-    AdminRoutes.buses: const BusesPage(),
+    AdminRoutes.buses: const BusesAdminManageScreen(),
     AdminRoutes.trips: const AdminTripsPage(),
     AdminRoutes.inventory: const AdminInventoryPage(),
     AdminRoutes.tracking: const AdminTrackingPage(),
