@@ -14,6 +14,7 @@ import { CatalogueSharedModule } from './catalogue-shared/catalogue_shared_manag
 import { PlaceRequestsModule } from './locations/places_admin_manage';
 import { CompanyClientModule } from './onboarding/kyc_client_manage';
 import { OperatorsAdminModule } from './operators/operators_admin_manage';
+import { PayoutCfgModule } from './settlements/payout_cfg_admin_manage';
 import { SeatLayoutsModule } from './seat-layouts/seat-layouts.module';
 import { CitiesModule } from './cities/cities.module';
 import { LocationsModule } from './locations/locations.module';
@@ -136,4 +137,5 @@ export const DOMAIN_MODULES = [
   OperatorsAdminModule,
   CompanyClientModule,
   EventRouterModule,
+  PayoutCfgModule,
 ];

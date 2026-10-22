@@ -817,5 +817,8 @@
   "navGroupOperations": "Operations",
   "navGroupCustomers": "Customers",
   "navGroupMarketing": "Marketing",
-  "navGroupSystem": "System"
+  "navGroupSystem": "System",
+  "navGroupCommercial": "Commercial",
+  "navPayout": "Payout and fees",
+  "hintPayout": "How operators are paid, and what customers pay on top."
 }

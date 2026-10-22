@@ -124,6 +124,12 @@ class AdminSection {
       AdminStrings.hintSettings,
       Icons.settings_outlined,
     ),
+    AdminRoutes.payout: AdminSection(
+      AdminRoutes.payout,
+      AdminStrings.navPayout,
+      AdminStrings.hintPayout,
+      Icons.account_balance_outlined,
+    ),
   };
 
   /// The menu groups of the demo, in its order, with the sections each holds.
@@ -136,6 +142,8 @@ class AdminSection {
         AdminRoutes.operators,
       ],
     ),
+    // Commission joins Payout and fees here when it is merged
+    (AdminStrings.navGroupCommercial, <String>[AdminRoutes.payout]),
     (
       AdminStrings.navCatalogue,
       <String>[

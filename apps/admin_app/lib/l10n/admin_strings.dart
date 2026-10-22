@@ -736,6 +736,9 @@ abstract final class AdminStrings {
   static const navGroupCustomers = 'navGroupCustomers';
   static const navGroupMarketing = 'navGroupMarketing';
   static const navGroupSystem = 'navGroupSystem';
+  static const navGroupCommercial = 'navGroupCommercial';
+  static const navPayout = 'navPayout';
+  static const hintPayout = 'hintPayout';
   static const Set<String> all = <String>{
     appName,
     signInTitle,
@@ -1555,5 +1558,8 @@ abstract final class AdminStrings {
     navGroupCustomers,
     navGroupMarketing,
     navGroupSystem,
+    navGroupCommercial,
+    navPayout,
+    hintPayout,
   };
 }

@@ -54,6 +54,10 @@ export const AUDIT_ACTIONS = [
   'operator.bank-failed',
   'operator.profile-updated',
   'operator.bank-changed',
+  'payout.settings-changed',
+  'payout.slab-added',
+  'payout.slab-removed',
+  'payout.slab-restored',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

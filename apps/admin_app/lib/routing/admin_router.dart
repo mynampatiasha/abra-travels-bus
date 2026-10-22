@@ -22,6 +22,7 @@ import '../features/invitations/invitations_page.dart';
 import '../features/kyc/admin_kyc_configuration.dart';
 import '../features/notifications/admin_notification_screen.dart';
 import '../features/operators/operators_admin_manage_screen.dart';
+import '../features/payout/payout_cfg_admin_manage_screen.dart';
 import '../features/places/places_admin_manage_screen.dart';
 import '../features/reviews/review_detail_page.dart';
 import '../features/reviews/reviews_page.dart';
@@ -53,6 +54,7 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
     AdminRoutes.banners: AdminBannersPage(),
     AdminRoutes.places: PlacesAdminManageScreen(),
     AdminRoutes.audit: AuditAdminManageScreen(),
+    AdminRoutes.payout: PayoutCfgPage(),
   };
 
   final router = GoRouter(

@@ -42,6 +42,9 @@ abstract final class AdminRoutes {
   /// The audit log (demo page `audit`).
   static const audit = '/audit';
 
+  /// Payout modes and fees (demo page `payout`).
+  static const payout = '/payout';
+
   /// Query parameter that carries the section to return to after the
   /// session check or sign-in.
   static const fromParameter = 'from';
@@ -66,6 +69,7 @@ abstract final class AdminRoutes {
     banners: PermissionKeys.bannersRead,
     places: PermissionKeys.catalogueRead,
     audit: PermissionKeys.auditRead,
+    payout: PermissionKeys.payoutRead,
   };
 
   /// Sections in the order they are listed.
@@ -77,6 +81,7 @@ abstract final class AdminRoutes {
     operators,
     invitations,
     reviews,
+    payout,
     customers,
     places,
     cities,
