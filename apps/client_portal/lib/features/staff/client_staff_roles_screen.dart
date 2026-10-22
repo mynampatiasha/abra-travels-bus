@@ -91,6 +91,36 @@ class PortalUserModel {
   }
 }
 
+class PortalMatrixRowModel {
+  const PortalMatrixRowModel({
+    required this.id,
+    required this.title,
+    required this.owner,
+    required this.manager,
+    required this.booking,
+    required this.accounts,
+  });
+
+  factory PortalMatrixRowModel.fromJson(Map<String, dynamic> json) {
+    final levels = (json['levels'] as Map?) ?? const {};
+    return PortalMatrixRowModel(
+      id: '${json['id'] ?? ''}',
+      title: '${json['title'] ?? ''}',
+      owner: '${levels['owner'] ?? 'NONE'}',
+      manager: '${levels['manager'] ?? 'NONE'}',
+      booking: '${levels['booking'] ?? 'NONE'}',
+      accounts: '${levels['accounts'] ?? 'NONE'}',
+    );
+  }
+
+  final String id;
+  final String title;
+  final String owner;
+  final String manager;
+  final String booking;
+  final String accounts;
+}
+
 // ===== 2. SCREEN WIDGET =============================================================
 
 class ClientStaffRolesScreen extends ConsumerStatefulWidget {
@@ -111,16 +141,60 @@ class _ClientStaffRolesScreenState
   String _statusFilter = 'ALL';
   bool _isTableView = true;
 
+  bool _isLoadingMatrix = false;
+  String? _matrixError;
+  List<PortalMatrixRowModel>? _matrixRows;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(_loadUsers()));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_loadUsers());
+      unawaited(_loadMatrix());
+    });
   }
 
   @override
   void dispose() {
     _searchCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadMatrix() async {
+    setState(() {
+      _isLoadingMatrix = true;
+      _matrixError = null;
+    });
+
+    try {
+      final response = await ref
+          .read(appDependenciesProvider)
+          .apiClient
+          .get('client/users/matrix');
+
+      final data = response.data;
+      final rawPages = data is Map
+          ? (data['pages'] as List<dynamic>?) ?? <dynamic>[]
+          : <dynamic>[];
+      final loaded = rawPages
+          .whereType<Map<String, dynamic>>()
+          .map(PortalMatrixRowModel.fromJson)
+          .toList();
+
+      if (mounted) {
+        setState(() {
+          _matrixRows = loaded;
+          _isLoadingMatrix = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _matrixError = 'Not connected yet';
+          _isLoadingMatrix = false;
+        });
+      }
+    }
   }
 
   Future<void> _loadUsers() async {
@@ -252,7 +326,12 @@ class _ClientStaffRolesScreenState
   Widget _tabChip(String key, String label) {
     final isSel = _activeTab == key;
     return GestureDetector(
-      onTap: () => setState(() => _activeTab = key),
+      onTap: () {
+        setState(() => _activeTab = key);
+        if (key == 'mat' && _matrixRows == null && !_isLoadingMatrix) {
+          unawaited(_loadMatrix());
+        }
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
@@ -634,7 +713,7 @@ class _ClientStaffRolesScreenState
                   controller: emailCtrl,
                   decoration: const InputDecoration(
                     labelText: 'Email *',
-                    hintText: 'name@kaveriexpress.in',
+                    hintText: 'name@company.com',
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -1021,6 +1100,37 @@ class _ClientStaffRolesScreenState
           ),
           const SizedBox(height: 12),
 
+        if (_isLoadingMatrix)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 40),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (_matrixError != null || _matrixRows == null || _matrixRows!.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(AbraRadius.md),
+              border: Border.all(color: AbraColors.border),
+            ),
+            child: const Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.lock_outline, size: 40, color: AbraColors.textSecondary),
+                SizedBox(height: 12),
+                Text(
+                  'Not connected yet',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                    color: AbraColors.navy,
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: SizedBox(
@@ -1084,21 +1194,14 @@ class _ClientStaffRolesScreenState
                       ),
                     ],
                   ),
-                  _matrixRow('Dashboard & Analytics', 'FULL', 'FULL', 'NONE', 'VIEW'),
-                  _matrixRow('KYC verification', 'FULL', 'FULL', 'NONE', 'NONE'),
-                  _matrixRow('Company Profile & Bank Payout', 'FULL', 'VIEW', 'NONE', 'VIEW'),
-                  _matrixRow('Fleet & Buses', 'FULL', 'FULL', 'VIEW', 'NONE'),
-                  _matrixRow('Seat layouts', 'FULL', 'FULL', 'NONE', 'NONE'),
-                  _matrixRow('Drivers & Crew Assignment', 'FULL', 'FULL', 'NONE', 'NONE'),
-                  _matrixRow('Driver reports', 'FULL', 'FULL', 'NONE', 'NONE'),
-                  _matrixRow('Routes & Stops', 'FULL', 'FULL', 'VIEW', 'NONE'),
-                  _matrixRow('Schedules & Trips Creation', 'FULL', 'FULL', 'VIEW', 'NONE'),
-                  _matrixRow('Customer Bookings', 'FULL', 'FULL', 'FULL', 'VIEW'),
-                  _matrixRow('Offers & Discounts', 'FULL', 'FULL', 'NONE', 'NONE'),
-                  _matrixRow('Earnings, Settlements & Bank Statements', 'FULL', 'VIEW', 'NONE', 'FULL'),
-                  _matrixRow('Live Tracking & Safety', 'FULL', 'FULL', 'VIEW', 'NONE'),
-                  _matrixRow('Notifications', 'FULL', 'FULL', 'FULL', 'FULL'),
-                  _matrixRow('Staff & Roles Management', 'FULL', 'NONE', 'NONE', 'NONE'),
+                  for (final row in _matrixRows!)
+                    _matrixRow(
+                      row.title,
+                      row.owner,
+                      row.manager,
+                      row.booking,
+                      row.accounts,
+                    ),
                 ],
               ),
             ),

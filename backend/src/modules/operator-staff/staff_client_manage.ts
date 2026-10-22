@@ -1,4 +1,4 @@
-﻿import {
+import {
   Body,
   Controller,
   Get,
@@ -27,9 +27,13 @@ import {
 } from '../catalogue-shared/catalogue_export_manage.service';
 import { RequirePermission } from '../rbac/decorators/require-permission.decorator';
 import {
+  type PortalMatrixPageRow,
+  type PortalMatrixView,
   type PortalUserView,
   StaffClientManageService,
 } from './staff_client_manage.service';
+
+export type { PortalMatrixPageRow, PortalMatrixView };
 
 // ===== 1. REQUEST DTOS ===============================================================
 
@@ -128,6 +132,16 @@ export class StaffClientManageController {
   })
   roles(): Promise<Array<{ key: string; name: string }>> {
     return this.clientStaffService.roles();
+  }
+
+  @Get('matrix')
+  @RequirePermission('users.read')
+  @ApiOperation({
+    summary: 'Get operator portal permission matrix',
+    description: 'Requires users.read. Returns real page permission levels derived from system roles.',
+  })
+  matrix(): Promise<PortalMatrixView> {
+    return this.clientStaffService.permissionMatrix();
   }
 
   @Get(':id')

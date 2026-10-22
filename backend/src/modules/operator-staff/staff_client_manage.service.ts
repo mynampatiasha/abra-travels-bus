@@ -1,4 +1,4 @@
-﻿import { createHash, randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { isValidObjectId, type Model, Types } from 'mongoose';
@@ -17,6 +17,8 @@ import { UsersService } from '../users/services/users.service';
 import { RoleRepository } from '../rbac/repositories/role.repository';
 import { AuditedChangeRunner } from '../rbac/services/audited-change.service';
 import { STAFF_INVITATION_MODEL, type StaffInvitation } from '../rbac/staff_admin_manage.service';
+import { type AccessLevel, inferLevel, pagesFor } from '../rbac/permissions/access-pages';
+import { SYSTEM_ROLES } from '../rbac/roles/system-roles';
 
 export const CLIENT_ROLE_NAMES: Record<string, string> = {
   SUPER_ADMIN: 'Owner',
@@ -60,6 +62,22 @@ export interface InvitePortalUserInput {
 export interface UpdatePortalUserInput {
   name?: string;
   role?: string;
+}
+
+export interface PortalMatrixPageRow {
+  id: string;
+  title: string;
+  levels: {
+    owner: AccessLevel;
+    manager: AccessLevel;
+    booking: AccessLevel;
+    accounts: AccessLevel;
+  };
+}
+
+export interface PortalMatrixView {
+  roles: Array<{ key: string; name: string }>;
+  pages: PortalMatrixPageRow[];
 }
 
 function hashToken(token: string): string {
@@ -110,6 +128,58 @@ export class StaffClientManageService {
       { key: 'SUPPORT', name: 'Booking staff' },
       { key: 'ACCOUNTS', name: 'Accounts' },
     ]);
+  }
+
+  async permissionMatrix(): Promise<PortalMatrixView> {
+    const roleKeys = ['OPERATOR_ADMIN', 'OPERATOR_MANAGER', 'BOOKING_STAFF', 'ACCOUNT_STAFF'] as const;
+    const operatorPages = pagesFor('OPERATOR');
+
+    const roleDefs: Record<
+      (typeof roleKeys)[number],
+      { keys: ReadonlySet<string>; wildcard: boolean }
+    > = {
+      OPERATOR_ADMIN: { keys: new Set(), wildcard: false },
+      OPERATOR_MANAGER: { keys: new Set(), wildcard: false },
+      BOOKING_STAFF: { keys: new Set(), wildcard: false },
+      ACCOUNT_STAFF: { keys: new Set(), wildcard: false },
+    };
+
+    for (const key of roleKeys) {
+      const stored = await this.roleRepo.findByKey(key);
+      const systemDef = SYSTEM_ROLES.find((r) => r.key === key);
+      const permissionKeys =
+        (stored?.permissionKeys?.length ?? 0) > 0
+          ? stored!.permissionKeys
+          : systemDef
+            ? [...systemDef.permissionKeys]
+            : [];
+      const wildcard = permissionKeys.includes('*');
+      roleDefs[key] = {
+        keys: new Set(permissionKeys),
+        wildcard,
+      };
+    }
+
+    const pages: PortalMatrixPageRow[] = operatorPages.map((page) => ({
+      id: page.id,
+      title: page.title,
+      levels: {
+        owner: inferLevel(page, roleDefs.OPERATOR_ADMIN.keys, roleDefs.OPERATOR_ADMIN.wildcard).level,
+        manager: inferLevel(page, roleDefs.OPERATOR_MANAGER.keys, roleDefs.OPERATOR_MANAGER.wildcard).level,
+        booking: inferLevel(page, roleDefs.BOOKING_STAFF.keys, roleDefs.BOOKING_STAFF.wildcard).level,
+        accounts: inferLevel(page, roleDefs.ACCOUNT_STAFF.keys, roleDefs.ACCOUNT_STAFF.wildcard).level,
+      },
+    }));
+
+    return {
+      roles: [
+        { key: 'OPERATOR_ADMIN', name: 'Owner' },
+        { key: 'OPERATOR_MANAGER', name: 'Manager' },
+        { key: 'BOOKING_STAFF', name: 'Booking staff' },
+        { key: 'ACCOUNT_STAFF', name: 'Accounts' },
+      ],
+      pages,
+    };
   }
 
   async list(actor: AuthenticatedUserActor, query: PortalUserListQuery): Promise<PaginatedResult<PortalUserView>> {

@@ -1,4 +1,4 @@
-﻿import 'package:client_portal/routing/portal_routes.dart';
+import 'package:client_portal/routing/portal_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_network/shared_network.dart';
@@ -136,6 +136,39 @@ FakeBackend withPortalUsers(Persona persona) {
     );
   };
 
+  backend.overrides['GET client/users/matrix'] = (request) {
+    return FakeResponse.ok(<String, Object?>{
+      'roles': [
+        {'key': 'OPERATOR_ADMIN', 'name': 'Owner'},
+        {'key': 'OPERATOR_MANAGER', 'name': 'Manager'},
+        {'key': 'BOOKING_STAFF', 'name': 'Booking staff'},
+        {'key': 'ACCOUNT_STAFF', 'name': 'Accounts'},
+      ],
+      'pages': [
+        {
+          'id': 'buses',
+          'title': 'Fleet & Buses',
+          'levels': {
+            'owner': 'FULL',
+            'manager': 'EDIT',
+            'booking': 'VIEW',
+            'accounts': 'NONE',
+          },
+        },
+        {
+          'id': 'routes',
+          'title': 'Routes & Stops',
+          'levels': {
+            'owner': 'FULL',
+            'manager': 'EDIT',
+            'booking': 'NONE',
+            'accounts': 'NONE',
+          },
+        },
+      ],
+    });
+  };
+
   return backend;
 }
 
@@ -194,6 +227,18 @@ void main() {
       expect(find.textContaining('Owner has full access to everything'), findsOneWidget);
       expect(find.text('Fleet & Buses'), findsOneWidget);
       expect(find.text('Routes & Stops'), findsOneWidget);
+    });
+
+    testWidgets('shows Not connected yet when matrix endpoint fails', (tester) async {
+      final backend = withPortalUsers(Persona.owner);
+      backend.overrides['GET client/users/matrix'] =
+          (request) => const FakeResponse(500, 'Server error');
+      await openStaffRoles(tester, backend);
+
+      final matrixTab = find.text('Permission matrix');
+      await tapOn(tester, matrixTab);
+
+      expect(find.text('Not connected yet'), findsOneWidget);
     });
 
     testWidgets('invites new user via dialog', (tester) async {
