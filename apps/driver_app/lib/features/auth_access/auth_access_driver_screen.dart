@@ -1,61 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_core/shared_core.dart';
 import '../../app/providers.dart';
 import '../../routing/driver_routes.dart';
 
-// ===== 1. MODELS =====
-class DriverAccount {
-  const DriverAccount({
-    required this.name,
-    required this.operatorId,
-    required this.operatorName,
-    required this.phone,
-    required this.tripsCount,
-  });
-
-  final String name;
-  final String operatorId;
-  final String operatorName;
-  final String phone;
-  final int tripsCount;
-}
-
-// ===== 2. CONTROLLER =====
-class AuthAccessDriverController {
-  AuthAccessDriverController(this.ref);
-  final Ref ref;
-
-  List<DriverAccount> get accounts {
-    final db = ref.read(driverMockDbProvider);
-    return db.drivers.map((d) {
-      return DriverAccount(
-        name: d['name'] as String,
-        operatorId: d['operatorId'] as String,
-        operatorName: d['operatorName'] as String,
-        phone: d['phone'] as String,
-        tripsCount: d['tripsCount'] as int,
-      );
-    }).toList();
-  }
-
-  void selectDriver(BuildContext context, DriverAccount driver) {
-    ref.read(currentDriverProvider.notifier).set(driver.name);
-    ref.read(driverMockDbProvider).currentDriver = driver.name;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Signed in as ${driver.name}'),
-        backgroundColor: const Color(0xFF10B981),
-      ),
-    );
-    context.go(DriverRoutes.home);
-  }
-}
-
-final authAccessDriverControllerProvider =
-    Provider<AuthAccessDriverController>((ref) => AuthAccessDriverController(ref));
-
-// ===== 3. SCREEN & WIDGETS =====
 class AuthAccessDriverScreen extends ConsumerStatefulWidget {
   const AuthAccessDriverScreen({super.key});
 
@@ -77,38 +26,71 @@ class _AuthAccessDriverScreenState extends ConsumerState<AuthAccessDriverScreen>
     super.dispose();
   }
 
-  void _sendOtp() {
-    final phone = _phoneController.text.trim();
-    if (phone.length < 10) {
+  String _cleanPhone() {
+    final raw = _phoneController.text.trim().replaceAll(RegExp(r'\s+'), '');
+    if (raw.startsWith('+')) return raw;
+    if (raw.length == 10) return '+91';
+    return '+91';
+  }
+
+  Future<void> _sendOtp() async {
+    final digits = _phoneController.text.trim().replaceAll(RegExp(r'\D'), '');
+    if (digits.length < 10) {
       setState(() {
         _errorMessage = 'Please enter a valid 10-digit mobile number';
       });
       return;
     }
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
-    Future.delayed(const Duration(milliseconds: 600), () {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _otpSent = true;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('OTP sent to +91 $phone via SMS/WhatsApp'),
-            backgroundColor: const Color(0xFF10B981),
-          ),
-        );
-      }
-    });
+    final phone = _cleanPhone();
+    final client = ref.read(driverApiClientProvider);
+
+    try {
+      await client.post(
+        'auth/otp/send',
+        body: <String, Object?>{
+          'phone': phone,
+          'purpose': 'SIGN_IN',
+        },
+        authenticated: false,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _otpSent = true;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('OTP sent to $phone via SMS/WhatsApp'),
+          backgroundColor: const Color(0xFF10B981),
+        ),
+      );
+    } on AppException catch (e) {
+      if (!mounted) return;
+      final msg = e.failure is ApiFailure
+          ? (e.failure as ApiFailure).message
+          : 'Unable to send OTP. Please try again.';
+      setState(() {
+        _isLoading = false;
+        _errorMessage = msg;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Unable to send OTP. Please try again.';
+      });
+    }
   }
 
-  void _verifyOtp() {
+  Future<void> _verifyOtp() async {
     final otp = _otpController.text.trim();
-    final phone = _phoneController.text.trim();
     if (otp.length < 4) {
       setState(() {
         _errorMessage = 'Please enter the verification code';
@@ -121,34 +103,83 @@ class _AuthAccessDriverScreenState extends ConsumerState<AuthAccessDriverScreen>
       _errorMessage = null;
     });
 
-    Future.delayed(const Duration(milliseconds: 600), () {
-      if (mounted) {
-        final driverLabel = 'Driver (+91 $phone)';
-        ref.read(currentDriverProvider.notifier).set(driverLabel);
-        ref.read(driverMockDbProvider).currentDriver = driverLabel;
+    final phone = _cleanPhone();
+    final client = ref.read(driverApiClientProvider);
+    final tokenSource = ref.read(driverTokenSourceProvider);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Signed in successfully as $driverLabel'),
-            backgroundColor: const Color(0xFF10B981),
-          ),
-        );
-        context.go(DriverRoutes.home);
+    try {
+      final res = await client.post(
+        'auth/otp/verify',
+        body: <String, Object?>{
+          'phone': phone,
+          'code': otp,
+          'device': <String, Object?>{
+            'clientType': 'MOBILE',
+            'deviceName': 'Driver Mobile App',
+          },
+        },
+        authenticated: false,
+      );
+
+      final data = res.data is Map ? res.data as Map : <String, Object?>{};
+      final accessToken = data['accessToken'] as String?;
+      tokenSource.token = accessToken;
+
+      // Verify user account role with /me
+      final meRes = await client.get('me');
+      final meData = meRes.data is Map ? meRes.data as Map : <String, Object?>{};
+      final userType = meData['userType'] as String? ??
+          (data['user'] is Map ? (data['user'] as Map)['userType'] as String? : null);
+
+      if (userType != 'DRIVER') {
+        tokenSource.token = null;
+        if (!mounted) return;
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'This app is for registered Abra drivers only.';
+        });
+        return;
       }
-    });
+
+      final driverName = meData['name'] as String? ??
+          (data['user'] is Map ? (data['user'] as Map)['name'] as String? : null) ??
+          'Driver ($phone)';
+
+      ref.read(currentDriverProvider.notifier).set(driverName);
+      ref.read(driverMockDbProvider).currentDriver = driverName;
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Signed in successfully as $driverName'),
+          backgroundColor: const Color(0xFF10B981),
+        ),
+      );
+      context.go(DriverRoutes.home);
+    } on AppException catch (e) {
+      tokenSource.token = null;
+      if (!mounted) return;
+      final msg = e.failure is ApiFailure
+          ? (e.failure as ApiFailure).message
+          : 'Verification failed. Please check the code and try again.';
+      setState(() {
+        _isLoading = false;
+        _errorMessage = msg;
+      });
+    } catch (_) {
+      tokenSource.token = null;
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Verification failed. Please check the code and try again.';
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final controller = ref.watch(authAccessDriverControllerProvider);
-    final accounts = controller.accounts;
-
-    // Group by operator if available
-    final operatorGroups = <String, List<DriverAccount>>{};
-    for (final acc in accounts) {
-      operatorGroups.putIfAbsent(acc.operatorName, () => []).add(acc);
-    }
-
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -185,7 +216,7 @@ class _AuthAccessDriverScreenState extends ConsumerState<AuthAccessDriverScreen>
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Sign in with your registered mobile number\nto access your assigned trips.',
+                      'Sign in with your registered mobile number to access your assigned trips.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14,
@@ -216,7 +247,7 @@ class _AuthAccessDriverScreenState extends ConsumerState<AuthAccessDriverScreen>
                             ),
                             const SizedBox(height: 6),
                             const Text(
-                              'Enter your phone number to receive a one-time login code.',
+                              'Enter your mobile number to receive a one-time verification code.',
                               style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
                             ),
                             const SizedBox(height: 18),
@@ -225,7 +256,7 @@ class _AuthAccessDriverScreenState extends ConsumerState<AuthAccessDriverScreen>
                             TextField(
                               controller: _phoneController,
                               keyboardType: TextInputType.phone,
-                              enabled: !_otpSent,
+                              enabled: !_otpSent && !_isLoading,
                               decoration: InputDecoration(
                                 labelText: 'Mobile Number',
                                 prefixText: '+91 ',
@@ -248,6 +279,7 @@ class _AuthAccessDriverScreenState extends ConsumerState<AuthAccessDriverScreen>
                               TextField(
                                 controller: _otpController,
                                 keyboardType: TextInputType.number,
+                                enabled: !_isLoading,
                                 decoration: InputDecoration(
                                   labelText: '6-digit OTP Code',
                                   hintText: 'Enter OTP sent to mobile',
@@ -301,13 +333,15 @@ class _AuthAccessDriverScreenState extends ConsumerState<AuthAccessDriverScreen>
                             if (_otpSent) ...[
                               const SizedBox(height: 12),
                               TextButton(
-                                onPressed: () {
-                                  setState(() {
-                                    _otpSent = false;
-                                    _otpController.clear();
-                                    _errorMessage = null;
-                                  });
-                                },
+                                onPressed: _isLoading
+                                    ? null
+                                    : () {
+                                        setState(() {
+                                          _otpSent = false;
+                                          _otpController.clear();
+                                          _errorMessage = null;
+                                        });
+                                      },
                                 child: const Text(
                                   'Change mobile number',
                                   style: TextStyle(color: Color(0xFF1677C8), fontWeight: FontWeight.w600),
@@ -318,108 +352,6 @@ class _AuthAccessDriverScreenState extends ConsumerState<AuthAccessDriverScreen>
                         ),
                       ),
                     ),
-
-                    if (accounts.isNotEmpty) ...[
-                      const SizedBox(height: 20),
-                      Card(
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        color: Colors.white,
-                        child: Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              const Text(
-                                'Or select assigned driver profile:',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF12304A),
-                                ),
-                              ),
-                              const SizedBox(height: 14),
-                              for (final entry in operatorGroups.entries) ...[
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 6, bottom: 6),
-                                  child: Text(
-                                    entry.key.toUpperCase(),
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                      color: Color(0xFF64748B),
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                ),
-                                for (final driver in entry.value)
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 8),
-                                    child: Material(
-                                      color: Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        side: const BorderSide(color: Color(0xFFE2E8F0)),
-                                      ),
-                                      child: InkWell(
-                                        borderRadius: BorderRadius.circular(12),
-                                        onTap: () => controller.selectDriver(context, driver),
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(12),
-                                          child: Row(
-                                            children: [
-                                              CircleAvatar(
-                                                radius: 18,
-                                                backgroundColor: const Color(0xFFE0F2FE),
-                                                child: Text(
-                                                  driver.name.isNotEmpty ? driver.name[0] : 'D',
-                                                  style: const TextStyle(
-                                                    color: Color(0xFF0369A1),
-                                                    fontWeight: FontWeight.w700,
-                                                  ),
-                                                ),
-                                              ),
-                                              const SizedBox(width: 12),
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      driver.name,
-                                                      style: const TextStyle(
-                                                        fontWeight: FontWeight.w600,
-                                                        fontSize: 14,
-                                                        color: Color(0xFF0F172A),
-                                                      ),
-                                                    ),
-                                                    Text(
-                                                      driver.phone,
-                                                      style: const TextStyle(
-                                                        color: Color(0xFF64748B),
-                                                        fontSize: 12,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                              const Icon(
-                                                Icons.chevron_right_rounded,
-                                                color: Color(0xFF94A3B8),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),

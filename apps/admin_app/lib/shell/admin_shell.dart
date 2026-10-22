@@ -242,9 +242,9 @@ abstract final class AdminNavigationRegistry {
         ),
         AdminSection(
           path: AdminRoutes.messages,
-          title: 'Chat & messages',
-          hint: 'Customer WhatsApp chatbot and support conversations',
-          icon: Icons.chat_outlined,
+          title: 'Messages sent',
+          hint: 'Every WhatsApp message and email Abra sends to customers: booking, payment, cancellation, refund and delay.',
+          icon: Icons.mail_outline,
         ),
         AdminSection(
           path: AdminRoutes.content,

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_core/shared_core.dart';
 import '../../app/providers.dart';
 import '../../core/l10n/driver_strings.dart';
 
-// ===== 1. SHEET & LOGIC =====
 class AssistantDriverSheet extends ConsumerStatefulWidget {
   const AssistantDriverSheet({super.key});
 
@@ -24,11 +24,12 @@ class _AssistantDriverSheetState extends ConsumerState<AssistantDriverSheet> {
   final TextEditingController _queryController = TextEditingController();
   final List<Map<String, String>> _messages = [];
   bool _isListening = false;
+  bool _isLoading = false;
 
   @override
-  void initState() {
-    super.initState();
-    // Greeting added in build() after lang is available
+  void dispose() {
+    _queryController.dispose();
+    super.dispose();
   }
 
   void _addGreeting(String lang) {
@@ -37,61 +38,66 @@ class _AssistantDriverSheetState extends ConsumerState<AssistantDriverSheet> {
     }
   }
 
-  void _handleCommand(String query) {
-    if (query.trim().isEmpty) return;
+  Future<void> _handleCommand(String query) async {
+    final text = query.trim();
+    if (text.isEmpty || _isLoading) return;
 
-    final q = query.trim().toLowerCase();
     setState(() {
-      _messages.add({'sender': 'user', 'text': query.trim()});
+      _messages.add({'sender': 'user', 'text': text});
       _queryController.clear();
+      _isLoading = true;
     });
 
-    final db = ref.read(driverMockDbProvider);
-    final trip = db.currentTrip;
+    final client = ref.read(driverApiClientProvider);
+    final lang = ref.read(driverLanguageProvider);
 
-    String response = '';
-    if (trip == null) {
-      response = 'You do not have an active trip right now. New trips assigned by your operator will appear on Home.';
-    } else {
-      final route = db.routeOfTrip(trip['routeId'] as String? ?? '');
-      final stops = (route?['stops'] as List<dynamic>?) ?? [];
-      final bookings = db.passengersOfTrip(trip['id'] as String);
-      final checkedIn = List<String>.from(trip['checkedIn'] as List);
-
-      if (q.contains('next stop') || q.contains('తదుపరి') || q.contains('अगला')) {
-        final stopName = stops.isNotEmpty ? stops[1]['name'] : 'Destination';
-        final city = stops.isNotEmpty ? stops[1]['city'] : '';
-        response = 'Next stop: $stopName, $city in about 25 minutes. It is a drop point.';
-      } else if (q.contains('who') || q.contains('not checked') || q.contains('missing') || q.contains('రాలేదు')) {
-        final missing = bookings.where((b) => !checkedIn.contains(b['id'])).toList();
-        if (missing.isEmpty) {
-          response = 'All ${bookings.length} passengers have checked in!';
-        } else {
-          final names = missing.map((b) => "${b['customer']} (${b['seatList']})").join(', ');
-          response = '${missing.length} booking(s) not checked in yet: $names';
-        }
-      } else if (q.contains('how many') || q.contains('board') || q.contains('ఎక్కుతారు') || q.contains('चढ़ेंगे')) {
-        final nextStopName = stops.isNotEmpty ? stops[1]['name'] : '';
-        final boardingAtNext = bookings.where((b) => b['board'] == nextStopName).toList();
-        response = 'At $nextStopName, ${boardingAtNext.length} passenger(s) will board.';
-      } else if (q.contains('delay') || q.contains('late') || q.contains('ఆలస్యం') || q.contains('देरी')) {
-        db.reportDelay(trip['id'] as String, 30, 'Traffic');
-        response = 'Reported 30 minutes delay due to Traffic. Passengers and operator have been notified.';
-      } else if (q.contains('directions') || q.contains('map') || q.contains('దారి') || q.contains('రాస్తా')) {
-        final targetStop = stops.length > 1 ? stops[1]['name'] : (stops.isNotEmpty ? stops[0]['name'] : 'next stop');
-        response = 'Opening directions for $targetStop...';
-      } else {
-        response = 'Trip ${trip['id']}: ${trip['route']} is ${trip['status']}. ${checkedIn.length} of ${bookings.length} passengers checked in.';
+    final payloadMessages = <Map<String, String>>[];
+    for (final m in _messages) {
+      final content = m['text']?.trim() ?? '';
+      if (content.isNotEmpty) {
+        payloadMessages.add({
+          'role': m['sender'] == 'user' ? 'user' : 'assistant',
+          'content': content,
+        });
       }
     }
 
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (mounted) {
-        setState(() {
-          _messages.add({'sender': 'assistant', 'text': response});
+    try {
+      final res = await client.post(
+        'assistant/chat',
+        body: <String, Object?>{
+          'messages': payloadMessages,
+          'language': lang,
+        },
+      );
+
+      final data = res.data is Map ? res.data as Map : <String, Object?>{};
+      final reply = data['reply'] as String? ?? 'No response';
+
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _messages.add({'sender': 'assistant', 'text': reply});
+      });
+    } on AppException catch (e) {
+      if (!mounted) return;
+      final msg = e.failure is ApiFailure
+          ? (e.failure as ApiFailure).message
+          : 'The assistant could not answer. Please try again.';
+      setState(() {
+        _isLoading = false;
+        _messages.add({'sender': 'assistant', 'text': msg});
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _messages.add({
+          'sender': 'assistant',
+          'text': 'The assistant could not answer. Please try again.',
         });
-      }
-    });
+      });
+    }
   }
 
   @override
@@ -192,6 +198,17 @@ class _AssistantDriverSheetState extends ConsumerState<AssistantDriverSheet> {
               },
             ),
           ),
+          if (_isLoading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 6),
+              child: Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            ),
           const SizedBox(height: 12),
           // Input row
           Row(
@@ -217,6 +234,7 @@ class _AssistantDriverSheetState extends ConsumerState<AssistantDriverSheet> {
               Expanded(
                 child: TextField(
                   controller: _queryController,
+                  enabled: !_isLoading,
                   decoration: InputDecoration(
                     hintText: 'Ask or tap a command...',
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -231,7 +249,7 @@ class _AssistantDriverSheetState extends ConsumerState<AssistantDriverSheet> {
               const SizedBox(width: 8),
               IconButton(
                 icon: const Icon(Icons.send_rounded, color: Color(0xFF1677C8)),
-                onPressed: () => _handleCommand(_queryController.text),
+                onPressed: _isLoading ? null : () => _handleCommand(_queryController.text),
               ),
             ],
           ),
@@ -248,7 +266,7 @@ class _AssistantDriverSheetState extends ConsumerState<AssistantDriverSheet> {
         label,
         style: const TextStyle(fontSize: 12, color: Color(0xFF334155)),
       ),
-      onPressed: () => _handleCommand(label),
+      onPressed: _isLoading ? null : () => _handleCommand(label),
     );
   }
 }

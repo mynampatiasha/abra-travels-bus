@@ -844,6 +844,99 @@ abstract final class AdminStrings {
   static const commEmptyFiltered = 'commEmptyFiltered';
   static const commClearFilters = 'commClearFilters';
   static const commDefaultFallback = 'commDefaultFallback';
+  static const settingsPageTitle = 'settingsPageTitle';
+  static const settingsPageSubtitle = 'settingsPageSubtitle';
+  static const settingsTabIntegrations = 'settingsTabIntegrations';
+  static const settingsTabCompany = 'settingsTabCompany';
+  static const settingsTabBookingRules = 'settingsTabBookingRules';
+  static const settingsTabSecurity = 'settingsTabSecurity';
+  static const settingsTabTemplates = 'settingsTabTemplates';
+  static const settingsCompanyTitle = 'settingsCompanyTitle';
+  static const settingsCompanyName = 'settingsCompanyName';
+  static const settingsCompanyEmail = 'settingsCompanyEmail';
+  static const settingsCompanyPhone = 'settingsCompanyPhone';
+  static const settingsCompanyGstin = 'settingsCompanyGstin';
+  static const settingsCompanyAddress = 'settingsCompanyAddress';
+  static const settingsBookingTitle = 'settingsBookingTitle';
+  static const settingsHoldSeconds = 'settingsHoldSeconds';
+  static const settingsHoldSecondsHint = 'settingsHoldSecondsHint';
+  static const settingsMaxSeats = 'settingsMaxSeats';
+  static const settingsCutoffMinutes = 'settingsCutoffMinutes';
+  static const settingsAdvanceDays = 'settingsAdvanceDays';
+  static const settingsBookingNotice = 'settingsBookingNotice';
+  static const settingsReasonTitle = 'settingsReasonTitle';
+  static const settingsReasonField = 'settingsReasonField';
+  static const settingsReasonConfirm = 'settingsReasonConfirm';
+  static const settingsSavedWithReason = 'settingsSavedWithReason';
+  static const settingsSecurityTitle = 'settingsSecurityTitle';
+  static const settingsMfaRequired = 'settingsMfaRequired';
+  static const settingsSessionMinutes = 'settingsSessionMinutes';
+  static const settingsPasswordDays = 'settingsPasswordDays';
+  static const settingsTplColMessage = 'settingsTplColMessage';
+  static const settingsTplColChannels = 'settingsTplColChannels';
+  static const settingsTplColLanguages = 'settingsTplColLanguages';
+  static const settingsTplPreview = 'settingsTplPreview';
+  static const settingsTplPreviewTitle = 'settingsTplPreviewTitle';
+  static const settingsCardSetUp = 'settingsCardSetUp';
+  static const settingsCardConnected = 'settingsCardConnected';
+  static const settingsCardTestMode = 'settingsCardTestMode';
+  static const settingsCardLastTested = 'settingsCardLastTested';
+  static const settingsCardNeverTested = 'settingsCardNeverTested';
+  static const settingsSetupSecretHelp = 'settingsSetupSecretHelp';
+  static const settingsSavedRunTest = 'settingsSavedRunTest';
+  static const settingsConnectionWorks = 'settingsConnectionWorks';
+  static const settingsSetUpFirst = 'settingsSetUpFirst';
+  static const settingsSectionSms = 'settingsSectionSms';
+  static const settingsSectionSmsHint = 'settingsSectionSmsHint';
+  static const settingsSectionRazorpay = 'settingsSectionRazorpay';
+  static const settingsSectionRazorpayHint = 'settingsSectionRazorpayHint';
+  static const settingsSectionMaps = 'settingsSectionMaps';
+  static const settingsSectionMapsHint = 'settingsSectionMapsHint';
+  static const settingsSectionPush = 'settingsSectionPush';
+  static const settingsSectionPushHint = 'settingsSectionPushHint';
+  static const msgPageTitle = 'msgPageTitle';
+  static const msgPageSubtitle = 'msgPageSubtitle';
+  static const msgBreadcrumbSection = 'msgBreadcrumbSection';
+  static const msgStatSentToday = 'msgStatSentToday';
+  static const msgStatWhatsApp = 'msgStatWhatsApp';
+  static const msgStatEmails = 'msgStatEmails';
+  static const msgStatFailed = 'msgStatFailed';
+  static const msgColWhen = 'msgColWhen';
+  static const msgColChannel = 'msgColChannel';
+  static const msgColTo = 'msgColTo';
+  static const msgColType = 'msgColType';
+  static const msgColSubject = 'msgColSubject';
+  static const msgColStatus = 'msgColStatus';
+  static const msgFilterSearch = 'msgFilterSearch';
+  static const msgFilterChannel = 'msgFilterChannel';
+  static const msgFilterType = 'msgFilterType';
+  static const msgFilterStatus = 'msgFilterStatus';
+  static const msgStatusSent = 'msgStatusSent';
+  static const msgStatusFailed = 'msgStatusFailed';
+  static const msgStatusQueued = 'msgStatusQueued';
+  static const msgStatusSkipped = 'msgStatusSkipped';
+  static const msgChannelWhatsApp = 'msgChannelWhatsApp';
+  static const msgChannelEmail = 'msgChannelEmail';
+  static const msgKindBookingConfirmed = 'msgKindBookingConfirmed';
+  static const msgKindBookingCancelled = 'msgKindBookingCancelled';
+  static const msgKindRefundPaid = 'msgKindRefundPaid';
+  static const msgKindPaymentFailed = 'msgKindPaymentFailed';
+  static const msgKindTripDelayed = 'msgKindTripDelayed';
+  static const msgKindBoardingStarted = 'msgKindBoardingStarted';
+  static const msgKindAnnouncement = 'msgKindAnnouncement';
+  static const msgKindGeneral = 'msgKindGeneral';
+  static const msgDetailTitle = 'msgDetailTitle';
+  static const msgDetailReceived = 'msgDetailReceived';
+  static const msgDetailChannel = 'msgDetailChannel';
+  static const msgDetailTo = 'msgDetailTo';
+  static const msgDetailType = 'msgDetailType';
+  static const msgDetailSent = 'msgDetailSent';
+  static const msgDetailStatus = 'msgDetailStatus';
+  static const msgDetailBooking = 'msgDetailBooking';
+  static const msgActionSendAgain = 'msgActionSendAgain';
+  static const msgSentAgainToast = 'msgSentAgainToast';
+  static const msgEmptyTitle = 'msgEmptyTitle';
+  static const msgEmptyMessage = 'msgEmptyMessage';
   static const Set<String> all = <String>{
     appName,
     signInTitle,
@@ -1771,5 +1864,98 @@ abstract final class AdminStrings {
     commEmptyFiltered,
     commClearFilters,
     commDefaultFallback,
+    settingsPageTitle,
+    settingsPageSubtitle,
+    settingsTabIntegrations,
+    settingsTabCompany,
+    settingsTabBookingRules,
+    settingsTabSecurity,
+    settingsTabTemplates,
+    settingsCompanyTitle,
+    settingsCompanyName,
+    settingsCompanyEmail,
+    settingsCompanyPhone,
+    settingsCompanyGstin,
+    settingsCompanyAddress,
+    settingsBookingTitle,
+    settingsHoldSeconds,
+    settingsHoldSecondsHint,
+    settingsMaxSeats,
+    settingsCutoffMinutes,
+    settingsAdvanceDays,
+    settingsBookingNotice,
+    settingsReasonTitle,
+    settingsReasonField,
+    settingsReasonConfirm,
+    settingsSavedWithReason,
+    settingsSecurityTitle,
+    settingsMfaRequired,
+    settingsSessionMinutes,
+    settingsPasswordDays,
+    settingsTplColMessage,
+    settingsTplColChannels,
+    settingsTplColLanguages,
+    settingsTplPreview,
+    settingsTplPreviewTitle,
+    settingsCardSetUp,
+    settingsCardConnected,
+    settingsCardTestMode,
+    settingsCardLastTested,
+    settingsCardNeverTested,
+    settingsSetupSecretHelp,
+    settingsSavedRunTest,
+    settingsConnectionWorks,
+    settingsSetUpFirst,
+    settingsSectionSms,
+    settingsSectionSmsHint,
+    settingsSectionRazorpay,
+    settingsSectionRazorpayHint,
+    settingsSectionMaps,
+    settingsSectionMapsHint,
+    settingsSectionPush,
+    settingsSectionPushHint,
+    msgPageTitle,
+    msgPageSubtitle,
+    msgBreadcrumbSection,
+    msgStatSentToday,
+    msgStatWhatsApp,
+    msgStatEmails,
+    msgStatFailed,
+    msgColWhen,
+    msgColChannel,
+    msgColTo,
+    msgColType,
+    msgColSubject,
+    msgColStatus,
+    msgFilterSearch,
+    msgFilterChannel,
+    msgFilterType,
+    msgFilterStatus,
+    msgStatusSent,
+    msgStatusFailed,
+    msgStatusQueued,
+    msgStatusSkipped,
+    msgChannelWhatsApp,
+    msgChannelEmail,
+    msgKindBookingConfirmed,
+    msgKindBookingCancelled,
+    msgKindRefundPaid,
+    msgKindPaymentFailed,
+    msgKindTripDelayed,
+    msgKindBoardingStarted,
+    msgKindAnnouncement,
+    msgKindGeneral,
+    msgDetailTitle,
+    msgDetailReceived,
+    msgDetailChannel,
+    msgDetailTo,
+    msgDetailType,
+    msgDetailSent,
+    msgDetailStatus,
+    msgDetailBooking,
+    msgActionSendAgain,
+    msgSentAgainToast,
+    msgEmptyTitle,
+    msgEmptyMessage,
   };
 }

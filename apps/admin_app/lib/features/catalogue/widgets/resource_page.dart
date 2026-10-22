@@ -107,6 +107,7 @@ class ResourcePage extends ConsumerStatefulWidget {
     this.filters = const <FilterSpec>[],
     this.onCreate,
     this.rowActions,
+    this.onRowTap,
     this.stats = const <StatSpec>[],
     this.exportName,
     this.importSpec,
@@ -161,6 +162,9 @@ class ResourcePage extends ConsumerStatefulWidget {
   /// The actions for a row; may depend on the record (a draft can be
   /// published, a cancelled trip cannot).
   final List<RowAction> Function(JsonMap record)? rowActions;
+
+  /// Called when a row or block is tapped.
+  final void Function(BuildContext context, JsonMap record)? onRowTap;
 
   @override
   ConsumerState<ResourcePage> createState() => _ResourcePageState();
@@ -469,6 +473,7 @@ class _ResourcePageState extends ConsumerState<ResourcePage> {
         actionsOf: widget.rowActions,
         isListView: _isListView,
         onAction: (action, record) => _run(() => action.run(context, record)),
+        onRowTap: widget.onRowTap,
       );
     }
 
@@ -836,6 +841,7 @@ class _ResourceTable extends StatefulWidget {
     required this.records,
     required this.actionsOf,
     required this.onAction,
+    this.onRowTap,
     this.isListView = false,
   });
 
@@ -843,6 +849,7 @@ class _ResourceTable extends StatefulWidget {
   final List<JsonMap> records;
   final List<RowAction> Function(JsonMap record)? actionsOf;
   final void Function(RowAction action, JsonMap record) onAction;
+  final void Function(BuildContext context, JsonMap record)? onRowTap;
   final bool isListView;
 
   @override
@@ -940,6 +947,7 @@ class _ResourceTableState extends State<_ResourceTable> {
           child: ConstrainedBox(
             constraints: BoxConstraints(minWidth: width - actionsWidth),
             child: DataTable(
+              showCheckboxColumn: false,
               headingRowHeight: _headingHeight,
               dataRowMinHeight: _rowHeight,
               dataRowMaxHeight: _rowHeight,
@@ -964,9 +972,17 @@ class _ResourceTableState extends State<_ResourceTable> {
               rows: <DataRow>[
                 for (final record in widget.records)
                   DataRow(
+                    onSelectChanged: widget.onRowTap == null
+                        ? null
+                        : (_) => widget.onRowTap!(context, record),
                     cells: <DataCell>[
                       for (final column in widget.columns)
-                        DataCell(column.cell(context, record)),
+                        DataCell(
+                          column.cell(context, record),
+                          onTap: widget.onRowTap == null
+                              ? null
+                              : () => widget.onRowTap!(context, record),
+                        ),
                     ],
                   ),
               ],
@@ -1042,7 +1058,7 @@ class _ResourceTableState extends State<_ResourceTable> {
       separatorBuilder: (context, _) => const Divider(),
       itemBuilder: (context, index) {
         final record = widget.records[index];
-        return Padding(
+        final item = Padding(
           padding: const EdgeInsets.all(AbraSpacing.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1082,6 +1098,12 @@ class _ResourceTableState extends State<_ResourceTable> {
             ],
           ),
         );
+        return widget.onRowTap == null
+            ? item
+            : InkWell(
+                onTap: () => widget.onRowTap!(context, record),
+                child: item,
+              );
       },
     );
   }

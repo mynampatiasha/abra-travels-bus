@@ -21,6 +21,7 @@ dependencies:
   shared_core:
   shared_localization:
   shared_models:
+  shared_network:
   shared_notifications:
   shared_permissions:
   shared_storage:

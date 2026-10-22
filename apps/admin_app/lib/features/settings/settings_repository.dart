@@ -7,7 +7,11 @@ import '../../app/providers.dart';
 /// The integrations whose settings are managed here.
 enum SettingsChannel {
   whatsapp('whatsapp'),
-  email('email');
+  email('email'),
+  sms('sms'),
+  razorpay('razorpay'),
+  maps('maps'),
+  push('push');
 
   const SettingsChannel(this.path);
 
