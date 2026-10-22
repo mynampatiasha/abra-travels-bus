@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_theme/shared_theme.dart';
 import '../../app/providers.dart';
 import '../../core/browser_files.dart';
-import '../../core/mock/abra_mock_db.dart';
 import '../../core/widgets/portal_section_title.dart';
 import '../../core/widgets/portal_status_chip.dart';
 import '../../routing/portal_routes.dart';
@@ -677,21 +676,78 @@ class _ClientRoutesScreenState extends ConsumerState<ClientRoutesScreen> {
     );
   }
 
-  void _openRouteFormDialog(BuildContext context, {ClientRouteItem? existingRoute}) {
+  /// The active cities and the approved boarding and dropping places, from the server.
+  Future<(List<Map<String, dynamic>>, List<Map<String, dynamic>>)> _loadCitiesAndPlaces() async {
+    final client = ref.read(appDependenciesProvider).apiClient;
+    final citiesResponse = await client.get('client/place-requests/cities');
+    final cities = <Map<String, dynamic>>[
+      for (final raw in (citiesResponse.data is List ? citiesResponse.data as List : const <Object?>[]))
+        if (raw is Map) Map<String, dynamic>.from(raw),
+    ];
+    final cityNames = {for (final c in cities) c['id'] as String: c['name'] as String};
+    final placesResponse = await client.get('catalogue/locations', query: <String, dynamic>{'active': true, 'pageSize': 100});
+    final rawPlaces = placesResponse.data is Map && (placesResponse.data as Map)['items'] is List
+        ? (placesResponse.data as Map)['items'] as List
+        : placesResponse.data is List
+            ? placesResponse.data as List
+            : const <Object?>[];
+    final places = <Map<String, dynamic>>[
+      for (final raw in rawPlaces)
+        if (raw is Map)
+          {
+            'id': raw['id'] as String,
+            'name': raw['name'] as String,
+            'city': cityNames[raw['cityId']] ?? '',
+          },
+    ];
+    return (cities, places);
+  }
+
+  Future<void> _openRouteFormDialog(BuildContext context, {ClientRouteItem? existingRoute}) async {
     final isEdit = existingRoute != null;
-    final kmCtrl = TextEditingController(text: isEdit ? '${existingRoute.km}' : '570');
-    final hrsCtrl = TextEditingController(text: isEdit ? '${existingRoute.hours}' : '10');
-    String fromCity = isEdit ? existingRoute.from : 'Bengaluru';
-    String toCity = isEdit ? existingRoute.to : 'Hyderabad';
+    final List<Map<String, dynamic>> cities;
+    final List<Map<String, dynamic>> places;
+    try {
+      (cities, places) = await _loadCitiesAndPlaces();
+    } catch (err) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not load cities and places: $err'), backgroundColor: AbraColors.danger),
+        );
+      }
+      return;
+    }
+    if (!context.mounted) return;
+    if (cities.length < 2 || places.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('A route needs at least 2 active cities and approved places. Ask Abra to add them, or use "Request a place".'),
+          backgroundColor: AbraColors.danger,
+        ),
+      );
+      return;
+    }
+    final cityNames = <String>[for (final c in cities) c['name'] as String];
+    if (isEdit) {
+      for (final name in <String>[existingRoute.from, existingRoute.to]) {
+        if (!cityNames.contains(name)) cityNames.add(name);
+      }
+    }
+    final kmCtrl = TextEditingController(text: isEdit ? '${existingRoute.km}' : '');
+    final hrsCtrl = TextEditingController(text: isEdit ? '${existingRoute.hours}' : '');
+    String fromCity = isEdit ? existingRoute.from : cityNames[0];
+    String toCity = isEdit ? existingRoute.to : cityNames[1];
 
     final List<Map<String, dynamic>> formStops = isEdit
         ? existingRoute.stops.map((s) => s.toJson()).toList()
-        : [
-            {'placeId': 'PL1', 'name': 'Majestic Bus Stand', 'city': 'Bengaluru', 'offset': 0, 'type': 'BOARDING'},
-            {'placeId': 'PL4', 'name': 'MGBS Bus Stand', 'city': 'Hyderabad', 'offset': 600, 'type': 'DROPPING'},
-          ];
+        : <Map<String, dynamic>>[];
+    for (final stop in formStops) {
+      if (!places.any((p) => p['id'] == stop['placeId'])) {
+        places.add(<String, dynamic>{'id': stop['placeId'], 'name': stop['name'], 'city': stop['city']});
+      }
+    }
 
-    showDialog<void>(
+    await showDialog<void>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDlgState) {
@@ -710,7 +766,7 @@ class _ClientRoutesScreenState extends ConsumerState<ClientRoutesScreen> {
                           child: DropdownButtonFormField<String>(
                             initialValue: fromCity,
                             decoration: const InputDecoration(labelText: 'From city *'),
-                            items: kMockCities.map((c) => DropdownMenuItem(value: c['name'] as String, child: Text('${c['name']}'))).toList(),
+                            items: cityNames.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                             onChanged: (v) => setDlgState(() => fromCity = v ?? fromCity),
                           ),
                         ),
@@ -719,7 +775,7 @@ class _ClientRoutesScreenState extends ConsumerState<ClientRoutesScreen> {
                           child: DropdownButtonFormField<String>(
                             initialValue: toCity,
                             decoration: const InputDecoration(labelText: 'To city *'),
-                            items: kMockCities.map((c) => DropdownMenuItem(value: c['name'] as String, child: Text('${c['name']}'))).toList(),
+                            items: cityNames.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                             onChanged: (v) => setDlgState(() => toCity = v ?? toCity),
                           ),
                         ),
@@ -744,11 +800,12 @@ class _ClientRoutesScreenState extends ConsumerState<ClientRoutesScreen> {
                           onPressed: () {
                             setDlgState(() {
                               final lastOffset = formStops.isNotEmpty ? (formStops.last['offset'] as int) : 0;
+                              final first = places.first;
                               formStops.add({
-                                'placeId': 'PL2',
-                                'name': 'Silk Board Junction',
-                                'city': fromCity,
-                                'offset': lastOffset + 30,
+                                'placeId': first['id'],
+                                'name': first['name'],
+                                'city': first['city'],
+                                'offset': formStops.isEmpty ? 0 : lastOffset + 30,
                                 'type': 'BOTH',
                               });
                             });
@@ -800,7 +857,7 @@ class _ClientRoutesScreenState extends ConsumerState<ClientRoutesScreen> {
                                 child: DropdownButton<String>(
                                   isExpanded: true,
                                   value: formStops[i]['placeId'] as String,
-                                  items: kMockPlaces.map((p) {
+                                  items: places.map((p) {
                                     return DropdownMenuItem<String>(
                                       value: p['id'] as String,
                                       child: Text('${p['name']} (${p['city']})', style: const TextStyle(fontSize: 12)),
@@ -808,7 +865,7 @@ class _ClientRoutesScreenState extends ConsumerState<ClientRoutesScreen> {
                                   }).toList(),
                                   onChanged: (val) {
                                     if (val != null) {
-                                      final p = kMockPlaces.firstWhere((x) => x['id'] == val);
+                                      final p = places.firstWhere((x) => x['id'] == val);
                                       setDlgState(() {
                                         formStops[i]['placeId'] = val;
                                         formStops[i]['name'] = p['name'];
@@ -867,8 +924,14 @@ class _ClientRoutesScreenState extends ConsumerState<ClientRoutesScreen> {
               TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
               FilledButton(
                 onPressed: () async {
-                  final km = int.tryParse(kmCtrl.text) ?? 500;
-                  final hrs = int.tryParse(hrsCtrl.text) ?? 8;
+                  final km = int.tryParse(kmCtrl.text.trim());
+                  final hrs = int.tryParse(hrsCtrl.text.trim());
+                  if (km == null || km <= 0 || hrs == null || hrs <= 0) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Enter the distance and the duration'), backgroundColor: AbraColors.danger),
+                    );
+                    return;
+                  }
                   final name = '$fromCity to $toCity';
 
                   // Client-side validations
