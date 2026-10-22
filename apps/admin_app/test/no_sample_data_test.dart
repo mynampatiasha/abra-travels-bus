@@ -5,7 +5,6 @@ void main() {
   test('Admin app contains no sample data outside allow list', () {
     // Files still using sample data or containing mock in name, each with the session responsible for removing it.
     const allowList = <String, String>{
-      'features/commission/admin_payout_page.dart': 'Session A (branch phase2-payout)',
     };
 
     final libDir = Directory('lib');

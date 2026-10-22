@@ -93,6 +93,10 @@ export const AUDIT_ACTION_LABELS: Readonly<Record<AuditAction, string>> = {
   'portal-user.updated': 'Changed portal user',
   'portal-user.deactivated': 'Deactivated portal user',
   'portal-user.activated': 'Activated portal user',
+  'payout.settings-changed': 'Changed payout and fee settings',
+  'payout.slab-added': 'Added a refund slab',
+  'payout.slab-removed': 'Removed a refund slab',
+  'payout.slab-restored': 'Restored a refund slab',
 };
 
 /**
@@ -100,6 +104,10 @@ export const AUDIT_ACTION_LABELS: Readonly<Record<AuditAction, string>> = {
  * marks these "Sensitive" and shows what changed (before and after) when the entry is opened.
  */
 export const SENSITIVE_ACTIONS: ReadonlySet<AuditAction> = new Set<AuditAction>([
+  'payout.settings-changed',
+  'payout.slab-added',
+  'payout.slab-removed',
+  'payout.slab-restored',
   'operator.suspended',
   'operator.payout-mode-changed',
   'operator.bank-verified',

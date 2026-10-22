@@ -79,6 +79,10 @@ export const AUDIT_ACTIONS = [
   'portal-user.updated',
   'portal-user.deactivated',
   'portal-user.activated',
+  'payout.settings-changed',
+  'payout.slab-added',
+  'payout.slab-removed',
+  'payout.slab-restored',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

@@ -16,7 +16,7 @@ import '../features/catalogue/pages/document_types_page.dart';
 import '../features/catalogue/pages/locations_page.dart';
 import '../features/catalogue/pages/operators_page.dart';
 import '../features/catalogue/pages/routes_page.dart';
-import '../features/commission/admin_payout_page.dart';
+import '../features/payout/payout_cfg_admin_manage_screen.dart';
 import '../features/commission/commission_admin_manage_screen.dart';
 import '../features/customers/admin_customers.dart';
 import '../features/dashboard/admin_dashboard_page.dart';
@@ -71,7 +71,7 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
 
     // 3. Commercial
     AdminRoutes.commission: const CommissionAdminManageScreen(),
-    AdminRoutes.payout: const AdminPayoutPage(),
+    AdminRoutes.payout: const PayoutCfgPage(),
 
     // 4. Catalogue
     AdminRoutes.places: const PlacesAdminManageScreen(),

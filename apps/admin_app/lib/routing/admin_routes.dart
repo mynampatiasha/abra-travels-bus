@@ -102,7 +102,7 @@ abstract final class AdminRoutes {
     driverReports: PermissionKeys.operatorsRead,
     driverRules: PermissionKeys.operatorsRead,
     commission: PermissionKeys.commissionsRead,
-    payout: PermissionKeys.settlementsRead,
+    payout: PermissionKeys.payoutRead,
     places: PermissionKeys.catalogueRead,
     cities: PermissionKeys.catalogueRead,
     locations: PermissionKeys.routesRead,
