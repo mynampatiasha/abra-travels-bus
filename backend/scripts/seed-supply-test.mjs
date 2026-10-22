@@ -7,6 +7,19 @@ const argon2Async = promisify(argon2);
 
 const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/abra_supply_test?directConnection=true';
 
+try {
+  const parsed = new URL(uri);
+  const host = parsed.hostname;
+  const dbName = parsed.pathname.replace(/^\//, '').split('?')[0];
+  if ((host !== 'localhost' && host !== '127.0.0.1') || !dbName.endsWith('_test')) {
+    console.error(`Refusing to run: MongoDB host must be localhost or 127.0.0.1 and database name must end with _test (got host="${host}", db="${dbName}").`);
+    process.exit(1);
+  }
+} catch {
+  console.error('Refusing to run: Invalid MongoDB URI');
+  process.exit(1);
+}
+
 async function hashPassword(password) {
   const salt = randomBytes(16);
   const hash = await argon2Async('argon2id', {

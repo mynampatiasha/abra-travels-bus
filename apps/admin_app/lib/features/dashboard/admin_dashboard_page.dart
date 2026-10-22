@@ -284,9 +284,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   ),
                   const SizedBox(height: AbraSpacing.sm),
                   for (final item in const [
-                    ('Super Admin', 'Approved KYC submission for Kaveri Express', '12 min ago'),
+                    ('Super Admin', 'Approved KYC submission for operator', '12 min ago'),
                     ('Admin', 'Updated commission rule CR-3 to 12%', '45 min ago'),
-                    ('Support', 'Acknowledged SOS alert SOS-2001', '1 hour ago'),
+                    ('Support', 'Acknowledged SOS alert', '1 hour ago'),
                     ('Accounts', 'Generated settlements for Cycle 1 Oct - 7 Oct', '3 hours ago'),
                   ])
                     Padding(

@@ -1,49 +1,218 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_theme/shared_theme.dart';
+import '../../app/providers.dart';
+import '../../core/browser_files.dart';
 import '../../core/mock/abra_mock_db.dart';
 import '../../core/widgets/portal_section_title.dart';
 import '../../core/widgets/portal_status_chip.dart';
 import '../../routing/portal_routes.dart';
 
-class ClientRoutesScreen extends StatefulWidget {
+// ===== 1. MODELS =====
+
+class ClientRouteStopItem {
+  ClientRouteStopItem({
+    required this.placeId,
+    required this.name,
+    required this.city,
+    required this.offset,
+    required this.type,
+  });
+
+  final String placeId;
+  final String name;
+  final String city;
+  final int offset;
+  final String type;
+
+  factory ClientRouteStopItem.fromJson(Map<String, dynamic> json) {
+    return ClientRouteStopItem(
+      placeId: json['placeId'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      city: json['city'] as String? ?? '',
+      offset: (json['offset'] as num?)?.toInt() ?? 0,
+      type: json['type'] as String? ?? 'BOTH',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'placeId': placeId,
+    'name': name,
+    'city': city,
+    'offset': offset,
+    'type': type,
+  };
+}
+
+class ClientRouteItem {
+  ClientRouteItem({
+    required this.id,
+    this.operatorId,
+    required this.name,
+    required this.from,
+    required this.to,
+    required this.km,
+    required this.hours,
+    required this.status,
+    required this.stops,
+    this.tripsCount = 0,
+    this.faresCount = 0,
+    this.schedulesCount = 0,
+  });
+
+  final String id;
+  final String? operatorId;
+  final String name;
+  final String from;
+  final String to;
+  final int km;
+  final int hours;
+  final String status;
+  final List<ClientRouteStopItem> stops;
+  final int tripsCount;
+  final int faresCount;
+  final int schedulesCount;
+
+  bool get isShared => operatorId == null || operatorId!.isEmpty;
+
+  factory ClientRouteItem.fromJson(Map<String, dynamic> json) {
+    final rawStops = json['stops'] as List<dynamic>? ?? [];
+    return ClientRouteItem(
+      id: json['id'] as String? ?? '',
+      operatorId: json['operatorId'] as String?,
+      name: json['name'] as String? ?? '',
+      from: json['from'] as String? ?? '',
+      to: json['to'] as String? ?? '',
+      km: (json['km'] as num?)?.toInt() ?? 0,
+      hours: (json['hours'] as num?)?.toInt() ?? 0,
+      status: json['status'] as String? ?? 'ACTIVE',
+      stops: rawStops
+          .map((s) => ClientRouteStopItem.fromJson(Map<String, dynamic>.from(s as Map)))
+          .toList(),
+      tripsCount: (json['tripsCount'] as num?)?.toInt() ?? 0,
+      faresCount: (json['faresCount'] as num?)?.toInt() ?? 0,
+      schedulesCount: (json['schedulesCount'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
+// ===== 2. PROVIDERS =====
+
+final clientRoutesProvider = FutureProvider.autoDispose
+    .family<List<ClientRouteItem>, (String, String)>((ref, args) async {
+  final (statusFilter, search) = args;
+  try {
+    final client = ref.watch(appDependenciesProvider).apiClient;
+    final query = <String, dynamic>{'pageSize': 100};
+    if (statusFilter != 'ALL') {
+      query['status'] = statusFilter;
+    }
+    if (search.trim().isNotEmpty) {
+      query['search'] = search.trim();
+    }
+    final response = await client.get('client/routes', query: query);
+    final List<ClientRouteItem> items = [];
+    if (response.data is List) {
+      for (final raw in response.data as List) {
+        if (raw is Map) {
+          items.add(ClientRouteItem.fromJson(Map<String, dynamic>.from(raw)));
+        }
+      }
+    } else if (response.data is Map && (response.data as Map)['items'] is List) {
+      for (final raw in (response.data as Map)['items'] as List) {
+        if (raw is Map) {
+          items.add(ClientRouteItem.fromJson(Map<String, dynamic>.from(raw)));
+        }
+      }
+    }
+    return items;
+  } catch (_) {
+    return <ClientRouteItem>[];
+  }
+});
+
+// ===== 3. SCREEN =====
+
+class ClientRoutesScreen extends ConsumerStatefulWidget {
   const ClientRoutesScreen({super.key});
 
   @override
-  State<ClientRoutesScreen> createState() => _ClientRoutesScreenState();
+  ConsumerState<ClientRoutesScreen> createState() => _ClientRoutesScreenState();
 }
 
-class _ClientRoutesScreenState extends State<ClientRoutesScreen> {
-  late List<Map<String, dynamic>> _routes;
+class _ClientRoutesScreenState extends ConsumerState<ClientRoutesScreen> {
   String? _selectedRouteId;
+  String _statusFilter = 'ALL';
+  final _searchCtrl = TextEditingController();
 
   @override
-  void initState() {
-    super.initState();
-    _routes = List.from(kMockRoutes);
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
   }
 
-  Map<String, dynamic>? get _selectedRoute {
-    if (_selectedRouteId == null) return null;
-    try {
-      return _routes.firstWhere((r) => r['id'] == _selectedRouteId);
-    } catch (_) {
-      return null;
+  void _refresh() {
+    ref.invalidate(clientRoutesProvider);
+  }
+
+  void _exportCsv(List<ClientRouteItem> routes) {
+    final buffer = StringBuffer();
+    buffer.writeln('Route,From,To,Distance (km),Duration (h),Stops,Your Trips,Status,Ownership');
+    for (final r in routes) {
+      final name = r.name.replaceAll('"', '""');
+      final from = r.from.replaceAll('"', '""');
+      final to = r.to.replaceAll('"', '""');
+      final owner = r.isShared ? 'Shared Abra' : 'Operator';
+      buffer.writeln('"$name","$from","$to",${r.km},${r.hours},${r.stops.length},${r.tripsCount},"${r.status}","$owner"');
     }
+    final stamp = DateTime.now().toIso8601String().substring(0, 10);
+    downloadTextFile('routes_$stamp.csv', buffer.toString());
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('The file is ready.')),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final selRoute = _selectedRoute;
+    final search = _searchCtrl.text.trim();
+    final asyncRoutes = ref.watch(clientRoutesProvider((_statusFilter, search)));
 
-    if (selRoute != null) {
-      return _buildRouteDetailView(context, selRoute);
-    }
-
-    return _buildRoutesTableView(context);
+    return asyncRoutes.when(
+      loading: () => const Center(child: Padding(padding: EdgeInsets.all(48), child: CircularProgressIndicator())),
+      error: (err, _) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: AbraColors.danger),
+              const SizedBox(height: 16),
+              Text('Failed to load routes: $err', style: const TextStyle(color: AbraColors.danger)),
+              const SizedBox(height: 16),
+              FilledButton(onPressed: _refresh, child: const Text('Retry')),
+            ],
+          ),
+        ),
+      ),
+      data: (routes) {
+        if (_selectedRouteId != null) {
+          final selRoute = routes.cast<ClientRouteItem?>().firstWhere(
+                (r) => r?.id == _selectedRouteId,
+                orElse: () => null,
+              );
+          if (selRoute != null) {
+            return _buildRouteDetailView(context, selRoute);
+          }
+        }
+        return _buildRoutesTableView(context, routes);
+      },
+    );
   }
 
-  Widget _buildRoutesTableView(BuildContext context) {
+  Widget _buildRoutesTableView(BuildContext context, List<ClientRouteItem> routes) {
+    final isNarrow = MediaQuery.of(context).size.width < 768;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AbraSpacing.xxl),
       child: Column(
@@ -68,6 +237,73 @@ class _ClientRoutesScreenState extends State<ClientRoutesScreen> {
             ],
           ),
           const SizedBox(height: AbraSpacing.xl),
+          // Filter Toolbar
+          Container(
+            padding: const EdgeInsets.all(AbraSpacing.md),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(AbraRadius.lg),
+              border: Border.all(color: AbraColors.border),
+              boxShadow: AbraShadows.soft,
+            ),
+            child: Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                SizedBox(
+                  width: isNarrow ? double.infinity : 220,
+                  child: TextField(
+                    controller: _searchCtrl,
+                    decoration: InputDecoration(
+                      labelText: 'Search',
+                      hintText: 'Search route or city',
+                      prefixIcon: const Icon(Icons.search, size: 18),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    onSubmitted: (_) => setState(() {}),
+                  ),
+                ),
+                SizedBox(
+                  width: isNarrow ? double.infinity : 150,
+                  child: DropdownButtonFormField<String>(
+                    isExpanded: true,
+                    initialValue: _statusFilter,
+                    decoration: InputDecoration(
+                      labelText: 'Status',
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'ALL', child: Text('All')),
+                      DropdownMenuItem(value: 'ACTIVE', child: Text('Active')),
+                      DropdownMenuItem(value: 'INACTIVE', child: Text('Inactive')),
+                    ],
+                    onChanged: (val) => setState(() => _statusFilter = val ?? 'ALL'),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.close, size: 16),
+                  label: const Text('Clear'),
+                  onPressed: () {
+                    setState(() {
+                      _searchCtrl.clear();
+                      _statusFilter = 'ALL';
+                    });
+                  },
+                ),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.download, size: 16),
+                  label: const Text('Export CSV'),
+                  onPressed: () => _exportCsv(routes),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AbraSpacing.lg),
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -75,7 +311,7 @@ class _ClientRoutesScreenState extends State<ClientRoutesScreen> {
               border: Border.all(color: AbraColors.border),
               boxShadow: AbraShadows.soft,
             ),
-            child: _routes.isEmpty
+            child: routes.isEmpty
                 ? Padding(
                     padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
                     child: Center(
@@ -102,69 +338,70 @@ class _ClientRoutesScreenState extends State<ClientRoutesScreen> {
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: DataTable(
-                  showCheckboxColumn: false,
-                  headingTextStyle: const TextStyle(fontWeight: FontWeight.w700, color: AbraColors.textPrimary, fontSize: 13),
-                  dataTextStyle: const TextStyle(color: AbraColors.textPrimary, fontSize: 13),
-                  columns: const [
-                    DataColumn(label: Text('Route')),
-                    DataColumn(label: Text('Distance')),
-                    DataColumn(label: Text('Duration')),
-                    DataColumn(label: Text('Stops')),
-                    DataColumn(label: Text('Your trips')),
-                    DataColumn(label: Text('Status')),
-                    DataColumn(label: Text('Actions')),
-                  ],
-                  rows: _routes.map((r) {
-                    final stops = (r['stops'] as List?) ?? [];
-                    final isMine = r['operatorId'] == kMockOperatorId;
-                    final tripsCount = kMockTrips.where((t) => t['routeId'] == r['id']).length;
-
-                    return DataRow(
-                      onSelectChanged: (_) {
-                        setState(() => _selectedRouteId = r['id'] as String);
-                      },
-                      cells: [
-                        DataCell(
-                          Row(
-                            children: [
-                              Text('${r['name']}', style: const TextStyle(fontWeight: FontWeight.w700)),
-                              if (!isMine) ...[
-                                const SizedBox(width: 6),
-                                const Text('(Abra route)', style: TextStyle(fontSize: 11, color: AbraColors.textSecondary)),
-                              ],
+                        showCheckboxColumn: false,
+                        headingTextStyle: const TextStyle(fontWeight: FontWeight.w700, color: AbraColors.textPrimary, fontSize: 13),
+                        dataTextStyle: const TextStyle(color: AbraColors.textPrimary, fontSize: 13),
+                        columns: const [
+                          DataColumn(label: Text('Route')),
+                          DataColumn(label: Text('Distance')),
+                          DataColumn(label: Text('Duration')),
+                          DataColumn(label: Text('Stops')),
+                          DataColumn(label: Text('Your trips')),
+                          DataColumn(label: Text('Status')),
+                          DataColumn(label: Text('Actions')),
+                        ],
+                        rows: routes.map((r) {
+                          return DataRow(
+                            onSelectChanged: (_) {
+                              setState(() => _selectedRouteId = r.id);
+                            },
+                            cells: [
+                              DataCell(
+                                Row(
+                                  children: [
+                                    Text(r.name, style: const TextStyle(fontWeight: FontWeight.w700)),
+                                    if (r.isShared) ...[
+                                      const SizedBox(width: 6),
+                                      const Text('(Abra route)', style: TextStyle(fontSize: 11, color: AbraColors.textSecondary)),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              DataCell(Text('${r.km} km')),
+                              DataCell(Text('${r.hours} h')),
+                              DataCell(Text('${r.stops.length}')),
+                              DataCell(Text('${r.tripsCount}')),
+                              DataCell(PortalStatusChip(status: r.status)),
+                              DataCell(
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    TextButton(
+                                      onPressed: () => setState(() => _selectedRouteId = r.id),
+                                      child: const Text('View stops', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                    ),
+                                    if (!r.isShared)
+                                      IconButton(
+                                        icon: const Icon(Icons.delete_outline, size: 18, color: AbraColors.danger),
+                                        tooltip: 'Delete route',
+                                        onPressed: () => _confirmDeleteRoute(context, r),
+                                      ),
+                                  ],
+                                ),
+                              ),
                             ],
-                          ),
-                        ),
-                        DataCell(Text('${r['km']} km')),
-                        DataCell(Text('${r['hours']} h')),
-                        DataCell(Text('${stops.length}')),
-                        DataCell(Text('$tripsCount')),
-                        DataCell(PortalStatusChip(status: '${r['status']}')),
-                        DataCell(
-                          TextButton(
-                            onPressed: () => setState(() => _selectedRouteId = r['id'] as String),
-                            child: const Text('View stops', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                          ),
-                        ),
-                      ],
-                    );
-                  }).toList(),
-                ),
-              ),
-            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildRouteDetailView(BuildContext context, Map<String, dynamic> r) {
-    final stops = (r['stops'] as List<dynamic>?)?.map((s) => Map<String, dynamic>.from(s as Map)).toList() ?? [];
-    final isMine = r['operatorId'] == kMockOperatorId;
-    final tripsCount = kMockTrips.where((t) => t['routeId'] == r['id']).length;
-    final faresCount = kMockFares.where((f) => f['routeId'] == r['id']).length;
-    final schedCount = kMockSchedules.where((s) => s['routeId'] == r['id']).length;
-
+  Widget _buildRouteDetailView(BuildContext context, ClientRouteItem r) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWide = constraints.maxWidth > 850;
@@ -175,45 +412,38 @@ class _ClientRoutesScreenState extends State<ClientRoutesScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               PortalSectionTitle(
-                title: '${r['name']}',
-                subtitle: '${r['km']} km · about ${r['hours']} h',
-                breadcrumbs: ['Network', 'Routes', '${r['name']}'],
+                title: r.name,
+                subtitle: '${r.km} km · about ${r.hours} h',
+                breadcrumbs: ['Network', 'Routes', r.name],
                 actions: [
                   OutlinedButton.icon(
                     icon: const Icon(Icons.arrow_back, size: 16),
                     label: const Text('All routes'),
                     onPressed: () => setState(() => _selectedRouteId = null),
                   ),
-                  if (isMine)
+                  if (!r.isShared) ...[
                     FilledButton.icon(
                       icon: const Icon(Icons.edit, size: 16),
                       label: const Text('Edit route'),
                       style: FilledButton.styleFrom(backgroundColor: AbraColors.blue),
                       onPressed: () => _openRouteFormDialog(context, existingRoute: r),
-                    )
-                  else
+                    ),
+                    const SizedBox(width: 8),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.delete_outline, size: 16, color: AbraColors.danger),
+                      label: const Text('Delete route', style: TextStyle(color: AbraColors.danger)),
+                      onPressed: () => _confirmDeleteRoute(context, r),
+                    ),
+                  ] else
                     OutlinedButton.icon(
                       icon: const Icon(Icons.copy, size: 16),
                       label: const Text('Copy as my route'),
-                      onPressed: () {
-                        final newId = 'RT${_routes.length + 1}';
-                        final copy = Map<String, dynamic>.from(r);
-                        copy['id'] = newId;
-                        copy['operatorId'] = kMockOperatorId;
-                        copy['name'] = '${r['name']} (mine)';
-                        setState(() {
-                          _routes.add(copy);
-                          _selectedRouteId = newId;
-                        });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Copied as your route: ${copy['name']}')),
-                        );
-                      },
+                      onPressed: () => _copyRoute(context, r),
                     ),
                 ],
               ),
               const SizedBox(height: AbraSpacing.md),
-              if (!isMine)
+              if (r.isShared)
                 Container(
                   margin: const EdgeInsets.only(bottom: AbraSpacing.lg),
                   padding: const EdgeInsets.all(AbraSpacing.sm),
@@ -234,15 +464,15 @@ class _ClientRoutesScreenState extends State<ClientRoutesScreen> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(flex: 3, child: _buildStopsTimelineCard(context, stops)),
+                    Expanded(flex: 3, child: _buildStopsTimelineCard(context, r.stops)),
                     const SizedBox(width: AbraSpacing.xl),
-                    Expanded(flex: 2, child: _buildUsedByAndMapCard(context, tripsCount, faresCount, schedCount, stops)),
+                    Expanded(flex: 2, child: _buildUsedByAndMapCard(context, r.tripsCount, r.faresCount, r.schedulesCount, r.stops)),
                   ],
                 )
               else ...[
-                _buildStopsTimelineCard(context, stops),
+                _buildStopsTimelineCard(context, r.stops),
                 const SizedBox(height: AbraSpacing.lg),
-                _buildUsedByAndMapCard(context, tripsCount, faresCount, schedCount, stops),
+                _buildUsedByAndMapCard(context, r.tripsCount, r.faresCount, r.schedulesCount, r.stops),
               ],
             ],
           ),
@@ -251,7 +481,7 @@ class _ClientRoutesScreenState extends State<ClientRoutesScreen> {
     );
   }
 
-  Widget _buildStopsTimelineCard(BuildContext context, List<Map<String, dynamic>> stops) {
+  Widget _buildStopsTimelineCard(BuildContext context, List<ClientRouteStopItem> stops) {
     return Container(
       padding: const EdgeInsets.all(AbraSpacing.lg),
       decoration: BoxDecoration(
@@ -289,15 +519,14 @@ class _ClientRoutesScreenState extends State<ClientRoutesScreen> {
     );
   }
 
-  Widget _buildStopTimelineItem(Map<String, dynamic> stop, {required bool isFirst, required bool isLast}) {
-    final type = '${stop['type']}';
-    final (chipBg, chipFg, chipLabel) = switch (type) {
+  Widget _buildStopTimelineItem(ClientRouteStopItem stop, {required bool isFirst, required bool isLast}) {
+    final (chipBg, chipFg, chipLabel) = switch (stop.type) {
       'DROPPING' => (AbraColors.dangerContainer, AbraColors.danger, 'Dropping'),
       'BOTH' => (AbraColors.orangeContainer, AbraColors.orangeDark, 'Both'),
       _ => (AbraColors.tealContainer, AbraColors.tealDark, 'Boarding'),
     };
 
-    final offset = (stop['offset'] as num?)?.toInt() ?? 0;
+    final offset = stop.offset;
     final timeStr = offset == 0
         ? 'Start (0 min)'
         : '+${offset ~/ 60}h ${offset % 60}m';
@@ -336,7 +565,7 @@ class _ClientRoutesScreenState extends State<ClientRoutesScreen> {
                   children: [
                     Row(
                       children: [
-                        Text('${stop['name']}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                        Text(stop.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
                         const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -346,7 +575,7 @@ class _ClientRoutesScreenState extends State<ClientRoutesScreen> {
                       ],
                     ),
                     const SizedBox(height: 2),
-                    Text('${stop['city']} · $timeStr', style: const TextStyle(fontSize: 11, color: AbraColors.textSecondary)),
+                    Text('${stop.city} · $timeStr', style: const TextStyle(fontSize: 11, color: AbraColors.textSecondary)),
                   ],
                 ),
               ],
@@ -357,7 +586,7 @@ class _ClientRoutesScreenState extends State<ClientRoutesScreen> {
     );
   }
 
-  Widget _buildUsedByAndMapCard(BuildContext context, int trips, int fares, int scheds, List<Map<String, dynamic>> stops) {
+  Widget _buildUsedByAndMapCard(BuildContext context, int trips, int fares, int scheds, List<ClientRouteStopItem> stops) {
     return Container(
       padding: const EdgeInsets.all(AbraSpacing.lg),
       decoration: BoxDecoration(
@@ -409,7 +638,7 @@ class _ClientRoutesScreenState extends State<ClientRoutesScreen> {
                           width: 12,
                           height: 12,
                           decoration: BoxDecoration(
-                            color: stops[i]['type'] == 'DROPPING' ? AbraColors.danger : AbraColors.teal,
+                            color: stops[i].type == 'DROPPING' ? AbraColors.danger : AbraColors.teal,
                             shape: BoxShape.circle,
                             border: Border.all(color: Colors.white, width: 2),
                           ),
@@ -418,7 +647,7 @@ class _ClientRoutesScreenState extends State<ClientRoutesScreen> {
                         SizedBox(
                           width: 70,
                           child: Text(
-                            '${stops[i]['city']}',
+                            stops[i].city,
                             textAlign: TextAlign.center,
                             style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AbraColors.navy),
                             overflow: TextOverflow.ellipsis,
@@ -448,17 +677,15 @@ class _ClientRoutesScreenState extends State<ClientRoutesScreen> {
     );
   }
 
-  void _openRouteFormDialog(BuildContext context, {Map<String, dynamic>? existingRoute}) {
+  void _openRouteFormDialog(BuildContext context, {ClientRouteItem? existingRoute}) {
     final isEdit = existingRoute != null;
-    final kmCtrl = TextEditingController(text: isEdit ? '${existingRoute['km']}' : '570');
-    final hrsCtrl = TextEditingController(text: isEdit ? '${existingRoute['hours']}' : '10');
-    String fromCity = isEdit ? '${existingRoute['from']}' : 'Bengaluru';
-    String toCity = isEdit ? '${existingRoute['to']}' : 'Hyderabad';
+    final kmCtrl = TextEditingController(text: isEdit ? '${existingRoute.km}' : '570');
+    final hrsCtrl = TextEditingController(text: isEdit ? '${existingRoute.hours}' : '10');
+    String fromCity = isEdit ? existingRoute.from : 'Bengaluru';
+    String toCity = isEdit ? existingRoute.to : 'Hyderabad';
 
-    List<Map<String, dynamic>> formStops = isEdit
-        ? List<Map<String, dynamic>>.from(
-            ((existingRoute['stops'] as List?) ?? []).map((s) => Map<String, dynamic>.from(s as Map)),
-          )
+    final List<Map<String, dynamic>> formStops = isEdit
+        ? existingRoute.stops.map((s) => s.toJson()).toList()
         : [
             {'placeId': 'PL1', 'name': 'Majestic Bus Stand', 'city': 'Bengaluru', 'offset': 0, 'type': 'BOARDING'},
             {'placeId': 'PL4', 'name': 'MGBS Bus Stand', 'city': 'Hyderabad', 'offset': 600, 'type': 'DROPPING'},
@@ -471,7 +698,7 @@ class _ClientRoutesScreenState extends State<ClientRoutesScreen> {
           return AlertDialog(
             title: Text(isEdit ? 'Edit route' : 'New route'),
             content: SizedBox(
-              width: 560,
+              width: 580,
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -481,7 +708,7 @@ class _ClientRoutesScreenState extends State<ClientRoutesScreen> {
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            value: fromCity,
+                            initialValue: fromCity,
                             decoration: const InputDecoration(labelText: 'From city *'),
                             items: kMockCities.map((c) => DropdownMenuItem(value: c['name'] as String, child: Text('${c['name']}'))).toList(),
                             onChanged: (v) => setDlgState(() => fromCity = v ?? fromCity),
@@ -490,7 +717,7 @@ class _ClientRoutesScreenState extends State<ClientRoutesScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            value: toCity,
+                            initialValue: toCity,
                             decoration: const InputDecoration(labelText: 'To city *'),
                             items: kMockCities.map((c) => DropdownMenuItem(value: c['name'] as String, child: Text('${c['name']}'))).toList(),
                             onChanged: (v) => setDlgState(() => toCity = v ?? toCity),
@@ -510,7 +737,7 @@ class _ClientRoutesScreenState extends State<ClientRoutesScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Stops in order', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                        const Text('Stops in chronological order', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
                         TextButton.icon(
                           icon: const Icon(Icons.add, size: 14),
                           label: const Text('Add stop'),
@@ -542,7 +769,31 @@ class _ClientRoutesScreenState extends State<ClientRoutesScreen> {
                         child: Row(
                           children: [
                             Text('${i + 1}.', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 6),
+                            // Move Up / Down
+                            if (i > 0)
+                              InkWell(
+                                onTap: () {
+                                  setDlgState(() {
+                                    final prev = formStops[i - 1];
+                                    formStops[i - 1] = formStops[i];
+                                    formStops[i] = prev;
+                                  });
+                                },
+                                child: const Icon(Icons.arrow_upward, size: 14, color: AbraColors.textSecondary),
+                              ),
+                            if (i < formStops.length - 1)
+                              InkWell(
+                                onTap: () {
+                                  setDlgState(() {
+                                    final next = formStops[i + 1];
+                                    formStops[i + 1] = formStops[i];
+                                    formStops[i] = next;
+                                  });
+                                },
+                                child: const Icon(Icons.arrow_downward, size: 14, color: AbraColors.textSecondary),
+                              ),
+                            const SizedBox(width: 6),
                             Expanded(
                               flex: 2,
                               child: DropdownButtonHideUnderline(
@@ -568,7 +819,7 @@ class _ClientRoutesScreenState extends State<ClientRoutesScreen> {
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 6),
                             Expanded(
                               child: DropdownButtonHideUnderline(
                                 child: DropdownButton<String>(
@@ -586,9 +837,9 @@ class _ClientRoutesScreenState extends State<ClientRoutesScreen> {
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 6),
                             SizedBox(
-                              width: 60,
+                              width: 65,
                               child: TextFormField(
                                 initialValue: '${formStops[i]['offset']}',
                                 keyboardType: TextInputType.number,
@@ -615,46 +866,130 @@ class _ClientRoutesScreenState extends State<ClientRoutesScreen> {
             actions: [
               TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
               FilledButton(
-                onPressed: () {
+                onPressed: () async {
                   final km = int.tryParse(kmCtrl.text) ?? 500;
                   final hrs = int.tryParse(hrsCtrl.text) ?? 8;
                   final name = '$fromCity to $toCity';
 
-                  if (isEdit) {
-                    setState(() {
-                      existingRoute['from'] = fromCity;
-                      existingRoute['to'] = toCity;
-                      existingRoute['name'] = name;
-                      existingRoute['km'] = km;
-                      existingRoute['hours'] = hrs;
-                      existingRoute['stops'] = formStops;
-                    });
-                  } else {
-                    setState(() {
-                      _routes.add({
-                        'id': 'RT${_routes.length + 1}',
-                        'operatorId': kMockOperatorId,
-                        'name': name,
-                        'from': fromCity,
-                        'to': toCity,
-                        'km': km,
-                        'hours': hrs,
-                        'status': 'ACTIVE',
-                        'stops': formStops,
-                      });
-                    });
+                  // Client-side validations
+                  if (formStops.length < 2) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('A route requires at least 2 stops'), backgroundColor: AbraColors.danger),
+                    );
+                    return;
+                  }
+                  for (var s = 1; s < formStops.length; s++) {
+                    if ((formStops[s]['offset'] as int) < (formStops[s - 1]['offset'] as int)) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Stop ${s + 1} offset cannot be earlier than stop $s'), backgroundColor: AbraColors.danger),
+                      );
+                      return;
+                    }
                   }
 
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Route $name saved')),
-                  );
+                  try {
+                    final client = ref.read(appDependenciesProvider).apiClient;
+                    if (isEdit) {
+                      await client.put('client/routes/${existingRoute.id}', body: {
+                        'from': fromCity,
+                        'to': toCity,
+                        'name': name,
+                        'km': km,
+                        'hours': hrs,
+                        'stops': formStops,
+                      });
+                    } else {
+                      await client.post('client/routes', body: {
+                        'from': fromCity,
+                        'to': toCity,
+                        'name': name,
+                        'km': km,
+                        'hours': hrs,
+                        'stops': formStops,
+                      });
+                    }
+
+                    if (context.mounted) {
+                      Navigator.pop(ctx);
+                      _refresh();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Route $name saved')),
+                      );
+                    }
+                  } catch (err) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to save route: $err'), backgroundColor: AbraColors.danger),
+                      );
+                    }
+                  }
                 },
                 child: const Text('Save route'),
               ),
             ],
           );
         },
+      ),
+    );
+  }
+
+  void _copyRoute(BuildContext context, ClientRouteItem route) async {
+    try {
+      final client = ref.read(appDependenciesProvider).apiClient;
+      final res = await client.post('client/routes/${route.id}/copy');
+      final newId = res.data is Map ? (res.data as Map)['id'] as String? : null;
+      if (context.mounted) {
+        _refresh();
+        if (newId != null) {
+          setState(() => _selectedRouteId = newId);
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Copied as your route: ${route.name} (mine)')),
+        );
+      }
+    } catch (err) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to copy route: $err'), backgroundColor: AbraColors.danger),
+        );
+      }
+    }
+  }
+
+  void _confirmDeleteRoute(BuildContext context, ClientRouteItem route) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Delete ${route.name}?'),
+        content: const Text('Are you sure you want to delete this route?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AbraColors.danger),
+            onPressed: () async {
+              try {
+                final client = ref.read(appDependenciesProvider).apiClient;
+                await client.delete('client/routes/${route.id}');
+                if (context.mounted) {
+                  Navigator.pop(ctx);
+                  setState(() => _selectedRouteId = null);
+                  _refresh();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Deleted route ${route.name}')),
+                  );
+                }
+              } catch (err) {
+                if (context.mounted) {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to delete route: $err'), backgroundColor: AbraColors.danger),
+                  );
+                }
+              }
+            },
+            child: const Text('Delete'),
+          ),
+        ],
       ),
     );
   }

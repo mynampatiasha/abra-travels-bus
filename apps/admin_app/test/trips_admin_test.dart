@@ -1,7 +1,9 @@
-import 'package:admin_app/features/operations/admin_trips_page.dart';
+import 'package:admin_app/routing/admin_routes.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'admin_app_test.dart';
+import 'support/test_admin.dart';
 
 void main() {
   testWidgets('AdminTripsPage renders header, filters, and trip table', (tester) async {
@@ -9,17 +11,9 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
 
-    await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(
-          home: Scaffold(
-            body: AdminTripsPage(),
-          ),
-        ),
-      ),
-    );
-
-    await tester.pumpAndSettle();
+    final app = TestAdmin.signedIn(seeded(Persona.superAdmin));
+    await app.pump(tester);
+    await open(tester, AdminRoutes.trips);
 
     // Verify header and subtitle
     expect(find.text('Trips'), findsWidgets);
@@ -44,8 +38,8 @@ void main() {
     expect(find.text('Seats'), findsOneWidget);
     expect(find.text('From'), findsOneWidget);
 
-    // Verify trip ID from mock store is visible
-    expect(find.text('TRP-3001'), findsOneWidget);
-    expect(find.text('Hyderabad to Bengaluru'), findsOneWidget);
+    // Verify seeded trips are visible
+    expect(find.text('Draft'), findsWidgets);
+    expect(find.text('Scheduled'), findsWidgets);
   });
 }

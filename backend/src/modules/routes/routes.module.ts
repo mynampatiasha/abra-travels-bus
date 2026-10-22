@@ -1,10 +1,16 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { CatalogueSharedModule } from '../catalogue-shared/catalogue_shared_manage';
 import { CitiesModule } from '../cities/cities.module';
 import { OperatorsModule } from '../operators/operators.module';
 import { RbacModule } from '../rbac/rbac.module';
 import { RoutesController } from './controllers/routes.controller';
 import { RouteRepository } from './repositories/route.repository';
+import {
+  RoutesClientController,
+  RoutesClientExportController,
+} from './routes_client_manage';
+import { RoutesClientManageService } from './routes_client_manage.service';
 import { ROUTE_MODEL, routeSchema } from './schemas/route.schema';
 import { RoutesService } from './services/routes.service';
 
@@ -18,9 +24,14 @@ import { RoutesService } from './services/routes.service';
     RbacModule,
     CitiesModule,
     OperatorsModule,
+    CatalogueSharedModule,
   ],
-  controllers: [RoutesController],
-  providers: [RouteRepository, RoutesService],
-  exports: [RouteRepository, MongooseModule],
+  controllers: [
+    RoutesClientExportController,
+    RoutesClientController,
+    RoutesController,
+  ],
+  providers: [RouteRepository, RoutesService, RoutesClientManageService],
+  exports: [RouteRepository, RoutesService, RoutesClientManageService, MongooseModule],
 })
 export class RoutesModule {}

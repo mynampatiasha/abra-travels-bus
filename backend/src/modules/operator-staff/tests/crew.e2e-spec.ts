@@ -15,7 +15,6 @@ import {
   clearCatalogue,
   type Identified,
   type Network,
-  tripBody,
 } from '../../trips/tests/catalogue-e2e.support';
 import { runId } from '../../trips/tests/discovery-e2e.fixture';
 import { CrewClientManageService } from '../crew_client_manage.service';

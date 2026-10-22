@@ -485,7 +485,7 @@ class _ClientBusesViewState extends ConsumerState<_ClientBusesView> {
               children: [
                 TextField(controller: regCtrl, decoration: const InputDecoration(labelText: 'Registration Number (e.g. KA01 AB 1234)*')),
                 const SizedBox(height: 12),
-                TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Bus Name (e.g. Kaveri Prime 39)*')),
+                TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Bus Name (e.g. Deluxe Express)*')),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   initialValue: type,

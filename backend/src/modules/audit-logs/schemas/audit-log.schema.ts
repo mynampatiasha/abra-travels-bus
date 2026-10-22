@@ -61,6 +61,14 @@ export const AUDIT_ACTIONS = [
   'commission.rule.deleted',
   'commission.rule.restored',
   'commission.default.changed',
+  'fare.created',
+  'fare.updated',
+  'fare.versioned',
+  'fare.deleted',
+  'trip.delayed',
+  'trip.crew-assigned',
+  'seat.blocked',
+  'seat.unblocked',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

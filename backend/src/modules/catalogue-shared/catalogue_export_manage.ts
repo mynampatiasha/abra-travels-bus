@@ -85,7 +85,7 @@ export function exportController<Row, Service>(spec: ExportSpec<Row, Service>): 
   @Controller(spec.base)
   class ExportController {
     constructor(
-      private readonly exporter: CatalogueExportService,
+      @Inject(CatalogueExportService) private readonly exporter: CatalogueExportService,
       @Inject(spec.service) private readonly lists: Service,
     ) {}
 

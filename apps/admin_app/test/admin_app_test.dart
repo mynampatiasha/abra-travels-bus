@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:admin_app/app/providers.dart';
 import 'package:admin_app/bootstrap/admin_environment.dart';
 import 'package:admin_app/features/auth/sign_in_screen.dart';
-import 'package:admin_app/features/catalogue/pages/trips_page.dart';
+import 'package:admin_app/features/trips/trips_admin_manage_screen.dart';
 import 'package:admin_app/l10n/admin_strings.dart';
 import 'package:admin_app/routing/admin_route_guard.dart';
 import 'package:admin_app/routing/admin_routes.dart';

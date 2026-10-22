@@ -355,6 +355,7 @@ class _CrewClientManageScreenState extends ConsumerState<CrewClientManageScreen>
                                   SizedBox(
                                     width: isNarrow ? double.infinity : 150,
                                     child: DropdownButtonFormField<String>(
+                                      isExpanded: true,
                                       initialValue: _roleFilter,
                                       decoration: InputDecoration(
                                         labelText: 'Role',
@@ -374,6 +375,7 @@ class _CrewClientManageScreenState extends ConsumerState<CrewClientManageScreen>
                                   SizedBox(
                                     width: isNarrow ? double.infinity : 150,
                                     child: DropdownButtonFormField<String>(
+                                      isExpanded: true,
                                       initialValue: _statusFilter,
                                       decoration: InputDecoration(
                                         labelText: 'Status',
