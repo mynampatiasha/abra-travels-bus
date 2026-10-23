@@ -1,4 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common';
+import { InjectConnection } from '@nestjs/mongoose';
+import { type Connection } from 'mongoose';
 import { ApiException } from '../../../common/errors/api-exception';
 import { rejectDuplicates } from '../../../common/errors/duplicate-key';
 import { type ClientRequestInfo } from '../../../common/http/client-request-info';
@@ -34,13 +36,46 @@ export function busTypeViewOf(busType: StoredBusType): BusTypeView {
   };
 }
 
+/**
+ * The standard kinds of bus, built from AC or not and the berth (as bus booking sites show them),
+ * so every operator can describe any bus without waiting for an admin to add a type.
+ */
+export const STANDARD_BUS_TYPES: ReadonlyArray<Pick<BusType, 'key' | 'name' | 'isAc' | 'berthType'>> = [
+  { key: 'AC_SEATER', name: 'AC Seater', isAc: true, berthType: 'SEATER' },
+  { key: 'NON_AC_SEATER', name: 'Non-AC Seater', isAc: false, berthType: 'SEATER' },
+  { key: 'AC_SLEEPER', name: 'AC Sleeper', isAc: true, berthType: 'SLEEPER' },
+  { key: 'NON_AC_SLEEPER', name: 'Non-AC Sleeper', isAc: false, berthType: 'SLEEPER' },
+  { key: 'AC_SEMI_SLEEPER', name: 'AC Semi-sleeper', isAc: true, berthType: 'SEMI_SLEEPER' },
+  { key: 'NON_AC_SEMI_SLEEPER', name: 'Non-AC Semi-sleeper', isAc: false, berthType: 'SEMI_SLEEPER' },
+  { key: 'AC_SEATER_SLEEPER', name: 'AC Seater + Sleeper', isAc: true, berthType: 'MIXED' },
+  { key: 'NON_AC_SEATER_SLEEPER', name: 'Non-AC Seater + Sleeper', isAc: false, berthType: 'MIXED' },
+];
+
 /** The kinds of bus operators can register and customers can filter by. */
 @Injectable()
-export class BusTypesService {
+export class BusTypesService implements OnApplicationBootstrap {
+  private readonly logger = new Logger(BusTypesService.name);
+
   constructor(
     private readonly busTypes: BusTypeRepository,
     private readonly changes: AuditedChangeRunner,
+    @InjectConnection() private readonly connection: Connection,
   ) {}
+
+  /** Adds any standard bus type that is missing (an admin's renames, switch-offs and deletes are kept). */
+  async onApplicationBootstrap(): Promise<void> {
+    const collection = this.connection.collection('bus_types');
+    let added = 0;
+    for (const type of STANDARD_BUS_TYPES) {
+      const result = await collection.updateOne(
+        { key: type.key },
+        { $setOnInsert: { ...type, isActive: true, createdAt: new Date(), updatedAt: new Date() } },
+        { upsert: true },
+      );
+      added += result.upsertedCount;
+    }
+    this.logger.log({ added }, 'Standard bus types ready');
+  }
 
   async list(query: BusTypeListQueryDto): Promise<PaginatedResult<BusTypeView>> {
     const { items, total } = await this.busTypes.list(
