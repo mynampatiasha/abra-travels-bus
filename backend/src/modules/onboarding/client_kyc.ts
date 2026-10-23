@@ -103,7 +103,10 @@ export class ClientKycService {
     let submission = await this.submissions.findOne({ operatorId, subjectType: 'OPERATOR' }).lean();
     if (!submission)
       throw new ApiException('RESOURCE_NOT_FOUND', 'Company verification file not found.');
-    if (!submission.kyc && submission.status === 'DRAFT') {
+    // Until the first submit, a draft follows the admin's latest questions, rules and document
+    // types (keeping the owner's answers), so an owner who signed up before the admin finished
+    // the setup is not stuck with an empty snapshot. Once submitted, the snapshot stays fixed.
+    if (submission.status === 'DRAFT') {
       const [config, documents] = await Promise.all([
         this.configurations.findOne().lean(),
         this.documents.find().lean<StoredDocumentType[]>(),
@@ -114,20 +117,40 @@ export class ClientKycService {
         rules: config?.rules ?? [],
       };
       const documentCatalogue = documents.map(documentTypeViewOf);
-      const kyc: ClientKycSnapshot = {
-        version: config?.version ?? 0,
-        configuration,
-        answers: {},
-        documentCatalogue,
-        requirements: resolveKycRequirements(configuration, documentCatalogue, 'OPERATOR', {})
-          .documents,
-      };
-      await this.submissions.updateOne(
-        { _id: submission._id, status: 'DRAFT', kyc: { $exists: false } },
-        { $set: { kyc } },
-      );
-      submission = await this.submissions.findById(submission._id).lean();
-      if (!submission) throw new ApiException('RESOURCE_NOT_FOUND', 'Verification file not found.');
+      const version = config?.version ?? 0;
+      const current = submission.kyc;
+      const outdated =
+        !current ||
+        current.version !== version ||
+        JSON.stringify(current.configuration) !== JSON.stringify(configuration) ||
+        JSON.stringify(current.documentCatalogue) !== JSON.stringify(documentCatalogue);
+      if (outdated) {
+        const answers = current?.answers ?? {};
+        const kyc: ClientKycSnapshot = {
+          version,
+          configuration,
+          answers,
+          documentCatalogue,
+          requirements: resolveKycRequirements(
+            configuration,
+            documentCatalogue,
+            'OPERATOR',
+            answers,
+          ).documents,
+          ...(current?.introductionAcceptedAt
+            ? { introductionAcceptedAt: current.introductionAcceptedAt }
+            : {}),
+        };
+        await this.submissions.updateOne(
+          current
+            ? { _id: submission._id, status: 'DRAFT', 'kyc.version': current.version }
+            : { _id: submission._id, status: 'DRAFT', kyc: { $exists: false } },
+          { $set: { kyc } },
+        );
+        submission = await this.submissions.findById(submission._id).lean();
+        if (!submission)
+          throw new ApiException('RESOURCE_NOT_FOUND', 'Verification file not found.');
+      }
     }
     return {
       companyName: company.companyName,
