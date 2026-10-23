@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_localization/shared_localization.dart';
 import 'package:shared_network/shared_network.dart';
 import 'package:shared_theme/shared_theme.dart';
 import '../../app/providers.dart';
+import '../../core/failure_text.dart';
 import '../../core/widgets/portal_kpi_card.dart';
 import '../../core/widgets/portal_section_title.dart';
 import '../../core/widgets/portal_status_chip.dart';
@@ -465,90 +467,231 @@ class _ClientBusesViewState extends ConsumerState<_ClientBusesView> {
     }
   }
 
-  void _showAddBusDialog(BuildContext context) {
+  /// Seat arrangements an operator can describe the bus with; the exact seats are drawn later
+  /// in the seat layout designer.
+  static const _arrangements = <String>[
+    '2+2 Seater',
+    '2+1 Seater',
+    '2+1 Sleeper',
+    '1+1 Sleeper',
+    '2+1 Semi-sleeper',
+  ];
+
+  /// The bus types and amenities Abra has switched on, from the server.
+  Future<(List<Map<String, dynamic>>, List<Map<String, dynamic>>)> _loadBusChoices() async {
+    final client = ref.read(appDependenciesProvider).apiClient;
+    final typesResponse = await client.get(
+      'catalogue/bus-types',
+      query: <String, dynamic>{'active': true, 'pageSize': 100},
+    );
+    final rawTypes = typesResponse.data is Map && (typesResponse.data as Map)['items'] is List
+        ? (typesResponse.data as Map)['items'] as List
+        : typesResponse.data is List
+            ? typesResponse.data as List
+            : const <Object?>[];
+    final types = <Map<String, dynamic>>[
+      for (final raw in rawTypes)
+        if (raw is Map && raw['isActive'] != false) Map<String, dynamic>.from(raw),
+    ];
+    final amenitiesResponse = await client.get('catalogue/amenities');
+    final amenities = <Map<String, dynamic>>[
+      for (final raw in (amenitiesResponse.data is List ? amenitiesResponse.data as List : const <Object?>[]))
+        if (raw is Map) Map<String, dynamic>.from(raw),
+    ];
+    return (types, amenities);
+  }
+
+  Future<void> _showAddBusDialog(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AbraLocalizations.of(context);
+    final List<Map<String, dynamic>> busTypes;
+    final List<Map<String, dynamic>> amenityChoices;
+    try {
+      (busTypes, amenityChoices) = await _loadBusChoices();
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Could not load bus types: ${failureText(l10n, e)}')));
+      return;
+    }
+    if (!context.mounted) return;
+    if (busTypes.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Abra has not added any bus types yet. Please contact Abra support.'),
+          backgroundColor: AbraColors.danger,
+        ),
+      );
+      return;
+    }
+
     final regCtrl = TextEditingController();
     final nameCtrl = TextEditingController();
-    String type = 'AC Sleeper';
-    int seats = 36;
-    String layout = '2+1 Sleeper';
+    final seatsCtrl = TextEditingController();
+    String? busTypeId;
+    String? arrangement;
+    DateTime? insuranceExpiry;
+    final selectedAmenities = <String>{};
+    String? error;
+    var saving = false;
 
-    final messenger = ScaffoldMessenger.of(context);
-    showDialog<void>(
+    await showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Add new bus (Send for approval)'),
-        content: SizedBox(
-          width: 440,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(controller: regCtrl, decoration: const InputDecoration(labelText: 'Registration Number (e.g. KA01 AB 1234)*')),
-                const SizedBox(height: 12),
-                TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Bus Name (e.g. Deluxe Express)*')),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: type,
-                  decoration: const InputDecoration(labelText: 'Bus Type*'),
-                  items: ['AC Sleeper', 'Non-AC Sleeper', 'AC Seater', 'Non-AC Seater', 'Volvo Multi-Axle AC', 'Semi-Sleeper AC']
-                      .map((t) => DropdownMenuItem<String>(value: t, child: Text(t)))
-                      .toList(),
-                  onChanged: (v) => type = v ?? type,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlg) {
+          Future<void> submit() async {
+            final seats = int.tryParse(seatsCtrl.text.trim());
+            final problem = regCtrl.text.trim().isEmpty
+                ? 'Enter the registration number.'
+                : nameCtrl.text.trim().length < 2
+                    ? 'Enter the bus name.'
+                    : busTypeId == null
+                        ? 'Choose the bus type.'
+                        : seats == null || seats < 1 || seats > 100
+                            ? 'Enter the number of seats (1 to 100).'
+                            : null;
+            if (problem != null) {
+              setDlg(() => error = problem);
+              return;
+            }
+            setDlg(() {
+              error = null;
+              saving = true;
+            });
+            try {
+              final client = ref.read(appDependenciesProvider).apiClient;
+              await client.post(
+                'client/buses',
+                body: <String, dynamic>{
+                  'registrationNumber': regCtrl.text.trim(),
+                  'name': nameCtrl.text.trim(),
+                  'busTypeId': busTypeId,
+                  'seatCapacity': seats,
+                  'seatLayoutType': ?arrangement,
+                  if (insuranceExpiry != null)
+                    'insuranceExpiryDate':
+                        '${insuranceExpiry!.year.toString().padLeft(4, '0')}-${insuranceExpiry!.month.toString().padLeft(2, '0')}-${insuranceExpiry!.day.toString().padLeft(2, '0')}',
+                  'amenities': selectedAmenities.toList(),
+                },
+              );
+              ref.invalidate(clientBusesProvider);
+              if (ctx.mounted) Navigator.of(ctx).pop();
+              messenger.showSnackBar(
+                const SnackBar(content: Text('Bus submitted for approval. You can draw its layout.')),
+              );
+            } catch (e) {
+              setDlg(() {
+                saving = false;
+                error = failureText(l10n, e);
+              });
+            }
+          }
+
+          return AlertDialog(
+            title: const Text('Add new bus (Send for approval)'),
+            content: SizedBox(
+              width: 440,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextField(
+                      controller: regCtrl,
+                      textCapitalization: TextCapitalization.characters,
+                      decoration: const InputDecoration(labelText: 'Registration Number (e.g. KA01 AB 1234)*'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: nameCtrl,
+                      decoration: const InputDecoration(labelText: 'Bus Name (e.g. Deluxe Express)*'),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: busTypeId,
+                      isExpanded: true,
+                      decoration: const InputDecoration(labelText: 'Bus Type*'),
+                      items: [
+                        for (final t in busTypes)
+                          DropdownMenuItem<String>(value: '${t['id']}', child: Text('${t['name']}')),
+                      ],
+                      onChanged: (v) => setDlg(() => busTypeId = v),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: arrangement,
+                      isExpanded: true,
+                      decoration: const InputDecoration(labelText: 'Seat arrangement'),
+                      items: [
+                        for (final a in _arrangements)
+                          DropdownMenuItem<String>(value: a, child: Text(a)),
+                      ],
+                      onChanged: (v) => setDlg(() => arrangement = v),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: seatsCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Seat Capacity* (1 to 100)'),
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.event_outlined, size: 18),
+                      label: Text(
+                        insuranceExpiry == null
+                            ? 'Insurance valid until (optional)'
+                            : 'Insurance valid until ${insuranceExpiry!.day}/${insuranceExpiry!.month}/${insuranceExpiry!.year}',
+                      ),
+                      onPressed: () async {
+                        final now = DateTime.now();
+                        final picked = await showDatePicker(
+                          context: ctx,
+                          initialDate: insuranceExpiry ?? now,
+                          firstDate: DateTime(now.year - 1),
+                          lastDate: DateTime(now.year + 10),
+                        );
+                        if (picked != null) setDlg(() => insuranceExpiry = picked);
+                      },
+                    ),
+                    if (amenityChoices.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      const Text('Amenities', style: TextStyle(fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final a in amenityChoices)
+                            FilterChip(
+                              label: Text('${a['name']}'),
+                              selected: selectedAmenities.contains(a['key']),
+                              onSelected: (on) => setDlg(() {
+                                if (on) {
+                                  selectedAmenities.add('${a['key']}');
+                                } else {
+                                  selectedAmenities.remove(a['key']);
+                                }
+                              }),
+                            ),
+                        ],
+                      ),
+                    ],
+                    if (error != null) ...[
+                      const SizedBox(height: 12),
+                      Text(error!, style: const TextStyle(color: AbraColors.danger)),
+                    ],
+                  ],
                 ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: layout,
-                  decoration: const InputDecoration(labelText: 'Seat Layout*'),
-                  items: ['2+2 Seater', '2+1 Sleeper', '1+2 Sleeper', '2+1 Semi-sleeper']
-                      .map((l) => DropdownMenuItem<String>(value: l, child: Text(l)))
-                      .toList(),
-                  onChanged: (v) => layout = v ?? layout,
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Seat Capacity* (e.g. 36)'),
-                  controller: TextEditingController(text: '$seats'),
-                  onChanged: (v) => seats = int.tryParse(v) ?? seats,
-                ),
-              ],
+              ),
             ),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AbraColors.blue),
-            onPressed: () async {
-              if (regCtrl.text.trim().isNotEmpty && nameCtrl.text.trim().isNotEmpty) {
-                final nav = Navigator.of(ctx);
-                try {
-                  final client = ref.read(appDependenciesProvider).apiClient;
-                  await client.post(
-                    'client/buses',
-                    body: <String, dynamic>{
-                      'registrationNumber': regCtrl.text.trim(),
-                      'name': nameCtrl.text.trim(),
-                      'busTypeId': '660000000000000000000001',
-                      'seatCapacity': seats,
-                      'seatLayoutType': layout,
-                      'insuranceExpiryDate': '2027-12-31',
-                      'amenities': <String>[],
-                    },
-                  );
-                  ref.invalidate(clientBusesProvider);
-                  nav.pop();
-                  messenger.showSnackBar(
-                    const SnackBar(content: Text('Bus submitted for approval. You can draw its layout.')),
-                  );
-                } catch (e) {
-                  messenger.showSnackBar(SnackBar(content: Text('Error adding bus: $e')));
-                }
-              }
-            },
-            child: const Text('Send for approval'),
-          ),
-        ],
+            actions: [
+              TextButton(onPressed: saving ? null : () => Navigator.pop(ctx), child: const Text('Cancel')),
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: AbraColors.blue),
+                onPressed: saving ? null : submit,
+                child: Text(saving ? 'Sending…' : 'Send for approval'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

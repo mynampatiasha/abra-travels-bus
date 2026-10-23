@@ -662,8 +662,8 @@ class _ClientTripsScreenState extends ConsumerState<ClientTripsScreen> {
   }
 
   void _delayTrip(BuildContext context, ClientTripItem trip) {
-    final minCtrl = TextEditingController(text: '30');
-    final reasonCtrl = TextEditingController(text: 'Heavy traffic at the start point');
+    final minCtrl = TextEditingController();
+    final reasonCtrl = TextEditingController();
     final messenger = ScaffoldMessenger.of(context);
 
     showDialog<void>(
@@ -927,8 +927,8 @@ class _ClientTripsScreenState extends ConsumerState<ClientTripsScreen> {
       String selectedBusId = buses.first['id'] as String;
       final now = DateTime.now().add(const Duration(days: 1));
       final dateCtrl = TextEditingController(text: now.toIso8601String().substring(0, 10));
-      final timeCtrl = TextEditingController(text: '21:00');
-      final fareCtrl = TextEditingController(text: '850');
+      final timeCtrl = TextEditingController();
+      final fareCtrl = TextEditingController();
       bool publishImmediately = false;
 
       await showDialog<void>(
@@ -1097,7 +1097,7 @@ class _TripDetailDialogState extends ConsumerState<_TripDetailDialog> {
   }
 
   Future<void> _blockSeat(ClientSeatItem seat) async {
-    final reasonCtrl = TextEditingController(text: 'Counter sale');
+    final reasonCtrl = TextEditingController();
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(

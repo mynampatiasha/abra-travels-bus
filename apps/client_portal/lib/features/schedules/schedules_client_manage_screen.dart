@@ -402,7 +402,7 @@ class _ClientSchedulesScreenState extends ConsumerState<ClientSchedulesScreen> {
     String? selectedRouteId = availableRoutes.isNotEmpty ? availableRoutes.first.id : null;
     String? selectedBusId = busOptions.isNotEmpty ? busOptions.first.id : null;
 
-    final timeCtrl = TextEditingController(text: '21:30');
+    final timeCtrl = TextEditingController();
     final today = DateTime.now();
     final fromDateStr = today.toIso8601String().split('T').first;
     final toDateStr = today.add(const Duration(days: 60)).toIso8601String().split('T').first;
