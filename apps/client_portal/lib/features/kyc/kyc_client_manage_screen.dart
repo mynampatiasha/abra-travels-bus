@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_core/shared_core.dart';
 import 'package:shared_localization/shared_localization.dart';
 import 'package:shared_models/shared_models.dart';
 import 'package:shared_network/shared_network.dart';
@@ -88,6 +89,16 @@ class _ClientKycVerificationScreenState extends ConsumerState<ClientKycVerificat
       setState(() => _editing = false);
       ref.invalidate(clientKycProvider);
       if (_loadedId != null) ref.invalidate(onboardingFileProvider(_loadedId!));
+    } on AppException catch (e) {
+      if (!mounted) return;
+      if (e.failure is ApiFailure &&
+          (e.failure as ApiFailure).code == 'INVALID_STATE_TRANSITION') {
+        // Already submitted (or decided): show the current status instead of the form.
+        setState(() => _editing = false);
+        ref.invalidate(clientKycProvider);
+        return;
+      }
+      setState(() => _error = failureText(AbraLocalizations.of(context), e));
     } on Object catch (e) {
       if (mounted) {
         setState(() => _error = failureText(AbraLocalizations.of(context), e));
@@ -483,7 +494,12 @@ class _ClientKycVerificationScreenState extends ConsumerState<ClientKycVerificat
                 ),
         ),
         Expanded(
-          child: OnboardingPage(id: '${view['submissionId']}', embedded: true),
+          child: OnboardingPage(
+            id: '${view['submissionId']}',
+            embedded: true,
+            // After the submit the status is no longer a draft: show the waiting screen.
+            onChanged: () => ref.invalidate(clientKycProvider),
+          ),
         ),
       ],
     );

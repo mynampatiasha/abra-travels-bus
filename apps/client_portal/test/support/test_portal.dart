@@ -463,6 +463,8 @@ class FakeBackend {
       if (file == null) return null;
       if (method == 'POST' && parts[3] == 'submit') {
         file['status'] = 'PENDING';
+        // The company KYC view reads the same submission, as on the server.
+        if (clientKyc['submissionId'] == file['id']) clientKyc['status'] = 'PENDING';
         return FakeResponse.ok(file);
       }
       if (method == 'PUT' && parts[3] == 'documents') {
