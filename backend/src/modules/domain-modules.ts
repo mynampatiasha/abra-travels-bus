@@ -23,6 +23,7 @@ import { SchedulesModule } from './schedules/schedules.module';
 import { TripsModule } from './trips/trips.module';
 import { FaresModule } from './fares/fares.module';
 import { BookingsModule } from './bookings/bookings.module';
+import { InventoryModule } from './inventory/inventory.module';
 import { PassengersModule } from './passengers/passengers.module';
 import { CouponsModule } from './coupons/coupons.module';
 import { TicketsModule } from './tickets/tickets.module';
@@ -86,6 +87,7 @@ export const DOMAIN_MODULES = [
   TripsModule,
   FaresModule,
   // Inventory & booking
+  InventoryModule,
   BookingsModule,
   PassengersModule,
   CouponsModule,

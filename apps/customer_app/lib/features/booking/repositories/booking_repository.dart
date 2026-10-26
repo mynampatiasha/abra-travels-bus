@@ -1,5 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_core/shared_core.dart';
+import 'package:shared_models/shared_models.dart';
+import 'package:shared_network/shared_network.dart';
 
+import '../../../app/providers.dart';
 import '../models/booking_models.dart';
 import '../models/ticket_models.dart';
 
@@ -22,6 +26,9 @@ abstract interface class BookingRepository {
     required String droppingPointId,
   });
 
+  /// Lets go of a hold at once (`DELETE /seat-locks/:lockId`).
+  Future<void> releaseSeats(String lockId);
+
   /// Creates the booking for held seats (`POST /bookings`). The backend
   /// prices it; the app shows its own estimate meanwhile. Throws
   /// [SeatsUnavailableException] when the hold was lost.
@@ -42,35 +49,74 @@ abstract interface class BookingRepository {
   Future<List<CancellationRule>> cancellationPolicy(String tripId);
 }
 
-/// Backend implementation. Not connected yet; see the README table.
+/// Backend implementation. The seat hold is connected; the booking, coupons
+/// and the cancellation policy are "Not connected yet - built in Phase 3"
+/// and come from [rest] until their endpoints exist.
 class ApiBookingRepository implements BookingRepository {
+  ApiBookingRepository(
+    this._client, {
+    BookingRepository rest = const NotConnectedBookingRepository(),
+  }) : _rest = rest;
+
+  final ApiClient _client;
+  final BookingRepository _rest;
+
   @override
   Future<SeatLock> lockSeats({
     required String tripId,
     required List<String> seatIds,
     required String boardingPointId,
     required String droppingPointId,
-  }) => throw UnimplementedError('POST /trips/:tripId/seat-locks');
+  }) async {
+    try {
+      final response = await _client.post(
+        'trips/${Uri.encodeComponent(tripId)}/seat-locks',
+        body: <String, Object?>{
+          'seatIds': seatIds,
+          'boardingPointId': boardingPointId,
+          'droppingPointId': droppingPointId,
+        },
+      );
+      return response.decodeObject(seatLockFromJson);
+    } on AppException catch (error) {
+      final failure = error.failure;
+      if (failure is ApiFailure && failure.code == 'SEAT_NOT_AVAILABLE') {
+        throw const SeatsUnavailableException();
+      }
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> releaseSeats(String lockId) async {
+    await _client.delete('seat-locks/${Uri.encodeComponent(lockId)}');
+  }
 
   @override
   Future<BookingCreated> createBooking(BookingRequest request) =>
-      throw UnimplementedError('POST /bookings');
+      _rest.createBooking(request);
 
   @override
   Future<CouponResult> applyCoupon({
     required String tripId,
     required String code,
     required int basePaise,
-  }) => throw UnimplementedError('POST /coupons/validate');
+  }) => _rest.applyCoupon(tripId: tripId, code: code, basePaise: basePaise);
 
   @override
   Future<List<String>> suggestedCoupons(String tripId) =>
-      throw UnimplementedError('GET /coupons');
+      _rest.suggestedCoupons(tripId);
 
   @override
   Future<List<CancellationRule>> cancellationPolicy(String tripId) =>
-      throw UnimplementedError('GET /trips/:tripId/policy');
+      _rest.cancellationPolicy(tripId);
 }
+
+/// The hold as the backend sends it: its id and when it runs out.
+SeatLock seatLockFromJson(JsonMap json) => SeatLock(
+  lockId: '${json['lockId']}',
+  expiresAt: DateTime.parse('${json['expiresAt']}'),
+);
 
 /// Not connected yet - built in Phase 3.
 class NotConnectedBookingRepository implements BookingRepository {
@@ -84,6 +130,9 @@ class NotConnectedBookingRepository implements BookingRepository {
     required String droppingPointId,
   }) async =>
       throw const SeatsUnavailableException();
+
+  @override
+  Future<void> releaseSeats(String lockId) async {}
 
   @override
   Future<BookingCreated> createBooking(BookingRequest request) async =>
@@ -107,7 +156,7 @@ class NotConnectedBookingRepository implements BookingRepository {
 }
 
 final bookingRepositoryProvider = Provider<BookingRepository>(
-  (ref) => const NotConnectedBookingRepository(),
+  (ref) => ApiBookingRepository(ref.watch(appDependenciesProvider).apiClient),
 );
 
 /// The current time for the seat hold. Overridden in tests.
