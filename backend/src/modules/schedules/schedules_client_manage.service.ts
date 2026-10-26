@@ -8,6 +8,14 @@ import { PaginatedResult } from '../../common/interceptors/response-envelope.int
 import { skipOf } from '../../common/pipes/list-query';
 import { type AuthenticatedUserActor } from '../../common/request-context/request-actor';
 import { AuditedChangeRunner } from '../rbac/services/audited-change.service';
+import {
+  activeFareFor,
+  busSnapshotOf,
+  healRouteCities,
+  missingFareMessage,
+  requireBusType,
+  routePointsOf,
+} from '../trips/trip_snapshots';
 
 export const SCHEDULE_MODEL = 'Schedule';
 
@@ -192,7 +200,7 @@ export class SchedulesClientManageService {
     // Verify route and bus
     const [routeDoc, busDoc] = await Promise.all([
       this.connection.collection('routes').findOne<{ name?: string }>({ _id: routeId, isDeleted: { $ne: true } }),
-      this.connection.collection('buses').findOne<{ registrationNumber?: string; name?: string; type?: string; busTypeName?: string; status?: string }>({
+      this.connection.collection('buses').findOne<{ registrationNumber?: string; name?: string; busTypeId?: Types.ObjectId; status?: string }>({
         _id: busId,
         operatorId,
         isDeleted: { $ne: true },
@@ -207,17 +215,16 @@ export class SchedulesClientManageService {
     }
 
     const busReg = busDoc.registrationNumber ?? busDoc.name ?? 'Bus';
-    const busType = busDoc.type ?? busDoc.busTypeName ?? 'AC Sleeper';
-
-    // Lookup fare for this route & seat type
-    const fareDoc = await this.connection.collection('fares').findOne<{ weekday?: number }>({
-      operatorId,
-      routeId,
-      seatType: busType,
-      status: 'ACTIVE',
-      isDeleted: { $ne: true },
+    // The bus's real bus type decides the fare; without a fare there is no price to invent
+    const busType = await requireBusType(this.connection, {
+      busTypeId: busDoc.busTypeId,
+      registrationNumber: busReg,
     });
-    const farePaise = fareDoc?.weekday ?? 100000;
+    const fareDoc = await activeFareFor(this.connection, operatorId, routeId, busType);
+    if (!fareDoc) {
+      throw new ApiException('VALIDATION_FAILED', missingFareMessage(routeDoc.name ?? 'this route', busType));
+    }
+    const farePaise = fareDoc.weekday;
 
     const created = await this.auditedChanges.run<ScheduleHydratedDoc>({
       actor,
@@ -406,6 +413,8 @@ export class SchedulesClientManageService {
       this.connection.collection('routes').findOne<{
         _id: Types.ObjectId;
         name: string;
+        from?: string;
+        to?: string;
         hours?: number;
         originCityId?: Types.ObjectId;
         destinationCityId?: Types.ObjectId;
@@ -415,8 +424,8 @@ export class SchedulesClientManageService {
         _id: Types.ObjectId;
         name?: string;
         registrationNumber?: string;
-        type?: string;
-        busTypeName?: string;
+        busTypeId?: Types.ObjectId;
+        amenities?: string[];
         seatCapacity?: number;
         status?: string;
       }>({ _id: sc.busId, operatorId: sc.operatorId }),
@@ -429,21 +438,17 @@ export class SchedulesClientManageService {
       throw new ApiException('RESOURCE_NOT_FOUND', 'Route not found');
     }
 
-    const busType = bus.type ?? bus.busTypeName ?? 'AC Sleeper';
     const busReg = bus.registrationNumber ?? bus.name ?? 'Bus';
     const seatCapacity = bus.seatCapacity ?? 40;
 
-    // Look up fare for (routeId, busType)
-    const fareDoc = await this.connection.collection('fares').findOne<{
-      weekday: number;
-      weekend: number;
-    }>({
-      operatorId: sc.operatorId,
-      routeId: sc.routeId,
-      seatType: busType,
-      status: 'ACTIVE',
-      isDeleted: { $ne: true },
-    });
+    // The bus's real bus type decides the fare and what the trip says about the bus
+    const busType = await requireBusType(this.connection, { busTypeId: bus.busTypeId, registrationNumber: busReg });
+    const fareDoc = await activeFareFor(this.connection, sc.operatorId, sc.routeId, busType);
+    if (!fareDoc) {
+      throw new ApiException('VALIDATION_FAILED', missingFareMessage(route.name, busType));
+    }
+    // Real cities and places of the route (a route saved with made-up ids is repaired here)
+    const routeCities = await healRouteCities(this.connection, route);
 
     const now = new Date();
     let n = 0;
@@ -485,8 +490,9 @@ export class SchedulesClientManageService {
       }
 
       const isWeekend = di >= 5;
-      const startingFare = fareDoc ? (isWeekend ? fareDoc.weekend : fareDoc.weekday) : sc.fare;
+      const startingFare = isWeekend ? fareDoc.weekend : fareDoc.weekday;
       const durationHours = route.hours ?? 8;
+      const points = await routePointsOf(this.connection, routeCities.stops, d);
 
       tripsToInsert.push({
         operatorId: sc.operatorId,
@@ -500,20 +506,19 @@ export class SchedulesClientManageService {
         arrivalAt: new Date(d.getTime() + durationHours * 3600000),
         departureMinuteOfDay: h * 60 + m,
         durationMinutes: durationHours * 60,
-        originCityId: route.originCityId ?? new Types.ObjectId(),
-        destinationCityId: route.destinationCityId ?? new Types.ObjectId(),
-        stopCityIds: [],
-        boardingPoints: [],
-        droppingPoints: [],
-        bus: {
-          name: bus.name ?? busReg,
-          registrationNumber: busReg,
-          busTypeKey: busType,
-          busTypeName: busType,
-          isAc: true,
-          berthType: 'SEATER',
-          amenities: [],
-        },
+        originCityId: routeCities.originCityId,
+        destinationCityId: routeCities.destinationCityId,
+        stopCityIds: [
+          ...new Map(
+            points.stopCityIds
+              .filter((id) => !id.equals(routeCities.originCityId) && !id.equals(routeCities.destinationCityId))
+              .map((id) => [id.toHexString(), id] as const),
+          ).values(),
+        ],
+        boardingPoints: points.boardingPoints,
+        droppingPoints: points.droppingPoints,
+        bus: busSnapshotOf(bus, busType),
+        ...(fareDoc.fareRuleSetVersionId ? { fareRuleSetVersionId: fareDoc.fareRuleSetVersionId } : {}),
         startingFarePaise: startingFare,
         currency: 'INR',
         status: 'DRAFT',

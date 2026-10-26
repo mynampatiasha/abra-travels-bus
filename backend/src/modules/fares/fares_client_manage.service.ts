@@ -122,6 +122,21 @@ export class FaresClientManageService {
     };
   }
 
+  /** The seat type of a fare is the name of a bus type; only real, active bus types can be priced. */
+  private async assertRealBusType(seatType: string): Promise<void> {
+    const found = await this.connection.collection('bus_types').countDocuments({
+      name: seatType,
+      isActive: true,
+      isDeleted: { $ne: true },
+    });
+    if (found === 0) {
+      throw new ApiException(
+        'VALIDATION_FAILED',
+        `"${seatType}" is not an active bus type. Pick one from the list of bus types.`,
+      );
+    }
+  }
+
   private async assertNoActiveDuplicate(
     operatorId: Types.ObjectId,
     routeId: Types.ObjectId,
@@ -231,6 +246,7 @@ export class FaresClientManageService {
     const routeId = new Types.ObjectId(input.routeId);
     const status = input.status ?? 'ACTIVE';
 
+    await this.assertRealBusType(input.seatType);
     if (status === 'ACTIVE') {
       await this.assertNoActiveDuplicate(operatorId, routeId, input.seatType);
     }
@@ -325,6 +341,9 @@ export class FaresClientManageService {
     const routeId = input.routeId ? new Types.ObjectId(input.routeId) : fare.routeId;
     const status = input.status ?? fare.status;
 
+    if (input.seatType !== undefined && input.seatType !== fare.seatType) {
+      await this.assertRealBusType(seatType);
+    }
     if (status === 'ACTIVE') {
       await this.assertNoActiveDuplicate(fare.operatorId, routeId, seatType, fare._id);
     }

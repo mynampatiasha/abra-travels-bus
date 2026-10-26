@@ -8,6 +8,7 @@ import { PaginatedResult } from '../../common/interceptors/response-envelope.int
 import { skipOf } from '../../common/pipes/list-query';
 import { type AuthenticatedUserActor } from '../../common/request-context/request-actor';
 import { AuditedChangeRunner } from '../rbac/services/audited-change.service';
+import { resolveRouteCities } from '../trips/trip_snapshots';
 import { ROUTE_MODEL, type Route, type RouteStop, type RouteStatus, type StopType } from './schemas/route.schema';
 
 export type StoredRouteDoc = StoredDocument<Route>;
@@ -245,6 +246,8 @@ export class RoutesClientManageService {
     const name = input.name?.trim() || `${input.from.trim()} to ${input.to.trim()}`;
     const operatorId = new Types.ObjectId(actor.operatorId);
 
+    // The real cities of both ends and of every stop (a city Abra does not list is refused)
+    const cities = await resolveRouteCities(this.connection, input.from, input.to, input.stops);
     const stops: RouteStop[] = input.stops.map((s, idx) => ({
       placeId: s.placeId,
       name: s.name,
@@ -252,7 +255,7 @@ export class RoutesClientManageService {
       offset: s.offset,
       offsetMinutes: s.offset,
       sequence: idx + 1,
-      cityId: new Types.ObjectId(),
+      cityId: cities.stopCityIds[idx] ?? new Types.ObjectId(),
       type: s.type,
     }));
 
@@ -267,8 +270,8 @@ export class RoutesClientManageService {
           [
             {
               operatorId,
-              originCityId: new Types.ObjectId(),
-              destinationCityId: new Types.ObjectId(),
+              originCityId: cities.originCityId,
+              destinationCityId: cities.destinationCityId,
               from: input.from.trim(),
               to: input.to.trim(),
               name,
@@ -326,6 +329,7 @@ export class RoutesClientManageService {
     this.validateStops(from, to, km, hours, rawStops);
 
     const name = input.name?.trim() || `${from.trim()} to ${to.trim()}`;
+    const cities = await resolveRouteCities(this.connection, from, to, rawStops);
     const stops: RouteStop[] = rawStops.map((s, idx) => ({
       placeId: s.placeId,
       name: s.name,
@@ -333,7 +337,7 @@ export class RoutesClientManageService {
       offset: s.offset,
       offsetMinutes: s.offset,
       sequence: idx + 1,
-      cityId: new Types.ObjectId(),
+      cityId: cities.stopCityIds[idx] ?? new Types.ObjectId(),
       type: s.type,
     }));
 
@@ -346,6 +350,8 @@ export class RoutesClientManageService {
       apply: async () => {
         route.from = from.trim();
         route.to = to.trim();
+        route.originCityId = cities.originCityId;
+        route.destinationCityId = cities.destinationCityId;
         route.name = name;
         route.km = km;
         route.hours = hours;

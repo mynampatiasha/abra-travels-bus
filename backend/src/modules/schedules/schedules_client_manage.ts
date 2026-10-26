@@ -47,7 +47,8 @@ export const scheduleSchema = new Schema<ClientSchedule>(
     from: { type: String, required: true },
     to: { type: String, required: true },
     status: { type: String, enum: ['ACTIVE', 'INACTIVE'], default: 'ACTIVE', index: true },
-    fare: { type: Number, default: 100000 },
+    // Paise, taken from the route's fare when the schedule is made. There is no default price.
+    fare: { type: Number },
     isDeleted: { type: Boolean, default: false, index: true },
     deletedAt: { type: Date },
   },

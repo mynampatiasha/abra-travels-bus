@@ -10,6 +10,7 @@ import { AuditedChangeRunner } from '../rbac/services/audited-change.service';
 import { ProofFilesService } from '../files/files_core.service';
 import { TRIP_MODEL, type Trip, type TripPoint, type TripStatus } from './schemas/trip.schema';
 import { SEAT_INVENTORY_MODEL, type SeatInventoryItem } from './schemas/seat-inventory.schema';
+import { busSnapshotOf, healRouteCities, requireBusType, routePointsOf } from './trip_snapshots';
 
 export type StoredTripDoc = StoredDocument<Trip>;
 export type TripHydratedDoc = HydratedDocument<Trip>;
@@ -289,6 +290,8 @@ export class TripsClientManageService {
       this.connection.collection('routes').findOne<{
         _id: Types.ObjectId;
         name: string;
+        from?: string;
+        to?: string;
         hours?: number;
         originCityId?: Types.ObjectId;
         destinationCityId?: Types.ObjectId;
@@ -299,8 +302,7 @@ export class TripsClientManageService {
         registrationNumber: string;
         name: string;
         busTypeId: Types.ObjectId;
-        type?: string;
-        busTypeName?: string;
+        amenities?: string[];
         seatCapacity?: number;
         activeSeatLayoutVersionId?: Types.ObjectId;
         status: string;
@@ -336,9 +338,13 @@ export class TripsClientManageService {
     const durationHours = route.hours ?? 8;
     const arrDate = new Date(depDate.getTime() + durationHours * 3600000);
 
-    const busTypeKey = bus.type ?? bus.busTypeName ?? 'AC Sleeper';
     const busReg = bus.registrationNumber ?? bus.name ?? 'Bus';
     const seatCap = bus.seatCapacity ?? 40;
+    // What the trip says about the bus comes from the bus's real bus type
+    const busType = await requireBusType(this.connection, { busTypeId: bus.busTypeId, registrationNumber: busReg });
+    // Real cities and boarding and dropping points of the route (a route with made-up ids is repaired)
+    const routeCities = await healRouteCities(this.connection, route);
+    const points = await routePointsOf(this.connection, routeCities.stops, depDate);
 
     let driverName: string | undefined;
     if (input.driverId && Types.ObjectId.isValid(input.driverId)) {
@@ -393,20 +399,18 @@ export class TripsClientManageService {
               arrivalAt: arrDate,
               departureMinuteOfDay: depMinute,
               durationMinutes: durationHours * 60,
-              originCityId: route.originCityId ?? new Types.ObjectId(),
-              destinationCityId: route.destinationCityId ?? new Types.ObjectId(),
-              stopCityIds: [],
-              boardingPoints: [],
-              droppingPoints: [],
-              bus: {
-                name: bus.name ?? busReg,
-                registrationNumber: busReg,
-                busTypeKey,
-                busTypeName: busTypeKey,
-                isAc: true,
-                berthType: 'SEATER',
-                amenities: [],
-              },
+              originCityId: routeCities.originCityId,
+              destinationCityId: routeCities.destinationCityId,
+              stopCityIds: [
+                ...new Map(
+                  points.stopCityIds
+                    .filter((id) => !id.equals(routeCities.originCityId) && !id.equals(routeCities.destinationCityId))
+                    .map((id) => [id.toHexString(), id] as const),
+                ).values(),
+              ],
+              boardingPoints: points.boardingPoints,
+              droppingPoints: points.droppingPoints,
+              bus: busSnapshotOf(bus, busType),
               startingFarePaise: input.startingFarePaise,
               currency: 'INR',
               seatLayoutVersionId: bus.activeSeatLayoutVersionId,
