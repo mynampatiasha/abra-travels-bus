@@ -2237,6 +2237,17 @@ class CrewCredentials {
       );
 }
 
+/// The WhatsApp chat with the driver, with the login details already written. The operator
+/// presses send; nothing is sent by the system.
+String whatsAppShareAddress(String name, CrewCredentials credentials) {
+  final number = credentials.username.replaceAll(RegExp(r'\D'), '');
+  final text = 'Hello $name, your Abra Driver app login is ready.\n'
+      'Phone number: ${credentials.username}\n'
+      'Temporary password: ${credentials.temporaryPassword}\n'
+      'Sign in to the Abra Driver app with these, then choose your own password.';
+  return 'https://wa.me/$number?text=${Uri.encodeComponent(text)}';
+}
+
 /// The phone number and the temporary password, shown once, with a button to copy each.
 Future<void> showCrewCredentials(BuildContext context, String name, CrewCredentials credentials) {
   Widget line(BuildContext ctx, String label, String value) => Padding(
@@ -2294,7 +2305,15 @@ Future<void> showCrewCredentials(BuildContext context, String name, CrewCredenti
           ],
         ),
       ),
-      actions: [FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('Done'))],
+      actions: [
+        OutlinedButton.icon(
+          icon: const Icon(Icons.chat_outlined, size: 16),
+          label: const Text('Share on WhatsApp'),
+          style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF128C7E)),
+          onPressed: () => openWebAddress(whatsAppShareAddress(name, credentials)),
+        ),
+        FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('Done')),
+      ],
     ),
   );
 }

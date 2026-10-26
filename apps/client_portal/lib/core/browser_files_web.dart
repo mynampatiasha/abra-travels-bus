@@ -31,6 +31,11 @@ void downloadBytesFile(String filename, Uint8List bytes, String mimeType) {
   web.URL.revokeObjectURL(url);
 }
 
+/// Opens a web address (for example a WhatsApp chat) in a new browser tab.
+void openWebAddress(String address) {
+  web.window.open(address, '_blank');
+}
+
 /// Shows a file (a document) in a new browser tab.
 void openFileInBrowser(Uint8List bytes, String mimeType) {
   final blob = web.Blob(

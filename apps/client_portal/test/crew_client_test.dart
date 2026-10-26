@@ -1,3 +1,4 @@
+import 'package:client_portal/features/crew/crew_client_manage_screen.dart';
 import 'package:client_portal/routing/portal_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -172,6 +173,21 @@ void main() {
       expect(find.text('No login yet'), findsOneWidget);
       expect(find.text('Create login'), findsOneWidget);
       expect(find.text('Reset password'), findsNothing);
+    });
+
+    test('the WhatsApp share opens the driver chat with the login details written', () {
+      final address = whatsAppShareAddress(
+        'Test Meena',
+        CrewCredentials(username: '+919000000002', temporaryPassword: 'AbCdEfGh2345'),
+      );
+      final uri = Uri.parse(address);
+      expect(uri.host, 'wa.me');
+      expect(uri.path, '/919000000002');
+      final text = uri.queryParameters['text'] ?? '';
+      expect(text, contains('Test Meena'));
+      expect(text, contains('+919000000002'));
+      expect(text, contains('AbCdEfGh2345'));
+      expect(text, contains('choose your own password'));
     });
 
     testWidgets('Add person offers to create the driver app login for a driver, not for a manager', (tester) async {
