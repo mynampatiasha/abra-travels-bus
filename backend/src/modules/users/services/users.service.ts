@@ -22,6 +22,7 @@ export interface UserProfile {
   partnerId: string | null;
   preferredLanguage: string;
   hasPassword: boolean;
+  mustChangePassword: boolean;
   mfaEnabled: boolean;
   lastLoginAt: string | null;
   createdAt: string | null;
@@ -59,6 +60,7 @@ export function toUserProfile(user: StoredUser): UserProfile {
     partnerId: user.partnerId?.toHexString() ?? null,
     preferredLanguage: user.preferredLanguage,
     hasPassword: Boolean(user.passwordHash),
+    mustChangePassword: user.mustChangePassword === true,
     mfaEnabled: user.mfa.enabled,
     lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
     createdAt: user.createdAt?.toISOString() ?? null,
@@ -129,9 +131,53 @@ export class UsersService {
   async setPassword(id: string, passwordHash: string, session?: ClientSession): Promise<void> {
     await this.repository.setFields(
       id,
-      { passwordHash, passwordChangedAt: new Date() },
+      { passwordHash, passwordChangedAt: new Date(), mustChangePassword: false },
       { session },
     );
+  }
+
+  /** A password an operator handed over: the person must replace it at first sign-in. */
+  async setTemporaryPassword(id: string, passwordHash: string): Promise<void> {
+    await this.repository.setFields(
+      id,
+      { passwordHash, passwordChangedAt: new Date(), mustChangePassword: true },
+    );
+  }
+
+  /** Switches an account on or off. The caller signs the person out when switching off. */
+  async setStatus(id: string, status: 'ACTIVE' | 'SUSPENDED'): Promise<void> {
+    await this.repository.setFields(id, { status });
+  }
+
+  /**
+   * Creates the app account of a driver or conductor, made by the operator. Signs in with the phone
+   * number and a temporary password; sees only the trips assigned to the person.
+   */
+  async createDriver(input: {
+    name: string;
+    phone: string;
+    passwordHash: string;
+    roleIds: Types.ObjectId[];
+    operatorId: Types.ObjectId;
+  }): Promise<StoredUser> {
+    try {
+      return await this.repository.insert({
+        name: input.name,
+        phone: input.phone,
+        passwordHash: input.passwordHash,
+        passwordChangedAt: new Date(),
+        mustChangePassword: true,
+        userType: 'DRIVER',
+        roleIds: input.roleIds,
+        operatorId: input.operatorId,
+        dataScope: { type: 'ASSIGNED_RECORDS', operatorIds: [input.operatorId] },
+        status: 'ACTIVE',
+        preferredLanguage: 'en',
+      });
+    } catch (error) {
+      if (!isDuplicateKeyError(error)) throw error;
+      throw new ApiException('ALREADY_REGISTERED', 'An account already exists for this phone number');
+    }
   }
 
   async recordLogin(id: string, session?: ClientSession): Promise<void> {

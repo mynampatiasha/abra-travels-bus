@@ -12,6 +12,7 @@ import 'package:shared_ui/shared_ui.dart';
 
 import '../../app/providers.dart';
 import '../../core/async_value_view.dart';
+import '../../core/browser_files.dart';
 import '../../core/failure_text.dart';
 import '../../routing/portal_routes.dart';
 import '../onboarding/onboarding_page.dart';
@@ -137,7 +138,7 @@ class _ClientKycVerificationScreenState extends ConsumerState<ClientKycVerificat
           final status = '${view['status']}';
           _underReview = status == 'PENDING';
           final editable = status == 'DRAFT';
-          if (view['approved'] == true) return _approved(context);
+          if (view['approved'] == true) return _approved(context, view);
           if (!_introduced) return _welcome(context);
           if (editable && _editing && kyc.isNotEmpty) {
             return _questions(context, kyc);
@@ -163,52 +164,48 @@ class _ClientKycVerificationScreenState extends ConsumerState<ClientKycVerificat
         ),
       );
 
-  Widget _approved(BuildContext context) => Center(
-    child: SingleChildScrollView(
-      padding: const EdgeInsets.all(AbraSpacing.lg),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 520),
-        child: AbraCard(
-          padding: const EdgeInsets.all(AbraSpacing.xl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const _BigIcon(
-                icon: Icons.verified_user_outlined,
-                background: AbraColors.tealContainer,
-                color: AbraColors.teal,
-              ),
-              const SizedBox(height: AbraSpacing.lg),
-              Text(
-                'Your company is approved',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: AbraSpacing.sm),
-              Text(
-                'Your company is approved. Your account is ready.',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AbraColors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: AbraSpacing.xl),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () async {
-                    await ref.read(accessProvider.notifier).refreshApproval();
-                    if (context.mounted) context.go('/dashboard');
-                  },
-                  child: const Text('Open my account'),
-                ),
-              ),
-            ],
+  Widget _approved(BuildContext context, JsonMap view) => _page([
+    AbraCard(
+      padding: const EdgeInsets.all(AbraSpacing.xl),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const _BigIcon(
+            icon: Icons.verified_user_outlined,
+            background: AbraColors.tealContainer,
+            color: AbraColors.teal,
           ),
-        ),
+          const SizedBox(height: AbraSpacing.lg),
+          Text(
+            'Your company is approved',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: AbraSpacing.sm),
+          Text(
+            'Your company is approved. Your account is ready.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AbraColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AbraSpacing.xl),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: () async {
+                await ref.read(accessProvider.notifier).refreshApproval();
+                if (context.mounted) context.go('/dashboard');
+              },
+              child: const Text('Open my account'),
+            ),
+          ),
+        ],
       ),
     ),
-  );
+    const SizedBox(height: AbraSpacing.lg),
+    _SubmittedDocuments(submissionId: '${view['submissionId']}'),
+  ], maxWidth: 640);
 
   Widget _welcome(BuildContext context) {
     final theme = Theme.of(context);
@@ -502,6 +499,267 @@ class _ClientKycVerificationScreenState extends ConsumerState<ClientKycVerificat
           ),
         ),
       ],
+    );
+  }
+}
+
+/// The papers of an approved KYC: what was submitted, when, and each file to open or save.
+final kycSubmissionProvider = FutureProvider.autoDispose.family<JsonMap, String>(
+  (ref, submissionId) async => (await ref
+      .watch(appDependenciesProvider)
+      .apiClient
+      .get('onboarding/submissions/$submissionId')).decodeObject((json) => json),
+);
+
+String _fileSize(Object? bytes) {
+  final size = (bytes is num) ? bytes.toInt() : 0;
+  return size >= 1024 * 1024
+      ? '${(size / 1024 / 1024).toStringAsFixed(1)} MB'
+      : '${(size / 1024).ceil()} KB';
+}
+
+class _SubmittedDocuments extends ConsumerWidget {
+  const _SubmittedDocuments({required this.submissionId});
+
+  final String submissionId;
+
+  Future<void> _open(
+    BuildContext context,
+    WidgetRef ref,
+    JsonMap file, {
+    required bool download,
+  }) async {
+    try {
+      final bytes = await ref
+          .read(onboardingRepositoryProvider)
+          .fileBytes('${file['id']}');
+      if (download) {
+        downloadBytesFile('${file['originalName']}', bytes, '${file['mimeType']}');
+      } else {
+        openFileInBrowser(bytes, '${file['mimeType']}');
+      }
+    } on Object catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(failureText(AbraLocalizations.of(context), e))),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    return AsyncValueView<JsonMap>(
+      value: ref.watch(kycSubmissionProvider(submissionId)),
+      onRetry: () => ref.invalidate(kycSubmissionProvider(submissionId)),
+      data: (context, submission) {
+        final documents = [
+          for (final raw in (submission['documents'] as List? ?? const <Object?>[]))
+            if (raw is Map) asJsonMap(raw),
+        ];
+        final submittedAt = indiaTime(submission['submittedAt']);
+        final decidedAt = indiaTime(submission['decidedAt']);
+        final times = (submission['submitCount'] as num?)?.toInt() ?? 1;
+        return AbraCard(
+          padding: const EdgeInsets.all(AbraSpacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Submitted documents',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => showKycHistory(context, submissionId),
+                    icon: const Icon(Icons.history, size: 18),
+                    label: const Text('History'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AbraSpacing.xs),
+              if (submittedAt.isNotEmpty)
+                _FactLine(
+                  label: times > 1 ? 'Last submitted' : 'Submitted',
+                  value: submittedAt,
+                ),
+              if (decidedAt.isNotEmpty) _FactLine(label: 'Approved', value: decidedAt),
+              if (times > 1) _FactLine(label: 'Sent for review', value: '$times times'),
+              const SizedBox(height: AbraSpacing.md),
+              if (documents.isEmpty)
+                Text(
+                  'No documents were found for this file.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AbraColors.textSecondary,
+                  ),
+                ),
+              for (final document in documents) ...[
+                _SubmittedDocumentCard(
+                  document: document,
+                  onView: (file) => _open(context, ref, file, download: false),
+                  onDownload: (file) => _open(context, ref, file, download: true),
+                ),
+                const SizedBox(height: AbraSpacing.sm),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _FactLine extends StatelessWidget {
+  const _FactLine({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 2),
+    child: Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: '$label: ',
+            style: const TextStyle(color: AbraColors.textSecondary),
+          ),
+          TextSpan(
+            text: value,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _SubmittedDocumentCard extends StatelessWidget {
+  const _SubmittedDocumentCard({
+    required this.document,
+    required this.onView,
+    required this.onDownload,
+  });
+
+  final JsonMap document;
+  final void Function(JsonMap file) onView;
+  final void Function(JsonMap file) onDownload;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final status = '${document['status']}';
+    final files = [
+      for (final raw in (document['files'] as List? ?? const <Object?>[]))
+        if (raw is Map) asJsonMap(raw),
+    ];
+    final reviewed = indiaTime(document['reviewedAt']);
+    final expiry = document['expiryDate'];
+    final (label, fg, bg) = switch (status) {
+      'APPROVED' => ('Approved', AbraColors.tealDark, AbraColors.tealContainer),
+      'REJECTED' => ('Needs fixing', AbraColors.danger, AbraColors.dangerContainer),
+      _ => ('Waiting', AbraColors.orangeDark, AbraColors.orangeContainer),
+    };
+    return Container(
+      padding: const EdgeInsets.all(AbraSpacing.md),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AbraColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                '${document['name']}',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                decoration: BoxDecoration(
+                  color: bg,
+                  borderRadius: BorderRadius.circular(AbraRadius.pill),
+                ),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: fg,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (reviewed.isNotEmpty || expiry != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              [
+                if (reviewed.isNotEmpty) 'Checked $reviewed',
+                if (expiry != null) 'Valid till $expiry',
+              ].join(' · '),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: AbraColors.textSecondary,
+              ),
+            ),
+          ],
+          const SizedBox(height: AbraSpacing.xs),
+          for (final file in files)
+            Row(
+              children: [
+                Icon(
+                  '${file['mimeType']}' == 'application/pdf'
+                      ? Icons.picture_as_pdf_outlined
+                      : Icons.image_outlined,
+                  size: 18,
+                  color: AbraColors.textSecondary,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '${file['originalName']} (${_fileSize(file['sizeBytes'])})',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (indiaTime(file['uploadedAt']).isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: Text(
+                      'Uploaded ${indiaTime(file['uploadedAt'])}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AbraColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                IconButton(
+                  tooltip: 'View',
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.visibility_outlined, size: 18),
+                  onPressed: () => onView(file),
+                ),
+                IconButton(
+                  tooltip: 'Download',
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.download_outlined, size: 18),
+                  onPressed: () => onDownload(file),
+                ),
+              ],
+            ),
+        ],
+      ),
     );
   }
 }

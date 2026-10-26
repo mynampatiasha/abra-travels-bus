@@ -29,6 +29,23 @@ import { createZodDto } from '../../common/pipes/zod-dto.factory';
 import { RequestContextService } from '../../common/request-context/request-context.service';
 import { type AuthenticatedUserActor } from '../../common/request-context/request-actor';
 import { CatalogueSharedModule } from '../catalogue-shared/catalogue_shared_manage';
+import { AppConfigService } from '../../config/app-config.service';
+import { createFileStorage } from '../files/files.module';
+import { FILE_STORAGE } from '../files/storage/file-storage';
+import { USER_MODEL, userSchema } from '../users/schemas/user.schema';
+import { AuthenticationModule } from '../authentication/authentication.module';
+import { SessionsModule } from '../sessions/sessions.module';
+import { UsersModule } from '../users/users.module';
+import { CrewDocumentsClientController } from './crew_documents_client_manage';
+import { CrewLoginClientController } from './crew_login_client_manage';
+import { CrewLoginClientManageService } from './crew_login_client_manage.service';
+import {
+  CREW_DOCUMENT_MODEL,
+  CREW_REMINDER_MODEL,
+  CrewDocumentSchema,
+  CrewDocumentsClientManageService,
+  CrewReminderSchema,
+} from './crew_documents_client_manage.service';
 import { exportController } from '../catalogue-shared/catalogue_export_manage';
 import {
   type ExportKind,
@@ -139,7 +156,11 @@ export const CrewClientExportController = exportController({
 @ApiTags('Client Crew')
 @Controller('client/crew')
 export class CrewClientManageController {
-  constructor(private readonly service: CrewClientManageService) {}
+  constructor(
+    private readonly service: CrewClientManageService,
+    private readonly documents: CrewDocumentsClientManageService,
+    private readonly logins: CrewLoginClientManageService,
+  ) {}
 
   @Get('kpis')
   @RequirePermission('buses.read')
@@ -151,11 +172,23 @@ export class CrewClientManageController {
   @Get()
   @RequirePermission('buses.read')
   @ApiOperation({ summary: 'List operator crew with pagination and filters' })
-  list(
+  async list(
     @CurrentActor() actor: AuthenticatedUserActor,
     @Query() query: ClientCrewListQueryDto,
   ): Promise<PaginatedResult<ClientCrewView> & { kpis: ClientCrewKpis }> {
-    return this.service.list(actor, query);
+    const result = await this.service.list(actor, query);
+    // How many documents each person has, and how many are expiring or expired
+    const counts = await this.documents.countsFor(actor, result.items.map((person) => person.id));
+    // Whether each person can sign in to the driver app
+    const loginStates = await this.logins.statesFor(actor, result.items.map((person) => person.id));
+    for (const person of result.items) {
+      Object.assign(
+        person,
+        counts.get(person.id) ?? { documentsCount: 0, documentsExpiring: 0, documentsExpired: 0 },
+        { loginState: loginStates.get(person.id) ?? 'NONE' },
+      );
+    }
+    return result;
   }
 
   @Get(':id')
@@ -209,12 +242,15 @@ export class CrewClientManageController {
   @RequirePermission('buses.delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Soft delete crew member' })
-  delete(
+  async delete(
     @CurrentActor() actor: AuthenticatedUserActor,
     @Param() param: ClientCrewIdParamDto,
     @Req() req: Request,
   ): Promise<{ success: boolean; id: string }> {
-    return this.service.delete(actor, param.id, clientRequestInfo(req));
+    const result = await this.service.delete(actor, param.id, clientRequestInfo(req));
+    // A person removed from the list can no longer sign in to the driver app
+    await this.logins.switchOffForRemoved(actor, param.id);
+    return result;
   }
 }
 
@@ -223,12 +259,28 @@ export class CrewClientManageController {
     MongooseModule.forFeature([
       { name: 'operator_crew', schema: OperatorCrewSchema },
       { name: 'trips', schema: new Schema({}, { strict: false }) },
+      { name: CREW_DOCUMENT_MODEL, schema: CrewDocumentSchema },
+      { name: CREW_REMINDER_MODEL, schema: CrewReminderSchema },
+      { name: USER_MODEL, schema: userSchema },
     ]),
     forwardRef(() => RbacModule),
     CatalogueSharedModule,
+    UsersModule,
+    SessionsModule,
+    AuthenticationModule,
   ],
-  controllers: [CrewClientExportController, CrewClientManageController],
-  providers: [CrewClientManageService],
-  exports: [CrewClientManageService],
+  controllers: [
+    CrewClientExportController,
+    CrewDocumentsClientController,
+    CrewLoginClientController,
+    CrewClientManageController,
+  ],
+  providers: [
+    CrewClientManageService,
+    CrewDocumentsClientManageService,
+    CrewLoginClientManageService,
+    { provide: FILE_STORAGE, inject: [AppConfigService], useFactory: createFileStorage },
+  ],
+  exports: [CrewClientManageService, CrewDocumentsClientManageService],
 })
 export class OperatorStaffModule {}

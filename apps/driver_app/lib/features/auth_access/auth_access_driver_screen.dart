@@ -15,6 +15,10 @@ class AuthAccessDriverScreen extends ConsumerStatefulWidget {
 class _AuthAccessDriverScreenState extends ConsumerState<AuthAccessDriverScreen> {
   final _phoneController = TextEditingController();
   final _otpController = TextEditingController();
+  final _passwordController = TextEditingController();
+  /// The operator gives the driver a temporary password; the code by message is the other way in.
+  bool _usePassword = true;
+  bool _showPassword = false;
   bool _otpSent = false;
   bool _isLoading = false;
   String? _errorMessage;
@@ -23,14 +27,15 @@ class _AuthAccessDriverScreenState extends ConsumerState<AuthAccessDriverScreen>
   void dispose() {
     _phoneController.dispose();
     _otpController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
   String _cleanPhone() {
-    final raw = _phoneController.text.trim().replaceAll(RegExp(r'\s+'), '');
+    final raw = _phoneController.text.trim().replaceAll(RegExp(r'[\s()-]+'), '');
     if (raw.startsWith('+')) return raw;
-    if (raw.length == 10) return '+91';
-    return '+91';
+    final digits = raw.replaceAll(RegExp(r'\D'), '');
+    return '+91$digits';
   }
 
   Future<void> _sendOtp() async {
@@ -178,6 +183,193 @@ class _AuthAccessDriverScreenState extends ConsumerState<AuthAccessDriverScreen>
     }
   }
 
+  Future<void> _signInWithPassword() async {
+    final digits = _phoneController.text.trim().replaceAll(RegExp(r'\D'), '');
+    final password = _passwordController.text;
+    if (digits.length < 10) {
+      setState(() => _errorMessage = 'Please enter a valid 10-digit mobile number');
+      return;
+    }
+    if (password.isEmpty) {
+      setState(() => _errorMessage = 'Please enter your password');
+      return;
+    }
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    final phone = _cleanPhone();
+    final client = ref.read(driverApiClientProvider);
+    final tokenSource = ref.read(driverTokenSourceProvider);
+
+    try {
+      final res = await client.post(
+        'auth/login',
+        body: <String, Object?>{
+          'identifier': phone,
+          'password': password,
+          'device': <String, Object?>{'clientType': 'MOBILE', 'deviceName': 'Driver Mobile App'},
+        },
+        authenticated: false,
+      );
+      final data = res.data is Map ? res.data as Map : <String, Object?>{};
+      tokenSource.token = data['accessToken'] as String?;
+      if (tokenSource.token == null) {
+        throw StateError('No access token in the sign-in answer');
+      }
+
+      // The account must be a driver account
+      final meRes = await client.get('me');
+      final meData = meRes.data is Map ? meRes.data as Map : <String, Object?>{};
+      final user = meData['user'] is Map ? meData['user'] as Map : <String, Object?>{};
+      if (user['userType'] != 'DRIVER') {
+        tokenSource.token = null;
+        if (!mounted) return;
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'This app is for registered Abra drivers only.';
+        });
+        return;
+      }
+
+      // A password the operator gave: the driver chooses their own before going on
+      if (user['mustChangePassword'] == true) {
+        if (!mounted) return;
+        final changed = await _askNewPassword(currentPassword: password);
+        if (!changed) {
+          tokenSource.token = null;
+          if (!mounted) return;
+          setState(() {
+            _isLoading = false;
+            _errorMessage = 'Please choose your own password to continue.';
+          });
+          return;
+        }
+      }
+
+      final driverName = (user['name'] as String?) ?? 'Driver ($phone)';
+      ref.read(currentDriverProvider.notifier).set(driverName);
+      ref.read(driverMockDbProvider).currentDriver = driverName;
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      context.go(DriverRoutes.home);
+    } on AppException catch (e) {
+      tokenSource.token = null;
+      if (!mounted) return;
+      final failure = e.failure;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = failure is ApiFailure && failure.message.isNotEmpty
+            ? failure.message
+            : 'Sign-in failed. Please check your number and password.';
+      });
+    } catch (_) {
+      tokenSource.token = null;
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Sign-in failed. Please try again.';
+      });
+    }
+  }
+
+  /// Asks for a new password until it is saved. Returns false when the driver gives up.
+  Future<bool> _askNewPassword({required String currentPassword}) async {
+    final first = TextEditingController();
+    final second = TextEditingController();
+    String? problem;
+    bool busy = false;
+    final client = ref.read(driverApiClientProvider);
+    final saved = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialog) => AlertDialog(
+          title: const Text('Choose your own password'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'You signed in with a temporary password. Choose a new one that only you know '
+                '(at least 10 characters).',
+                style: TextStyle(fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: first,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: 'New password'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: second,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: 'Type it again'),
+              ),
+              if (problem != null) ...[
+                const SizedBox(height: 8),
+                Text(problem!, style: const TextStyle(color: Color(0xFFDC2626), fontSize: 12)),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: busy ? null : () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: busy
+                  ? null
+                  : () async {
+                      if (first.text.length < 10) {
+                        setDialog(() => problem = 'The password must have at least 10 characters.');
+                        return;
+                      }
+                      if (first.text != second.text) {
+                        setDialog(() => problem = 'The two passwords are not the same.');
+                        return;
+                      }
+                      setDialog(() {
+                        busy = true;
+                        problem = null;
+                      });
+                      try {
+                        await client.post(
+                          'me/password',
+                          body: <String, Object?>{
+                            'currentPassword': currentPassword,
+                            'newPassword': first.text,
+                          },
+                        );
+                        if (ctx.mounted) Navigator.pop(ctx, true);
+                      } on AppException catch (e) {
+                        final failure = e.failure;
+                        setDialog(() {
+                          busy = false;
+                          problem = failure is ApiFailure && failure.message.isNotEmpty
+                              ? failure.message
+                              : 'Could not save the password. Please try again.';
+                        });
+                      } catch (_) {
+                        setDialog(() {
+                          busy = false;
+                          problem = 'Could not save the password. Please try again.';
+                        });
+                      }
+                    },
+              child: const Text('Save password'),
+            ),
+          ],
+        ),
+      ),
+    );
+    first.dispose();
+    second.dispose();
+    return saved ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -246,8 +438,10 @@ class _AuthAccessDriverScreenState extends ConsumerState<AuthAccessDriverScreen>
                               ),
                             ),
                             const SizedBox(height: 6),
-                            const Text(
-                              'Enter your mobile number to receive a one-time verification code.',
+                            Text(
+                              _usePassword
+                                  ? 'Sign in with your mobile number and the password from your operator.'
+                                  : 'Enter your mobile number to receive a one-time verification code.',
                               style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
                             ),
                             const SizedBox(height: 18),
@@ -274,7 +468,28 @@ class _AuthAccessDriverScreenState extends ConsumerState<AuthAccessDriverScreen>
                               ),
                             ),
 
-                            if (_otpSent) ...[
+                            if (_usePassword) ...[
+                              const SizedBox(height: 16),
+                              TextField(
+                                controller: _passwordController,
+                                obscureText: !_showPassword,
+                                enabled: !_isLoading,
+                                onSubmitted: (_) => _isLoading ? null : _signInWithPassword(),
+                                decoration: InputDecoration(
+                                  labelText: 'Password',
+                                  prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF1677C8)),
+                                  suffixIcon: IconButton(
+                                    tooltip: _showPassword ? 'Hide password' : 'Show password',
+                                    icon: Icon(_showPassword ? Icons.visibility_off : Icons.visibility),
+                                    onPressed: () => setState(() => _showPassword = !_showPassword),
+                                  ),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                ),
+                              ),
+                            ],
+
+                            if (!_usePassword && _otpSent) ...[
                               const SizedBox(height: 16),
                               TextField(
                                 controller: _otpController,
@@ -317,7 +532,7 @@ class _AuthAccessDriverScreenState extends ConsumerState<AuthAccessDriverScreen>
                               ),
                               onPressed: _isLoading
                                   ? null
-                                  : (_otpSent ? _verifyOtp : _sendOtp),
+                                  : (_usePassword ? _signInWithPassword : (_otpSent ? _verifyOtp : _sendOtp)),
                               child: _isLoading
                                   ? const SizedBox(
                                       height: 20,
@@ -325,12 +540,14 @@ class _AuthAccessDriverScreenState extends ConsumerState<AuthAccessDriverScreen>
                                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                                     )
                                   : Text(
-                                      _otpSent ? 'Verify & Start Shift' : 'Send Verification Code',
+                                      _usePassword
+                                          ? 'Sign in'
+                                          : (_otpSent ? 'Verify & Start Shift' : 'Send Verification Code'),
                                       style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                                     ),
                             ),
 
-                            if (_otpSent) ...[
+                            if (!_usePassword && _otpSent) ...[
                               const SizedBox(height: 12),
                               TextButton(
                                 onPressed: _isLoading
@@ -348,6 +565,20 @@ class _AuthAccessDriverScreenState extends ConsumerState<AuthAccessDriverScreen>
                                 ),
                               ),
                             ],
+                            const SizedBox(height: 8),
+                            TextButton(
+                              onPressed: _isLoading
+                                  ? null
+                                  : () => setState(() {
+                                        _usePassword = !_usePassword;
+                                        _otpSent = false;
+                                        _errorMessage = null;
+                                      }),
+                              child: Text(
+                                _usePassword ? 'Sign in with a verification code instead' : 'Sign in with my password',
+                                style: const TextStyle(color: Color(0xFF1677C8), fontWeight: FontWeight.w600),
+                              ),
+                            ),
                           ],
                         ),
                       ),

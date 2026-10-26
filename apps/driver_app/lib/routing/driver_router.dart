@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../app/providers.dart';
 import '../features/auth_access/auth_access_driver_screen.dart';
 import '../features/driver_core/driver_core_driver_screen.dart';
 import '../features/driver_reports/driver_reports_driver_screen.dart';
@@ -11,6 +12,13 @@ import 'driver_routes.dart';
 final driverRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: DriverRoutes.home,
+    // Nobody reaches a screen of the driver app without signing in first
+    redirect: (context, state) {
+      final signedIn = ref.read(driverTokenSourceProvider).token != null;
+      final atSignIn = state.matchedLocation == DriverRoutes.signIn;
+      if (!signedIn && !atSignIn) return DriverRoutes.signIn;
+      return null;
+    },
     routes: <RouteBase>[
       GoRoute(
         path: DriverRoutes.signIn,

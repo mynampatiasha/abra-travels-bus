@@ -6,12 +6,8 @@ import '../../app/providers.dart';
 final driverNotificationsProvider =
     FutureProvider.autoDispose<List<NotificationItem>>((ref) async {
   final repo = ref.watch(driverNotificationsRepositoryProvider);
-  try {
-    final page = await repo.list(pageSize: 50);
-    return page.items;
-  } catch (_) {
-    return const <NotificationItem>[];
-  }
+  final page = await repo.list(pageSize: 50);
+  return page.items;
 });
 
 class NotificationsDriverScreen extends ConsumerWidget {
@@ -20,9 +16,9 @@ class NotificationsDriverScreen extends ConsumerWidget {
   static String _formatTime(DateTime time) {
     final difference = DateTime.now().difference(time);
     if (difference.inMinutes < 1) return 'Just now';
-    if (difference.inMinutes < 60) return 'm ago';
-    if (difference.inHours < 24) return 'h ago';
-    return 'd ago';
+    if (difference.inMinutes < 60) return '${difference.inMinutes}m ago';
+    if (difference.inHours < 24) return '${difference.inHours}h ago';
+    return '${difference.inDays}d ago';
   }
 
   @override
