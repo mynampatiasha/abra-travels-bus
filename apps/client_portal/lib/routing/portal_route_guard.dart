@@ -13,7 +13,7 @@ abstract final class PortalRouteGuard {
     required String path,
     String? from,
   }) {
-    final isInvitation = path == PortalRoutes.acceptInvite;
+    final isInvitation = path.startsWith(PortalRoutes.acceptInvite);
     switch (access.level) {
       case AccessLevel.signedOut:
         return path == PortalRoutes.signIn || isInvitation
@@ -32,7 +32,9 @@ abstract final class PortalRouteGuard {
       case AccessLevel.granted:
         if (!access.kycApproved &&
             path != '/kyc' &&
+            path != PortalRoutes.kycVerification &&
             path != '/notifications' &&
+            path != PortalRoutes.notifications &&
             !path.startsWith(PortalRoutes.onboardingPrefix)) {
           return '/kyc';
         }

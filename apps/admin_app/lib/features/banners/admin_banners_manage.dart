@@ -25,9 +25,18 @@ import 'admin_banners_api.dart';
 /// creating, editing, publishing, duplicating, archiving and moving up or
 /// down; `banners.delete` adds Delete (with Undo). The backend enforces the
 /// same rules. The page follows the demo: the same columns, buttons, form
-/// and wording.
-class AdminBannersPage extends ConsumerWidget {
+/// The tabs of the banners page: All banners and Analytics.
+enum BannersTab { all, analytics }
+
+class AdminBannersPage extends ConsumerStatefulWidget {
   const AdminBannersPage({super.key});
+
+  @override
+  ConsumerState<AdminBannersPage> createState() => _AdminBannersPageState();
+}
+
+class _AdminBannersPageState extends ConsumerState<AdminBannersPage> {
+  BannersTab _tab = BannersTab.all;
 
   static bool _opensOffer(JsonMap values) =>
       (values['linkType'] ?? 'OFFER') == 'OFFER';
@@ -183,7 +192,7 @@ class AdminBannersPage extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = AbraLocalizations.of(context);
     final access = ref.watch(accessProvider);
     final canManage = access.can(PermissionKeys.bannersManage);
@@ -332,41 +341,11 @@ class AdminBannersPage extends ConsumerWidget {
       };
     }
 
-    return ResourcePage(
+    final bannersList = ResourcePage(
       path: bannersPath,
       exportPath: canExport ? bannersPath : null,
-      stats: const <StatSpec>[
-        StatSpec(
-          AdminStrings.bnStatusPublished,
-          <String, String>{'status': 'LIVE'},
-          Icons.play_circle_outline,
-          AbraColors.tealDark,
-        ),
-        StatSpec(
-          AdminStrings.bnStatusScheduled,
-          <String, String>{'status': 'SCHEDULED'},
-          Icons.schedule,
-          AbraColors.blue,
-        ),
-        StatSpec(
-          AdminStrings.bnStatusDraft,
-          <String, String>{'status': 'INACTIVE'},
-          Icons.edit_note,
-          AbraColors.navySecondary,
-        ),
-        StatSpec(
-          AdminStrings.bnStatusExpired,
-          <String, String>{'status': 'EXPIRED'},
-          Icons.history,
-          AbraColors.textSecondary,
-        ),
-        StatSpec(
-          AdminStrings.bnStatusArchived,
-          <String, String>{'status': 'ARCHIVED'},
-          Icons.inventory_2_outlined,
-          AbraColors.textSecondary,
-        ),
-      ],
+      emptyTitle: 'No banners yet',
+      emptyMessage: 'Create your first banner.',
       filters: const <FilterSpec>[
         SearchFilter('search', AdminStrings.bannerSearch),
         ChoiceFilter('status', AdminStrings.bnColStatus, BannerLabels.statuses),
@@ -493,6 +472,128 @@ class AdminBannersPage extends ConsumerWidget {
               ];
             }
           : null,
+    );
+
+    final isCompact = AbraBreakpoint.of(context) == AbraBreakpoint.phone;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            isCompact ? AbraSpacing.md : AbraSpacing.xl,
+            AbraSpacing.md,
+            isCompact ? AbraSpacing.md : AbraSpacing.xl,
+            0,
+          ),
+          child: _BannersTabBar(
+            current: _tab,
+            onSelect: (tab) => setState(() => _tab = tab),
+          ),
+        ),
+        Expanded(
+          child: _tab == BannersTab.all
+              ? bannersList
+              : const _AnalyticsTab(),
+        ),
+      ],
+    );
+  }
+}
+
+class _BannersTabBar extends StatelessWidget {
+  const _BannersTabBar({
+    required this.current,
+    required this.onSelect,
+  });
+
+  final BannersTab current;
+  final ValueChanged<BannersTab> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AbraLocalizations.of(context);
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: AbraColors.border)),
+      ),
+      child: Row(
+        children: <Widget>[
+          _item(context, BannersTab.all, l10n.text(AdminStrings.bnTabAll)),
+          _item(context, BannersTab.analytics, l10n.text(AdminStrings.bnTabAnalytics)),
+        ],
+      ),
+    );
+  }
+
+  Widget _item(BuildContext context, BannersTab tab, String label) {
+    final active = tab == current;
+    return Semantics(
+      selected: active,
+      button: true,
+      child: InkWell(
+        onTap: () => onSelect(tab),
+        child: Container(
+          height: 46,
+          padding: const EdgeInsets.symmetric(horizontal: AbraSpacing.lg),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: active ? AbraColors.blue : Colors.transparent,
+                width: 3,
+              ),
+            ),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: active ? AbraColors.deepBlue : AbraColors.textSecondary,
+                fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AnalyticsTab extends StatelessWidget {
+  const _AnalyticsTab();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AbraLocalizations.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AbraSpacing.xxl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Icon(
+              Icons.analytics_outlined,
+              size: 48,
+              color: AbraColors.navySecondary,
+            ),
+            const SizedBox(height: AbraSpacing.md),
+            Text(
+              l10n.text(AdminStrings.bnAnalyticsPhase7),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AbraSpacing.xs),
+            Text(
+              l10n.text(AdminStrings.bnAnalyticsPhase7Hint),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AbraColors.textSecondary,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

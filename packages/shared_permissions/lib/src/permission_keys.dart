@@ -73,6 +73,14 @@ abstract final class PermissionKeys {
   static const messagesRead = 'messages.read';
   static const messagesResend = 'messages.resend';
   static const maintenanceBypass = 'maintenance.bypass';
+  static const commissionsRead = 'commissions.read';
+  static const commissionsManage = 'commissions.manage';
+  static const commissionsDelete = 'commissions.delete';
+  static const commissionsExport = 'commissions.export';
+  static const payoutRead = 'payout.read';
+  static const payoutManage = 'payout.manage';
+  static const payoutExport = 'payout.export';
+  static const payoutDelete = 'payout.delete';
 
   /// Every key above.
   static const Set<String> all = <String>{
@@ -142,5 +150,13 @@ abstract final class PermissionKeys {
     messagesRead,
     messagesResend,
     maintenanceBypass,
+    commissionsRead,
+    commissionsManage,
+    commissionsDelete,
+    commissionsExport,
+    payoutRead,
+    payoutManage,
+    payoutExport,
+    payoutDelete,
   };
 }

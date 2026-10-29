@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_authentication/shared_authentication.dart';
 import 'package:shared_core/shared_core.dart';
@@ -7,6 +8,24 @@ import 'package:shared_notifications/shared_notifications.dart';
 import 'package:shared_permissions/shared_permissions.dart';
 
 import '../bootstrap/app_dependencies.dart';
+
+/// Active theme mode (Light or Dark).
+final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(
+  ThemeModeNotifier.new,
+);
+
+class ThemeModeNotifier extends Notifier<ThemeMode> {
+  @override
+  ThemeMode build() => ThemeMode.light;
+
+  void toggle() {
+    state = state == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+  }
+
+  void setMode(ThemeMode mode) {
+    state = mode;
+  }
+}
 
 /// Overridden in `bootstrap` (and in tests).
 final appDependenciesProvider = Provider<AppDependencies>(

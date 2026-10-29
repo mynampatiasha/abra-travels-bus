@@ -17,6 +17,7 @@ abstract final class AdminRouteGuard {
     required String path,
     String? from,
   }) {
+    if (path == AdminRoutes.staffInvitation) return null;
     switch (access.level) {
       case AccessLevel.signedOut:
         return path == AdminRoutes.signIn
@@ -70,13 +71,17 @@ abstract final class AdminRouteGuard {
 
   /// Whether the user may open [path]. Unknown paths are not allowed.
   static bool canOpen(AccessState access, String path) {
-    if ((AdminRoutes.sectionOf(path) == AdminRoutes.kycConfiguration ||
-            AdminRoutes.sectionOf(path) == AdminRoutes.customers) &&
+    final section = AdminRoutes.sectionOf(path);
+    if ((section == AdminRoutes.kycConfiguration ||
+            section == AdminRoutes.customers) &&
         access.user?.userType != UserType.staff) {
       return false;
     }
+    if (AdminRoutes.openToAllStaff.contains(section)) {
+      return true;
+    }
     final permission =
-        AdminRoutes.requiredPermission[AdminRoutes.sectionOf(path)];
+        AdminRoutes.requiredPermission[section];
     return permission != null && access.can(permission);
   }
 }

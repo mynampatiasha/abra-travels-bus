@@ -6,6 +6,7 @@ export const SYSTEM_ROLE_KEYS = [
   'SUPER_ADMIN',
   'ADMIN',
   'SUPPORT',
+  'ACCOUNTS',
   'OPERATOR_ADMIN',
   'OPERATOR_MANAGER',
   'BOOKING_STAFF',
@@ -37,7 +38,7 @@ const ADMIN_EXCLUDED: readonly PermissionKey[] = [
 ];
 
 /**
- * The twelve roles of the platform specification (documentation/authorization.md §3). These
+ * The platform specification system roles (documentation/authorization.md §3). These
  * definitions are the source of truth for system roles; SystemRolesSynchronizer mirrors them into
  * the `roles` collection at start-up so users can reference them by id. Business code never
  * checks a role name — only permission keys and data scope.
@@ -75,6 +76,16 @@ export const SYSTEM_ROLES: readonly RoleDefinition[] = [
       'messages.read',
       'messages.resend',
     ],
+  },
+  {
+    // The admin demo's "Accounts": money pages, read-only. Payments, refunds and settlements are
+    // added here when those features exist.
+    key: 'ACCOUNTS',
+    name: 'Accounts',
+    description: 'Looks at commission and the audit trail for the money side of the platform.',
+    userType: 'STAFF',
+    dataScopeType: 'ALL',
+    permissionKeys: ['commissions.read', 'commissions.export', 'audit.read'],
   },
   {
     key: 'OPERATOR_ADMIN',

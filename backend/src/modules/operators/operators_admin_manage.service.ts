@@ -63,6 +63,9 @@ export interface AdminOperatorRow {
   buses: number;
   trips: number;
   joinedAt: string | null;
+  /** For the Payout and fees table: how Abra pays it, and the bank (last four digits only). */
+  payoutMode: PayoutMode;
+  bank: { accountLast4: string; ifsc: string; status: BankStatus } | null;
 }
 
 /** The operator detail page (#/operators/:id). */
@@ -237,6 +240,14 @@ export class OperatorsAdminService {
         buses: buses.get(key) ?? 0,
         trips: trips.get(key) ?? 0,
         joinedAt: operator.createdAt?.toISOString() ?? null,
+        payoutMode: operator.payoutMode ?? 'MANUAL',
+        bank: operator.bank
+          ? {
+              accountLast4: operator.bank.accountLast4,
+              ifsc: operator.bank.ifsc,
+              status: operator.bank.status,
+            }
+          : null,
       };
     });
   }
@@ -359,6 +370,18 @@ export class OperatorsAdminService {
         'INVALID_STATE_TRANSITION',
         'The bank account must be verified before payouts can be automatic.',
       );
+    }
+    // Automatic payouts go through Razorpay Route, which Payout and fees switches on or off
+    if (mode === 'AUTO_SPLIT') {
+      const settings = await this.connection
+        .collection('payout_settings')
+        .findOne({ key: 'platform' }, { projection: { razorpayRoute: 1 } });
+      if (settings?.razorpayRoute !== true) {
+        throw new ApiException(
+          'INVALID_STATE_TRANSITION',
+          'Razorpay Route is switched off in Payout and fees, so payouts cannot be automatic.',
+        );
+      }
     }
     await this.changes.run<StoredOperator>({
       actor,

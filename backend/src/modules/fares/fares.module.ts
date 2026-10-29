@@ -1,9 +1,28 @@
-import { Module } from '@nestjs/common';
+ï»¿import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+import { CatalogueSharedModule } from '../catalogue-shared/catalogue_shared_manage';
+import { RbacModule } from '../rbac/rbac.module';
+import {
+  FaresClientController,
+  FaresClientExportController,
+  fareSchema,
+} from './fares_client_manage';
+import { FARE_MODEL, FaresClientManageService } from './fares_client_manage.service';
 
 /**
- * `fares` — Supply domain (documentation/architecture.md §5).
- * Structure only: no controllers, services or collections yet. Implemented in Phase 3
- * (documentation/implementation-plan.md), following the module layout in project-structure.md §2.
+ * `fares` - Supply domain (documentation/architecture.md Â§5).
  */
-@Module({})
+@Module({
+  imports: [
+    MongooseModule.forFeature([{ name: FARE_MODEL, schema: fareSchema }]),
+    RbacModule,
+    CatalogueSharedModule,
+  ],
+  controllers: [
+    FaresClientExportController,
+    FaresClientController,
+  ],
+  providers: [FaresClientManageService],
+  exports: [FaresClientManageService, MongooseModule],
+})
 export class FaresModule {}

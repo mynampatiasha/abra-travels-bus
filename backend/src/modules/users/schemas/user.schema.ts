@@ -51,6 +51,8 @@ export interface User {
   /** Argon2id PHC string. Absent for accounts that only use OTP. */
   passwordHash?: string | null;
   passwordChangedAt?: Date | null;
+  /** True after an operator created the account or reset the password: the person sets their own at first sign-in. */
+  mustChangePassword?: boolean;
   userType: UserType;
   roleIds: Types.ObjectId[];
   operatorId?: Types.ObjectId;
@@ -80,6 +82,7 @@ export const userSchema = new Schema<User>(
     phoneVerifiedAt: { type: Date, default: null },
     passwordHash: { type: String, default: null },
     passwordChangedAt: { type: Date, default: null },
+    mustChangePassword: { type: Boolean, default: false },
     userType: { type: String, enum: USER_TYPES, required: true },
     roleIds: { type: [Schema.Types.ObjectId], default: [] },
     operatorId: { type: Schema.Types.ObjectId },

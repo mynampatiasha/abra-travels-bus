@@ -450,6 +450,8 @@ class PlaceRequestsTab extends ConsumerWidget {
     return ResourcePage(
       path: path,
       exportPath: access.can(PermissionKeys.catalogueExport) ? path : null,
+      emptyTitle: 'No requests',
+      emptyMessage: 'Operators ask here when a stop is missing.',
       filters: const <FilterSpec>[
         SearchFilter('query', AdminStrings.listSearch),
         ChoiceFilter('status', AdminStrings.fieldStatus, placeRequestStatuses),

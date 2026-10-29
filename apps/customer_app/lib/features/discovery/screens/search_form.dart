@@ -5,11 +5,13 @@ import 'package:shared_localization/shared_localization.dart';
 import 'package:shared_theme/shared_theme.dart';
 import 'package:shared_ui/shared_ui.dart';
 
-import '../../../core/brand_photo.dart';
 import '../../../l10n/customer_strings.dart';
 import '../../../routing/app_routes.dart';
 import '../../home/home_banner_carousel.dart';
 import '../../home/home_banners_repository.dart';
+import '../../home/widgets/active_trip_banner.dart';
+import '../../home/widgets/home_offers_slider.dart';
+import '../../home/widgets/popular_routes_section.dart';
 import '../controllers/search_form_controller.dart';
 import '../controllers/travel_dates.dart';
 import '../models/discovery_models.dart';
@@ -20,7 +22,7 @@ import '../widgets/discovery_text.dart';
 class SearchFormView extends ConsumerWidget {
   const SearchFormView({this.showBanners = true, super.key});
 
-  /// The banner carousel on top, with pull-to-refresh: Home only.
+  /// The promotional sections: Home only.
   final bool showBanners;
 
   static const _problemMessages = <SearchFormProblem, String>{
@@ -100,13 +102,15 @@ class SearchFormView extends ConsumerWidget {
       return problem == null ? null : l10n.text(_problemMessages[problem]!);
     }
 
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isTabletOrDesktop = screenWidth >= 800;
+    final contentMaxWidth = screenWidth >= 1100 ? 1040.0 : (screenWidth >= 800 ? 760.0 : 560.0);
     final gutter = AbraResponsive.gutter(context);
-    final isWide = AbraBreakpoint.of(context) == AbraBreakpoint.desktop;
 
-    Widget centered(Widget child) => Align(
+    Widget centered(Widget child, {double? maxWidth}) => Align(
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: _contentWidth),
+        constraints: BoxConstraints(maxWidth: maxWidth ?? contentMaxWidth),
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: gutter),
           child: child,
@@ -115,343 +119,497 @@ class SearchFormView extends ConsumerWidget {
     );
 
     final searchCard = DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AbraColors.white,
-        borderRadius: AbraRadius.large,
-        boxShadow: AbraShadows.raised,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1412304A),
+            blurRadius: 18,
+            offset: Offset(0, 6),
+          ),
+        ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(AbraSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            // From and To as one pair, with the swap button between them.
-            Stack(
-              alignment: AlignmentDirectional.centerEnd,
-              children: <Widget>[
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    _FormField(
-                      label: l10n.text(CustomerStrings.searchFromLabel),
-                      value: form.from?.name,
-                      hint: l10n.text(CustomerStrings.searchFromHint),
-                      icon: Icons.trip_origin,
-                      error: problemFor(const {
-                        SearchFormProblem.originRequired,
-                      }),
-                      onTap: () => _pickCity(context, ref, isOrigin: true),
-                    ),
-                    const SizedBox(height: AbraSpacing.md),
-                    _FormField(
-                      label: l10n.text(CustomerStrings.searchToLabel),
-                      value: form.to?.name,
-                      hint: l10n.text(CustomerStrings.searchToHint),
-                      icon: Icons.location_on_outlined,
-                      error: problemFor(const {
-                        SearchFormProblem.destinationRequired,
-                        SearchFormProblem.sameCity,
-                      }),
-                      onTap: () => _pickCity(context, ref, isOrigin: false),
-                    ),
-                  ],
-                ),
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(
-                    end: AbraSpacing.md,
+        padding: const EdgeInsets.all(AbraSpacing.md),
+        child: isTabletOrDesktop
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Expanded(
+                        child: _FormField(
+                          label: l10n.text(CustomerStrings.searchFromLabel),
+                          value: form.from?.name,
+                          hint: l10n.text(CustomerStrings.searchFromHint),
+                          icon: Icons.location_on_outlined,
+                          error: problemFor(const {
+                            SearchFormProblem.originRequired,
+                          }),
+                          onTap: () => _pickCity(context, ref, isOrigin: true),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8, left: 8, right: 8),
+                        child: IconButton.filled(
+                          style: IconButton.styleFrom(
+                            backgroundColor: AbraColors.white,
+                            foregroundColor: AbraColors.blue,
+                            disabledBackgroundColor: AbraColors.lightGray,
+                            side: const BorderSide(color: AbraColors.divider, width: 1.5),
+                            elevation: 2,
+                          ),
+                          icon: const Icon(Icons.swap_horiz),
+                          tooltip: l10n.text(CustomerStrings.searchSwap),
+                          onPressed: form.from == null && form.to == null
+                              ? null
+                              : controller.swap,
+                        ),
+                      ),
+                      Expanded(
+                        child: _FormField(
+                          label: l10n.text(CustomerStrings.searchToLabel),
+                          value: form.to?.name,
+                          hint: l10n.text(CustomerStrings.searchToHint),
+                          icon: Icons.outlined_flag,
+                          error: problemFor(const {
+                            SearchFormProblem.destinationRequired,
+                            SearchFormProblem.sameCity,
+                          }),
+                          onTap: () => _pickCity(context, ref, isOrigin: false),
+                        ),
+                      ),
+                    ],
                   ),
-                  child: IconButton.filled(
-                    style: IconButton.styleFrom(
-                      backgroundColor: AbraColors.lightBlue,
-                      foregroundColor: AbraColors.blueDark,
-                      disabledBackgroundColor: AbraColors.lightGray,
-                      side: const BorderSide(color: AbraColors.white, width: 3),
-                    ),
-                    icon: const Icon(Icons.swap_vert),
-                    tooltip: l10n.text(CustomerStrings.searchSwap),
-                    onPressed: form.from == null && form.to == null
-                        ? null
-                        : controller.swap,
+                  const SizedBox(height: AbraSpacing.sm),
+                  Row(
+                    children: <Widget>[
+                      ChoiceChip(
+                        label: Text(l10n.text(CustomerStrings.searchToday)),
+                        selected: form.date == today,
+                        onSelected: (_) => controller.setDate(today),
+                      ),
+                      const SizedBox(width: 8),
+                      ChoiceChip(
+                        label: Text(l10n.text(CustomerStrings.searchTomorrow)),
+                        selected: form.date == tomorrow,
+                        onSelected: (_) => controller.setDate(tomorrow),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Semantics(
+                          button: true,
+                          label:
+                              '${l10n.text(CustomerStrings.searchDateLabel)}, ${text.date(form.date)}',
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(99),
+                            onTap: () => _pickDate(context, ref),
+                            child: ExcludeSemantics(
+                              child: Container(
+                                constraints: const BoxConstraints(
+                                  minHeight: AbraSizes.minTouchTarget,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AbraColors.white,
+                                  borderRadius: BorderRadius.circular(99),
+                                  border: Border.all(color: AbraColors.divider),
+                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                alignment: Alignment.center,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Icons.calendar_today_outlined,
+                                      size: 15,
+                                      color: AbraColors.blueDark,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Flexible(
+                                      child: Text(
+                                        text.date(form.date),
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: AbraColors.textPrimary,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AbraSpacing.md),
+                      SizedBox(
+                        width: 190,
+                        child: AbraButton(
+                          label: l10n.text(CustomerStrings.searchButton),
+                          icon: Icons.search,
+                          variant: AbraButtonVariant.callToAction,
+                          onPressed: () => _search(context, ref),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AbraSpacing.md),
-            _FormField(
-              label: l10n.text(CustomerStrings.searchDateLabel),
-              value: text.date(form.date),
-              hint: '',
-              icon: Icons.calendar_today_outlined,
-              error: problemFor(const {SearchFormProblem.dateOutOfRange}),
-              onTap: () => _pickDate(context, ref),
-            ),
-            const SizedBox(height: AbraSpacing.sm),
-            Wrap(
-              spacing: AbraSpacing.sm,
-              children: <Widget>[
-                ChoiceChip(
-                  label: Text(l10n.text(CustomerStrings.searchToday)),
-                  selected: form.date == today,
-                  onSelected: (_) => controller.setDate(today),
-                ),
-                ChoiceChip(
-                  label: Text(l10n.text(CustomerStrings.searchTomorrow)),
-                  selected: form.date == tomorrow,
-                  onSelected: (_) => controller.setDate(tomorrow),
-                ),
-              ],
-            ),
-            const SizedBox(height: AbraSpacing.lg),
-            AbraButton(
-              label: l10n.text(CustomerStrings.searchButton),
-              icon: Icons.search,
-              variant: AbraButtonVariant.callToAction,
-              expand: true,
-              onPressed: () => _search(context, ref),
-            ),
-          ],
-        ),
+                ],
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  Stack(
+                    alignment: AlignmentDirectional.centerEnd,
+                    children: <Widget>[
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[
+                          _FormField(
+                            label: l10n.text(CustomerStrings.searchFromLabel),
+                            value: form.from?.name,
+                            hint: l10n.text(CustomerStrings.searchFromHint),
+                            icon: Icons.location_on_outlined,
+                            error: problemFor(const {
+                              SearchFormProblem.originRequired,
+                            }),
+                            onTap: () => _pickCity(context, ref, isOrigin: true),
+                          ),
+                          const SizedBox(height: AbraSpacing.sm),
+                          _FormField(
+                            label: l10n.text(CustomerStrings.searchToLabel),
+                            value: form.to?.name,
+                            hint: l10n.text(CustomerStrings.searchToHint),
+                            icon: Icons.outlined_flag,
+                            error: problemFor(const {
+                              SearchFormProblem.destinationRequired,
+                              SearchFormProblem.sameCity,
+                            }),
+                            onTap: () => _pickCity(context, ref, isOrigin: false),
+                          ),
+                        ],
+                      ),
+                      Padding(
+                        padding: const EdgeInsetsDirectional.only(
+                          end: AbraSpacing.sm,
+                        ),
+                        child: IconButton.filled(
+                          style: IconButton.styleFrom(
+                            backgroundColor: AbraColors.white,
+                            foregroundColor: AbraColors.blue,
+                            disabledBackgroundColor: AbraColors.lightGray,
+                            side: const BorderSide(color: AbraColors.divider, width: 1.5),
+                            elevation: 2,
+                          ),
+                          icon: const Icon(Icons.swap_vert),
+                          tooltip: l10n.text(CustomerStrings.searchSwap),
+                          onPressed: form.from == null && form.to == null
+                              ? null
+                              : controller.swap,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AbraSpacing.sm),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: <Widget>[
+                      ChoiceChip(
+                        label: Text(l10n.text(CustomerStrings.searchToday)),
+                        selected: form.date == today,
+                        onSelected: (_) => controller.setDate(today),
+                      ),
+                      ChoiceChip(
+                        label: Text(l10n.text(CustomerStrings.searchTomorrow)),
+                        selected: form.date == tomorrow,
+                        onSelected: (_) => controller.setDate(tomorrow),
+                      ),
+                      Semantics(
+                        button: true,
+                        label:
+                            '${l10n.text(CustomerStrings.searchDateLabel)}, ${text.date(form.date)}',
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(99),
+                          onTap: () => _pickDate(context, ref),
+                          child: ExcludeSemantics(
+                            child: Container(
+                              constraints: const BoxConstraints(
+                                minHeight: AbraSizes.minTouchTarget,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AbraColors.white,
+                                borderRadius: BorderRadius.circular(99),
+                                border: Border.all(color: AbraColors.divider),
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              alignment: Alignment.center,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.calendar_today_outlined,
+                                    size: 14,
+                                    color: AbraColors.blueDark,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Flexible(
+                                    child: Text(
+                                      text.date(form.date),
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: AbraColors.textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AbraSpacing.md),
+                  AbraButton(
+                    label: l10n.text(CustomerStrings.searchButton),
+                    icon: Icons.search,
+                    variant: AbraButtonVariant.callToAction,
+                    expand: true,
+                    onPressed: () => _search(context, ref),
+                  ),
+                ],
+              ),
       ),
     );
 
     final content = ListView(
       padding: EdgeInsets.zero,
       children: <Widget>[
-        if (showBanners) centered(const HomeBannerCarousel()),
-        // The hero: the question, and the search itself on the brand colours.
-        AbraBrandSurface(
-          gradient: AbraGradients.brandDeep,
-          showMotif: false,
-          borderRadius: const BorderRadius.vertical(
-            bottom: Radius.circular(AbraRadius.xl),
+        // Hero Header matching the demo model:
+        Container(
+          decoration: const BoxDecoration(
+            gradient: AbraGradients.brandDeep,
           ),
-          child: Stack(
-            children: <Widget>[
-              // The bus photograph across the top of the hero, fading into
-              // the brand colour so the words on it stay readable.
-              Positioned.fill(child: _HeroPhoto(isWide: isWide)),
-              Padding(
-                padding: const EdgeInsets.only(
-                  top: AbraSpacing.xl,
-                  bottom: AbraSpacing.xl,
-                ),
-                child: centered(
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      Semantics(
-                        header: true,
-                        child: Text(
-                          l10n.text(CustomerStrings.homeHeading),
-                          style: textTheme.headlineSmall?.copyWith(
-                            color: AbraColors.white,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: AbraSpacing.xs),
-                      Text(
-                        l10n.text(CustomerStrings.homeSubtitle),
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: AbraColors.white,
-                        ),
-                      ),
-                      SizedBox(
-                        height: isWide
-                            ? AbraSpacing.xl
-                            : _heroPhotoHeight * 0.42,
-                      ),
-                      AbraEntrance(child: searchCard),
-                    ],
+          padding: EdgeInsets.fromLTRB(gutter, 16, gutter, 20),
+          child: centered(
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Semantics(
+                  header: true,
+                  child: Text(
+                    l10n.text(CustomerStrings.homeHeading),
+                    style: textTheme.headlineSmall?.copyWith(
+                      color: AbraColors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 4),
+                Text(
+                  l10n.text(CustomerStrings.homeSubtitle),
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: AbraColors.white.withValues(alpha: 0.85),
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: AbraSpacing.md),
+                searchCard,
+              ],
+            ),
           ),
         ),
-        if (form.recent.isNotEmpty) ...<Widget>[
-          const SizedBox(height: AbraSpacing.xl),
+
+        // Active Trip Banner directly under Hero:
+        if (showBanners) ...[
+          centered(const ActiveTripBanner()),
+        ],
+
+        // Recent searches:
+        if (form.recent.isNotEmpty) ...[
+          const SizedBox(height: AbraSpacing.md),
           centered(
-            Semantics(
-              header: true,
-              child: Text(
-                l10n.text(CustomerStrings.searchRecentTitle),
-                style: textTheme.titleMedium,
-              ),
-            ),
-          ),
-          const SizedBox(height: AbraSpacing.sm),
-          for (final (index, recent) in form.recent.indexed)
-            centered(
-              Padding(
-                padding: const EdgeInsets.only(bottom: AbraSpacing.sm),
-                child: AbraEntrance(
-                  index: index,
-                  child: Material(
-                    color: AbraColors.white,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: AbraRadius.medium,
-                      side: BorderSide(color: AbraColors.divider),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: ListTile(
-                      minTileHeight: AbraSizes.minTouchTarget,
-                      leading: const Icon(
-                        Icons.history,
-                        color: AbraColors.blueDark,
-                      ),
-                      title: Text(
-                        text.route(recent.from.name, recent.to.name),
-                        style: textTheme.bodyLarge,
-                      ),
-                      trailing: const ExcludeSemantics(
-                        child: Icon(
-                          Icons.north_west,
-                          size: AbraSizes.iconSmall,
-                          color: AbraColors.textSecondary,
-                        ),
-                      ),
-                      onTap: () => controller.useRecent(recent),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Semantics(
+                  header: true,
+                  child: Text(
+                    l10n.text(CustomerStrings.searchRecentTitle),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AbraColors.navy,
                     ),
                   ),
                 ),
-              ),
-            ),
-        ],
-        const SizedBox(height: AbraSpacing.xl),
-        centered(
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Semantics(
-                header: true,
-                child: Text(
-                  l10n.text(CustomerStrings.homeTrustTitle),
-                  style: textTheme.titleMedium,
-                ),
-              ),
-              const SizedBox(height: AbraSpacing.sm),
-              for (final (icon, key) in const <(IconData, String)>[
-                (Icons.verified_outlined, CustomerStrings.homeTrustOperators),
-                (Icons.sell_outlined, CustomerStrings.homeTrustFares),
-                (Icons.schedule_outlined, CustomerStrings.homeTrustPoints),
-              ])
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: AbraSpacing.sm),
-                  child: Row(
-                    children: <Widget>[
-                      ExcludeSemantics(
-                        child: DecoratedBox(
-                          decoration: const BoxDecoration(
-                            color: AbraColors.lightBlue,
-                            borderRadius: AbraRadius.medium,
+                const SizedBox(height: AbraSpacing.xs),
+                for (final recent in form.recent)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AbraSpacing.xs,
+                    ),
+                    child: Material(
+                      color: AbraColors.white,
+                      borderRadius: AbraRadius.medium,
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: AbraSpacing.md,
+                        ),
+                        minTileHeight: AbraSizes.minTouchTarget,
+                        leading: const ExcludeSemantics(
+                          child: Icon(
+                            Icons.history,
+                            color: AbraColors.navy,
                           ),
+                        ),
+                        title: Text(
+                          text.route(recent.from.name, recent.to.name),
+                          style: textTheme.bodyLarge,
+                        ),
+                        trailing: const ExcludeSemantics(
+                          child: Icon(
+                            Icons.north_west,
+                            size: AbraSizes.iconSmall,
+                            color: AbraColors.textSecondary,
+                          ),
+                        ),
+                        onTap: () => controller.useRecent(recent),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+
+        // Promotional Banners, Offers, Popular Routes:
+        if (showBanners) ...[
+          const SizedBox(height: AbraSpacing.sm),
+          // Full width, like the demo's banner strip.
+          const HomeBannerCarousel(),
+          const SizedBox(height: AbraSpacing.lg),
+          centered(const HomeOffersSlider()),
+          const SizedBox(height: AbraSpacing.lg),
+          centered(const PopularRoutesSection()),
+        ],
+
+        // Good to know Section:
+        const SizedBox(height: AbraSpacing.lg),
+        centered(
+          Container(
+            decoration: BoxDecoration(
+              color: AbraColors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AbraColors.divider),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            padding: const EdgeInsets.all(AbraSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  l10n.text(CustomerStrings.homeTrustTitle),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AbraColors.navy,
+                  ),
+                ),
+                const SizedBox(height: AbraSpacing.sm),
+                if (isTabletOrDesktop)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final key in const <String>[
+                        CustomerStrings.homeTrustOperators,
+                        CustomerStrings.homeTrustFares,
+                        CustomerStrings.homeTrustPoints,
+                      ])
+                        Expanded(
                           child: Padding(
-                            padding: const EdgeInsets.all(AbraSpacing.sm),
-                            child: Icon(
-                              icon,
-                              color: AbraColors.blueDark,
-                              size: 20,
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(
+                                  Icons.check_circle_outline,
+                                  color: AbraColors.blue,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    l10n.text(key),
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: AbraColors.textPrimary,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: AbraSpacing.md),
-                      Expanded(
-                        child: Text(
-                          l10n.text(key),
-                          style: textTheme.bodyMedium,
-                        ),
-                      ),
                     ],
-                  ),
-                ),
-            ],
+                  )
+                else
+                  for (final key in const <String>[
+                    CustomerStrings.homeTrustOperators,
+                    CustomerStrings.homeTrustFares,
+                    CustomerStrings.homeTrustPoints,
+                  ])
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(
+                            Icons.check,
+                            color: AbraColors.blue,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              l10n.text(key),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: AbraColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+              ],
+            ),
           ),
         ),
-        const SizedBox(height: AbraSpacing.xl),
+        const SizedBox(height: 80),
       ],
     );
+
     if (!showBanners) return content;
     return RefreshIndicator(
-      // A failed reload hides the banners; it is not an error of Home.
       onRefresh: () => ref
           .refresh(homeBannersProvider.future)
           .then<void>((_) {}, onError: (Object _) {}),
       child: content,
-    );
-  }
-
-  static const double _contentWidth = 560;
-  static const double _heroPhotoHeight = 250;
-}
-
-/// The bus photograph in the hero, dissolving into the brand colour so it
-/// has no edge and the words on it stay readable.
-///
-/// Phone and tablet: across the top, behind the heading. Desktop: the
-/// trailing half, beside the search card (a portrait photograph stretched
-/// across a wide screen would show only a slice of the bus).
-class _HeroPhoto extends StatelessWidget {
-  const _HeroPhoto({required this.isWide});
-
-  final bool isWide;
-
-  @override
-  Widget build(BuildContext context) {
-    if (isWide) {
-      return Align(
-        alignment: AlignmentDirectional.centerEnd,
-        child: FractionallySizedBox(
-          widthFactor: 0.5,
-          heightFactor: 1,
-          child: ShaderMask(
-            blendMode: BlendMode.dstIn,
-            shaderCallback: (bounds) => LinearGradient(
-              begin: AlignmentDirectional.centerStart.resolve(
-                Directionality.of(context),
-              ),
-              end: AlignmentDirectional.centerEnd.resolve(
-                Directionality.of(context),
-              ),
-              colors: const <Color>[Color(0x00FFFFFF), Color(0xFFFFFFFF)],
-              stops: const <double>[0.04, 0.5],
-            ).createShader(bounds),
-            child: const BrandPhoto(alignment: BrandPhoto.busAlignment),
-          ),
-        ),
-      );
-    }
-    return Align(
-      alignment: Alignment.topCenter,
-      child: SizedBox(
-        height: SearchFormView._heroPhotoHeight,
-        child: ShaderMask(
-          blendMode: BlendMode.dstIn,
-          shaderCallback: (bounds) => const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: <Color>[Color(0xFFFFFFFF), Color(0x00FFFFFF)],
-            stops: <double>[0.55, 1],
-          ).createShader(bounds),
-          child: const Stack(
-            fit: StackFit.expand,
-            children: <Widget>[
-              BrandPhoto(alignment: BrandPhoto.busAlignment),
-              // Darker at the top, where the heading is.
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: <Color>[Color(0xE6071E3D), Color(0x00071E3D)],
-                    stops: <double>[0, 0.6],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

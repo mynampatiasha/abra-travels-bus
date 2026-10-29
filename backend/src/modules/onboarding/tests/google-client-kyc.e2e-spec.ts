@@ -295,6 +295,88 @@ describe('Google client KYC journey', () => {
       .expect(200);
     await world.call(client, 'get', '/catalogue/buses').expect(200);
   });
+  it('a draft started before the admin added rules picks up the rules; a submitted one keeps its snapshot', async () => {
+    const before = dataOf<{ version: number; documents: Array<{ name: string; key: string }> }>(
+      await world.call(world.superAdmin, 'get', '/settings/kyc-configuration').expect(200),
+    );
+    await world
+      .call(world.superAdmin, 'put', '/settings/kyc-configuration', {
+        schemaVersion: 1,
+        expectedVersion: before.version,
+        reason: 'Start with no document rules',
+        questions: [],
+        rules: [],
+      })
+      .expect(200);
+    verifier.mockResolvedValueOnce({
+      uid: `early-${Date.now()}`,
+      email: `early-${Date.now()}@example.com`,
+    });
+    const early = { tokens: dataOf<Tokens>(await login().expect(200)) };
+    const first = dataOf<{ submissionId: string; kyc: { requirements: unknown[] } }>(
+      await world.call(early, 'get', '/client/kyc').expect(200),
+    );
+    expect(first.kyc.requirements).toHaveLength(0);
+
+    const empty = dataOf<{ version: number }>(
+      await world.call(world.superAdmin, 'get', '/settings/kyc-configuration').expect(200),
+    );
+    const panKey = before.documents.find((d) => d.name === 'PAN')!.key;
+    await world
+      .call(world.superAdmin, 'put', '/settings/kyc-configuration', {
+        schemaVersion: 1,
+        expectedVersion: empty.version,
+        reason: 'Ask for PAN (optional, so the test can submit without a file)',
+        questions: [],
+        rules: [
+          {
+            key: 'pan_asked',
+            name: 'PAN asked',
+            appliesTo: 'OPERATOR',
+            documentKey: panKey,
+            required: false,
+            active: true,
+            match: 'ALL',
+            conditions: [],
+          },
+        ],
+      })
+      .expect(200);
+
+    // Still a draft: it now follows the new rule and can be saved.
+    const refreshed = dataOf<{ kyc: { requirements: Array<{ key: string }> } }>(
+      await world.call(early, 'get', '/client/kyc').expect(200),
+    );
+    expect(refreshed.kyc.requirements.map((d) => d.key)).toEqual([panKey]);
+    await world
+      .call(early, 'put', '/client/kyc', {
+        companyName: 'Early Lines',
+        introductionAccepted: true,
+        answers: {},
+      })
+      .expect(200);
+    await world
+      .call(early, 'post', `/onboarding/submissions/${first.submissionId}/submit`)
+      .expect(200);
+
+    // Submitted: a later admin change does not move the goalposts.
+    const latest = dataOf<{ version: number }>(
+      await world.call(world.superAdmin, 'get', '/settings/kyc-configuration').expect(200),
+    );
+    await world
+      .call(world.superAdmin, 'put', '/settings/kyc-configuration', {
+        schemaVersion: 1,
+        expectedVersion: latest.version,
+        reason: 'Back to no rules',
+        questions: [],
+        rules: [],
+      })
+      .expect(200);
+    const kept = dataOf<{ kyc: { requirements: Array<{ key: string }> } }>(
+      await world.call(early, 'get', '/client/kyc').expect(200),
+    );
+    expect(kept.kyc.requirements.map((d) => d.key)).toEqual([panKey]);
+  });
   it('uses the Apple verifier with audience-specific customer and client roles', async () => {
     verifier.mockResolvedValueOnce({
       uid: `apple-${Date.now()}`,

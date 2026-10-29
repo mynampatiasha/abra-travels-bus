@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_authentication/shared_authentication.dart';
 import 'package:shared_core/shared_core.dart';
+import 'package:shared_models/shared_models.dart';
 
 import '../bootstrap/app_dependencies.dart';
 
@@ -28,6 +29,10 @@ class AuthStateNotifier extends Notifier<AuthState> {
     final subscription = manager.states.listen((next) => state = next);
     ref.onDispose(subscription.cancel);
     return manager.state;
+  }
+
+  void signOut() {
+    state = const AuthSignedOut();
   }
 }
 

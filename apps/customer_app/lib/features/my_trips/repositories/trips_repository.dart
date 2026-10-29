@@ -1,9 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../booking/repositories/booking_repository.dart';
-import '../../booking/repositories/mock_ticket_repository.dart';
 import '../models/trip_models.dart';
-import 'mock_trips_repository.dart';
 
 /// The bookings of the signed-in customer. Screens depend on this interface
 /// only; the backend replaces [MockTripsRepository] by providing
@@ -50,9 +47,30 @@ class ApiTripsRepository implements TripsRepository {
   }) => throw UnimplementedError('POST /bookings/:id/cancellations');
 }
 
+/// Not connected yet - built in Phase 4.
+class NotConnectedTripsRepository implements TripsRepository {
+  const NotConnectedTripsRepository();
+
+  @override
+  Future<List<Booking>> bookings() async => const <Booking>[];
+
+  @override
+  Future<Booking> booking(String bookingId) async =>
+      throw StateError('Not connected yet - built in Phase 4');
+
+  @override
+  Future<CancellationQuote> quote(String bookingId, List<String> seatIds) async =>
+      throw StateError('Not connected yet - built in Phase 4');
+
+  @override
+  Future<Booking> cancel(
+    String bookingId,
+    List<String> seatIds, {
+    required String reason,
+  }) async =>
+      throw StateError('Not connected yet - built in Phase 4');
+}
+
 final tripsRepositoryProvider = Provider<TripsRepository>(
-  (ref) => MockTripsRepository(
-    tickets: ref.watch(mockTicketStoreProvider),
-    now: ref.read(bookingClockProvider),
-  ),
+  (ref) => const NotConnectedTripsRepository(),
 );

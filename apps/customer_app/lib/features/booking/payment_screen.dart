@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_localization/shared_localization.dart';
+import 'package:shared_theme/shared_theme.dart';
 
 import '../../core/format/rupees.dart';
 import '../../core/ui/gradient_header.dart';
@@ -218,7 +219,100 @@ class _PaymentFlow extends ConsumerWidget {
           body: WalletBody(tripId: tripId),
         ),
         const SecureNote(),
+        const SizedBox(height: AbraSpacing.md),
+        const _DemoPaymentSimCard(),
       ],
     );
   }
 }
+
+class _DemoPaymentSimCard extends ConsumerStatefulWidget {
+  const _DemoPaymentSimCard();
+
+  @override
+  ConsumerState<_DemoPaymentSimCard> createState() => _DemoPaymentSimCardState();
+}
+
+class _DemoPaymentSimCardState extends ConsumerState<_DemoPaymentSimCard> {
+  String _selected = 'ok';
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AbraSpacing.md),
+      decoration: BoxDecoration(
+        color: AbraColors.lightGray,
+        borderRadius: AbraRadius.medium,
+        border: Border.all(color: AbraColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.science_outlined, size: 16, color: AbraColors.blue),
+              SizedBox(width: 6),
+              Text(
+                'Demo: choose payment outcome',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: AbraColors.deepBlue,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AbraSpacing.sm),
+          Wrap(
+            spacing: AbraSpacing.sm,
+            children: [
+              ChoiceChip(
+                label: const Text('Success'),
+                selected: _selected == 'ok',
+                selectedColor: AbraColors.tealContainer,
+                onSelected: (val) {
+                  setState(() => _selected = 'ok');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Payment mode: Success'),
+                      duration: Duration(seconds: 1),
+                    ),
+                  );
+                },
+              ),
+              ChoiceChip(
+                label: const Text('Bank declines (U30)'),
+                selected: _selected == 'decline',
+                selectedColor: AbraColors.orangeContainer,
+                onSelected: (val) {
+                  setState(() => _selected = 'decline');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Test with UPI ID "fail@upi" or Card "4000 0000 0000 0002" to trigger decline'),
+                      duration: Duration(seconds: 3),
+                    ),
+                  );
+                },
+              ),
+              ChoiceChip(
+                label: const Text('Network timeout'),
+                selected: _selected == 'timeout',
+                selectedColor: AbraColors.dangerContainer,
+                onSelected: (val) {
+                  setState(() => _selected = 'timeout');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Test with UPI ID "timeout@upi" to simulate timeout / release hold'),
+                      duration: Duration(seconds: 3),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+

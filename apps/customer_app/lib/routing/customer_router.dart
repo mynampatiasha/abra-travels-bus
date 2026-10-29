@@ -24,6 +24,9 @@ import '../features/my_trips/refund_status_screen.dart';
 import '../features/notifications/notifications_offers_screen.dart';
 import '../features/onboarding/first_launch.dart';
 import '../features/onboarding/onboarding_screen.dart';
+import '../features/profile/messages_archive_screen.dart';
+import '../features/profile/notification_settings_screen.dart';
+import '../features/profile/profile_edit_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/startup/splash_screen.dart';
 import '../features/support/support_screen.dart';
@@ -113,10 +116,19 @@ final customerRouterProvider = Provider<GoRouter>((ref) {
                 AppRoutes.profile,
                 (_) => const ProfileScreen(),
                 routes: <RouteBase>[
-                  _notBuilt('edit', CustomerStrings.routeProfileEditTitle),
-                  _notBuilt(
+                  _page(
+                    'edit',
+                    (_) => const ProfileEditScreen(),
+                    titleKey: CustomerStrings.routeProfileEditTitle,
+                  ),
+                  _page(
                     'notifications',
-                    CustomerStrings.routeNotificationSettingsTitle,
+                    (_) => const NotificationSettingsScreen(),
+                    titleKey: CustomerStrings.routeNotificationSettingsTitle,
+                  ),
+                  _page(
+                    'messages',
+                    (_) => const MessagesArchiveScreen(),
                   ),
                 ],
               ),

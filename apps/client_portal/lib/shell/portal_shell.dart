@@ -1,23 +1,67 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_authentication/shared_authentication.dart';
-import 'package:shared_localization/shared_localization.dart';
-import 'package:shared_notifications/shared_notifications.dart';
 import 'package:shared_theme/shared_theme.dart';
-import 'package:shared_ui/shared_ui.dart';
-
 import '../app/providers.dart';
-import '../features/auth/sign_in_screen.dart';
-import '../features/onboarding/client_kyc_based_screen.dart';
-import '../l10n/portal_strings.dart';
 import '../routing/portal_routes.dart';
 
-/// Frame of the portal: a navy top bar with the Abra Travels mark, the
-/// notification bell, the signed-in person and sign-out. Pages fill the rest.
-class PortalShell extends ConsumerWidget {
+const _navGroups = [
+  _NavGroup('OVERVIEW', [
+    _NavItem('Dashboard', PortalRoutes.dashboard, Icons.home_outlined),
+  ]),
+  _NavGroup('COMPANY', [
+    _NavItem('KYC verification', PortalRoutes.kycVerification, Icons.verified_user_outlined),
+    _NavItem('Company details', PortalRoutes.companyProfile, Icons.business_outlined),
+  ]),
+  _NavGroup('FLEET', [
+    _NavItem('Buses', PortalRoutes.buses, Icons.directions_bus_outlined),
+    _NavItem('Seat layouts', PortalRoutes.seatLayouts, Icons.grid_view_outlined),
+    _NavItem('Drivers and crew', PortalRoutes.crew, Icons.people_outlined),
+    _NavItem('Driver reports', PortalRoutes.driverReports, Icons.bar_chart_outlined),
+    _NavItem('Driver rules', PortalRoutes.driverRules, Icons.rule_outlined),
+  ]),
+  _NavGroup('NETWORK', [
+    _NavItem('Routes and stops', PortalRoutes.routes, Icons.route_outlined),
+    _NavItem('Places', PortalRoutes.places, Icons.place_outlined),
+  ]),
+  _NavGroup('SALES SETUP', [
+    _NavItem('Fares', PortalRoutes.fares, Icons.local_offer_outlined),
+    _NavItem('Schedules', PortalRoutes.schedules, Icons.calendar_today_outlined),
+    _NavItem('Trips', PortalRoutes.trips, Icons.directions_outlined),
+  ]),
+  _NavGroup('SALES', [
+    _NavItem('Bookings', PortalRoutes.bookings, Icons.confirmation_number_outlined),
+    _NavItem('Offers', PortalRoutes.offers, Icons.discount_outlined),
+  ]),
+  _NavGroup('MONEY', [
+    _NavItem('Earnings', PortalRoutes.earnings, Icons.account_balance_wallet_outlined),
+    _NavItem('Commission', PortalRoutes.commission, Icons.percent_outlined),
+  ]),
+  _NavGroup('OPERATIONS', [
+    _NavItem('Live tracking', PortalRoutes.liveTracking, Icons.near_me_outlined),
+  ]),
+  _NavGroup('SYSTEM', [
+    _NavItem('Notifications', PortalRoutes.notifications, Icons.notifications_outlined),
+    _NavItem('Staff and roles', PortalRoutes.staffRoles, Icons.manage_accounts_outlined),
+  ]),
+];
+
+class _NavGroup {
+  const _NavGroup(this.label, this.items);
+  final String label;
+  final List<_NavItem> items;
+}
+
+class _NavItem {
+  const _NavItem(this.label, this.route, this.icon);
+  final String label;
+  final String route;
+  final IconData icon;
+}
+
+/// The full-sidebar shell for the operator portal.
+class PortalShell extends ConsumerStatefulWidget {
   const PortalShell({
     required this.currentPath,
     required this.child,
@@ -27,195 +71,866 @@ class PortalShell extends ConsumerWidget {
   final String currentPath;
   final Widget child;
 
-  Future<void> _signOut(BuildContext context, WidgetRef ref) async {
-    final l10n = AbraLocalizations.of(context);
-    final confirmed = await showAbraConfirmDialog(
-      context,
-      title: l10n.text(AbraStrings.commonSignOut),
-      message: l10n.text(PortalStrings.appName),
-      confirmLabel: l10n.text(AbraStrings.commonSignOut),
-    );
-    if (confirmed) {
-      // While the session is valid: this device stops receiving this person's push
-      await ref.read(notificationCenterProvider).stop();
-      await ref.read(sessionManagerProvider).signOut();
-    }
-  }
-
-  /// Takes the person to what a notification is about: the documents it names.
-  static void _openNotification(
-    BuildContext context,
-    WidgetRef ref,
-    NotificationItem item,
-  ) {
-    final route = item.route;
-    if (route != null && route.startsWith(PortalRoutes.onboardingPrefix)) {
-      ref.invalidate(clientKycProvider);
-      context.go(item.data['subjectType'] == 'BUS' ? route : '/kyc');
-    } else if (route == PortalRoutes.places) {
-      // A decision on a place request
-      context.go(route!);
-    }
-  }
-
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AbraLocalizations.of(context);
-    final access = ref.watch(accessProvider);
-    final breakpoint = AbraBreakpoint.of(context);
-    final userName = access.user?.name;
+  ConsumerState<PortalShell> createState() => _PortalShellState();
+}
 
-    return _NotificationLifecycle(
-      onOpen: (item) => _openNotification(context, ref, item),
-      child: Scaffold(
-        backgroundColor: AbraColors.lightGray,
-        appBar: AppBar(
-          backgroundColor: AbraColors.navy,
-          foregroundColor: AbraColors.white,
-          surfaceTintColor: Colors.transparent,
-          toolbarHeight: 64,
-          titleSpacing: AbraSpacing.lg,
-          title: InkWell(
-            onTap: () => context.go(PortalRoutes.dashboard),
+class _PortalShellState extends ConsumerState<PortalShell> {
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  int get _notifCount => 0;
+
+  String get _activeSection {
+    final p = widget.currentPath;
+    if (p.startsWith(PortalRoutes.dashboard)) return PortalRoutes.dashboard;
+    if (p.startsWith(PortalRoutes.kycVerification)) return PortalRoutes.kycVerification;
+    if (p.startsWith(PortalRoutes.companyProfile)) return PortalRoutes.companyProfile;
+    if (p.startsWith(PortalRoutes.buses)) return PortalRoutes.buses;
+    if (p.startsWith(PortalRoutes.seatLayouts)) return PortalRoutes.seatLayouts;
+    if (p.startsWith(PortalRoutes.crew)) return PortalRoutes.crew;
+    if (p.startsWith(PortalRoutes.driverReports)) return PortalRoutes.driverReports;
+    if (p.startsWith(PortalRoutes.driverRules)) return PortalRoutes.driverRules;
+    if (p.startsWith(PortalRoutes.routes)) return PortalRoutes.routes;
+    if (p.startsWith(PortalRoutes.places)) return PortalRoutes.places;
+    if (p.startsWith(PortalRoutes.fares)) return PortalRoutes.fares;
+    if (p.startsWith(PortalRoutes.schedules)) return PortalRoutes.schedules;
+    if (p.startsWith(PortalRoutes.trips)) return PortalRoutes.trips;
+    if (p.startsWith(PortalRoutes.bookings)) return PortalRoutes.bookings;
+    if (p.startsWith(PortalRoutes.offers)) return PortalRoutes.offers;
+    if (p.startsWith(PortalRoutes.earnings)) return PortalRoutes.earnings;
+    if (p.startsWith(PortalRoutes.commission)) return PortalRoutes.commission;
+    if (p.startsWith(PortalRoutes.liveTracking)) return PortalRoutes.liveTracking;
+    if (p.startsWith(PortalRoutes.notifications)) return PortalRoutes.notifications;
+    if (p.startsWith(PortalRoutes.staffRoles)) return PortalRoutes.staffRoles;
+    return PortalRoutes.dashboard;
+  }
+
+  String get _pageTitle {
+    final section = _activeSection;
+    for (final g in _navGroups) {
+      for (final i in g.items) {
+        if (i.route == section) return i.label;
+      }
+    }
+    return 'Dashboard';
+  }
+
+  int _badgeFor(String route) {
+    if (route == PortalRoutes.dashboard) return 0;
+    if (route == PortalRoutes.driverReports) return 0;
+    if (route == PortalRoutes.notifications) return _notifCount;
+    return 0;
+  }
+
+  Widget _buildSidebar(BuildContext context) {
+    return Container(
+      width: 262,
+      color: AbraColors.navy,
+      child: Column(
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 20, 16, 0),
             child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                const Icon(Icons.directions_bus_filled_outlined),
-                const SizedBox(width: AbraSpacing.md),
-                Flexible(
+              children: [
+                Icon(Icons.directions_bus_filled, color: Colors.white, size: 24),
+                SizedBox(width: 10),
+                Expanded(
                   child: Text(
-                    breakpoint.isTabletOrWider
-                        ? l10n.text(PortalStrings.appName)
-                        : 'Abra Travels',
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AbraColors.white,
-                      fontWeight: FontWeight.w700,
+                    'Abra Travels',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 18,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
           ),
-          actions: <Widget>[
-            IconButton(
-              icon: const Icon(Icons.manage_accounts_outlined),
-              tooltip: 'Login methods',
-              onPressed: () => showClientLoginMethods(context),
-            ),
-            IconButton(
-              icon: const Icon(Icons.inbox_outlined),
-              tooltip: 'Notification inbox',
-              onPressed: () => context.go('/notifications'),
-            ),
-            NotificationBell(
-              center: ref.watch(notificationCenterProvider),
-              color: AbraColors.white,
-              onOpen: (item) => _openNotification(context, ref, item),
-            ),
-            if (userName != null && breakpoint.isTabletOrWider) ...<Widget>[
-              const SizedBox(width: AbraSpacing.md),
-              Center(
-                child: Text(
-                  userName,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AbraColors.onNavyMuted,
-                  ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 4, 16, 12),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Operator Portal',
+                style: TextStyle(
+                  color: AbraColors.onNavyMuted,
+                  fontSize: 12,
                 ),
               ),
-            ],
-            IconButton(
-              icon: const Icon(Icons.logout),
-              tooltip: l10n.text(AbraStrings.commonSignOut),
-              onPressed: () => _signOut(context, ref),
             ),
-            const SizedBox(width: AbraSpacing.sm),
-          ],
-        ),
-        body: SafeArea(
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1100),
-              child: Column(
-                children: <Widget>[
-                  PushPermissionBanner(
-                    center: ref.watch(notificationCenterProvider),
+          ),
+          const Divider(color: AbraColors.navyDivider, height: 1),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              children: [
+                for (final group in _navGroups) ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 14, 12, 4),
+                    child: Text(
+                      group.label,
+                      style: const TextStyle(
+                        color: AbraColors.onNavyMuted,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.6,
+                      ),
+                    ),
                   ),
-                  Expanded(child: child),
+                  for (final item in group.items)
+                    _buildNavItem(context, item),
                 ],
-              ),
+              ],
             ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavItem(BuildContext context, _NavItem item) {
+    final isActive = _activeSection == item.route;
+    final badge = _badgeFor(item.route);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 2),
+      decoration: BoxDecoration(
+        color: isActive ? AbraColors.blue : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () {
+          context.go(item.route);
+          if (_scaffoldKey.currentState?.isDrawerOpen == true) {
+            Navigator.of(context).pop();
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              Icon(
+                item.icon,
+                color: isActive ? Colors.white : const Color(0xFFD3E2EE),
+                size: 19,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  item.label,
+                  style: TextStyle(
+                    color: isActive ? Colors.white : const Color(0xFFD3E2EE),
+                    fontWeight: isActive ? FontWeight.w800 : FontWeight.w400,
+                    fontSize: 14,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (badge > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: AbraColors.danger,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                  child: Text(
+                    '$badge',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
       ),
     );
   }
-}
 
-/// Starts the notifications once the person is in (live socket and push) and
-/// shows a toast when one arrives while the page is open. Stops them when the
-/// session ends.
-class _NotificationLifecycle extends ConsumerStatefulWidget {
-  const _NotificationLifecycle({required this.child, required this.onOpen});
+  Widget _buildTopBar(BuildContext context, bool isMobile) {
+    final isDark = ref.watch(themeModeProvider) == ThemeMode.dark;
+    final topBarBg = isDark ? const Color(0xFF13222F) : Colors.white;
+    final topBarBorder = isDark ? const Color(0xFF2A3E50) : AbraColors.border;
+    final titleColor = isDark ? const Color(0xFFE6EEF5) : AbraColors.textPrimary;
+    final searchBg = isDark ? const Color(0xFF0B1620) : AbraColors.lightGray;
 
-  final Widget child;
-  final void Function(NotificationItem item) onOpen;
-
-  @override
-  ConsumerState<_NotificationLifecycle> createState() =>
-      _NotificationLifecycleState();
-}
-
-class _NotificationLifecycleState
-    extends ConsumerState<_NotificationLifecycle> {
-  StreamSubscription<NotificationItem>? _toasts;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final center = ref.read(notificationCenterProvider);
-      unawaited(center.start(ref.read(sessionManagerProvider).accessToken));
-      _toasts = center.arrivals.listen(_toast);
-    });
-  }
-
-  void _toast(NotificationItem item) {
-    ref.invalidate(clientKycProvider);
-    unawaited(ref.read(accessProvider.notifier).refreshApproval());
-    if (!mounted) return;
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      SnackBar(
-        content: Text(
-          '${item.title}: ${item.body}',
-          maxLines: 3,
-          overflow: TextOverflow.ellipsis,
-        ),
-        duration: const Duration(seconds: 8),
-        action: SnackBarAction(
-          label: 'Open',
-          onPressed: () => widget.onOpen(item),
-        ),
+    return Container(
+      height: 60,
+      decoration: BoxDecoration(
+        color: topBarBg,
+        border: Border(bottom: BorderSide(color: topBarBorder)),
+        boxShadow: AbraShadows.soft,
+      ),
+      padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 20),
+      child: Row(
+        children: [
+          if (isMobile)
+            IconButton(
+              icon: const Icon(Icons.menu),
+              onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+            ),
+          Expanded(
+            child: Text(
+              _pageTitle,
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: titleColor,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (!isMobile) ...[
+            InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () => _openGlobalSearch(context),
+              child: Container(
+                height: 38,
+                width: 280,
+                decoration: BoxDecoration(
+                  color: searchBg,
+                  border: Border.all(color: topBarBorder),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: const Row(
+                  children: [
+                    Icon(Icons.search, color: AbraColors.textSecondary, size: 16),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Search PNR, trip, bus, driver...',
+                        style: TextStyle(color: AbraColors.textSecondary, fontSize: 13),
+                      ),
+                    ),
+                    Text(
+                      'Ctrl K',
+                      style: TextStyle(
+                        color: AbraColors.textSecondary,
+                        fontSize: 11,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: AbraColors.skyContainer,
+                borderRadius: BorderRadius.circular(99),
+              ),
+              child: Text(
+                ref.watch(accessProvider).user != null ? 'Operator Staff' : 'Partner',
+                style: const TextStyle(
+                  color: AbraColors.deepBlue,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Row(
+                children: [
+                  const Icon(Icons.language, size: 16, color: AbraColors.textSecondary),
+                  const SizedBox(width: 6),
+                  Text(
+                    'English',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: titleColor),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.keyboard_arrow_down, size: 16, color: AbraColors.textSecondary),
+                ],
+              ),
+            ),
+            const SizedBox(width: 6),
+            IconButton(
+              icon: const Icon(Icons.auto_awesome, size: 20, color: AbraColors.blue),
+              tooltip: 'Abra AI Copilot',
+              onPressed: () => _openAiAssistant(context),
+            ),
+          ],
+          IconButton(
+            icon: Icon(isDark ? Icons.wb_sunny_outlined : Icons.nightlight_round_outlined, size: 20),
+            tooltip: 'Toggle theme',
+            onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
+          ),
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications_outlined, size: 22),
+                tooltip: 'Notifications',
+                onPressed: () => _showNotificationsPopup(context),
+              ),
+              if (_notifCount > 0)
+                Positioned(
+                  top: 6,
+                  right: 6,
+                  child: Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: const BoxDecoration(
+                      color: AbraColors.danger,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                    child: Text(
+                      '$_notifCount',
+                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(width: 4),
+          _buildAccountMenu(context),
+        ],
       ),
     );
   }
 
+  Widget _buildAccountMenu(BuildContext context) {
+    final access = ref.watch(accessProvider);
+    final user = access.user;
+    final userName = user?.name ?? 'Partner Staff';
+    final userEmail = user?.email ?? '';
+    const userRole = 'Operator Staff';
+
+    return PopupMenuButton<String>(
+      tooltip: 'Account',
+      offset: const Offset(0, 48),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AbraRadius.lg),
+        side: const BorderSide(color: AbraColors.border),
+      ),
+      icon: Container(
+        width: 32,
+        height: 32,
+        decoration: const BoxDecoration(
+          color: AbraColors.lightBlue,
+          shape: BoxShape.circle,
+        ),
+        child: Center(
+          child: Text(
+            userName.isNotEmpty ? userName.substring(0, 1).toUpperCase() : 'O',
+            style: const TextStyle(
+              color: AbraColors.deepBlue,
+              fontWeight: FontWeight.w800,
+              fontSize: 13,
+            ),
+          ),
+        ),
+      ),
+      onSelected: (value) async {
+        if (value == 'profile') {
+          context.go(PortalRoutes.companyProfile);
+        } else if (value == 'staff') {
+          context.go(PortalRoutes.staffRoles);
+        } else if (value == 'kyc') {
+          context.go(PortalRoutes.kycVerification);
+        } else if (value == 'logout') {
+          await ref.read(sessionManagerProvider).signOut();
+          if (context.mounted) {
+            context.go(PortalRoutes.signIn);
+          }
+        }
+      },
+      itemBuilder: (ctx) => [
+        PopupMenuItem<String>(
+          enabled: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                userName,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  color: AbraColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                userEmail,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AbraColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: const BoxDecoration(
+                  color: AbraColors.skyContainer,
+                  borderRadius: BorderRadius.all(Radius.circular(99)),
+                ),
+                child: const Text(
+                  userRole,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AbraColors.deepBlue,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Divider(height: 1),
+            ],
+          ),
+        ),
+        const PopupMenuItem<String>(
+          value: 'profile',
+          child: Row(
+            children: [
+              Icon(Icons.business_outlined, size: 18, color: AbraColors.textSecondary),
+              SizedBox(width: 12),
+              Text('Company profile'),
+            ],
+          ),
+        ),
+        const PopupMenuItem<String>(
+          value: 'staff',
+          child: Row(
+            children: [
+              Icon(Icons.manage_accounts_outlined, size: 18, color: AbraColors.textSecondary),
+              SizedBox(width: 12),
+              Text('Staff and roles'),
+            ],
+          ),
+        ),
+        const PopupMenuItem<String>(
+          value: 'kyc',
+          child: Row(
+            children: [
+              Icon(Icons.verified_user_outlined, size: 18, color: AbraColors.textSecondary),
+              SizedBox(width: 12),
+              Text('KYC verification'),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(),
+        const PopupMenuItem<String>(
+          value: 'logout',
+          child: Row(
+            children: [
+              Icon(Icons.logout, size: 18, color: AbraColors.danger),
+              SizedBox(width: 12),
+              Text(
+                'Log out',
+                style: TextStyle(
+                  color: AbraColors.danger,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showNotificationsPopup(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.transparent,
+      builder: (ctx) => Stack(
+        children: [
+          Positioned(
+            top: 60,
+            right: 20,
+            child: Material(
+              elevation: 8,
+              borderRadius: BorderRadius.circular(AbraRadius.lg),
+              child: Container(
+                width: 360,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(AbraRadius.lg),
+                  border: Border.all(color: AbraColors.border),
+                  boxShadow: AbraShadows.raised,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(AbraSpacing.md),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Notifications', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              context.go(PortalRoutes.notifications);
+                            },
+                            child: const Text('See all', style: TextStyle(fontSize: 12)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1, color: AbraColors.divider),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                      child: Center(
+                        child: Text(
+                          'No new notifications',
+                          style: TextStyle(color: AbraColors.textSecondary, fontSize: 13),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openGlobalSearch(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => _GlobalSearchDialog(),
+    );
+  }
+
+  void _openAiAssistant(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => _AiAssistantDialog(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final isMobile = width < 760;
+    final isDark = ref.watch(themeModeProvider) == ThemeMode.dark;
+    final scaffoldBg = isDark ? const Color(0xFF0B1620) : AbraColors.lightGray;
+
+    final sidebar = _buildSidebar(context);
+    final topBar = _buildTopBar(context, isMobile);
+
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyK, control: true): () => _openGlobalSearch(context),
+        const SingleActivator(LogicalKeyboardKey.keyK, meta: true): () => _openGlobalSearch(context),
+      },
+      child: Focus(
+        autofocus: true,
+        child: isMobile
+            ? Scaffold(
+                key: _scaffoldKey,
+                backgroundColor: scaffoldBg,
+                drawer: Drawer(child: sidebar),
+                body: Column(
+                  children: [
+                    topBar,
+                    Expanded(child: widget.child),
+                  ],
+                ),
+              )
+            : Scaffold(
+                key: _scaffoldKey,
+                backgroundColor: scaffoldBg,
+                body: Row(
+                  children: [
+                    sidebar,
+                    Expanded(
+                      child: Column(
+                        children: [
+                          topBar,
+                          Expanded(
+                            child: widget.child,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+      ),
+    );
+  }
+}
+
+/// Global Search Dialog for Ctrl+K
+class _GlobalSearchDialog extends StatefulWidget {
+  @override
+  State<_GlobalSearchDialog> createState() => _GlobalSearchDialogState();
+}
+
+class _GlobalSearchDialogState extends State<_GlobalSearchDialog> {
+  final _controller = TextEditingController();
+  String _query = '';
+
   @override
   void dispose() {
-    unawaited(_toasts?.cancel());
+    _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // A session that ends by itself (expired, signed out elsewhere) also ends the live channel
-    ref.listen(authStateProvider, (previous, next) {
-      if (next is AuthSignedOut) {
-        unawaited(ref.read(notificationCenterProvider).stop());
-      }
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AbraRadius.lg)),
+      child: Container(
+        width: 580,
+        constraints: const BoxConstraints(maxHeight: 520),
+        padding: const EdgeInsets.all(AbraSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.search, color: AbraColors.blue, size: 22),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      hintText: 'Search PNR, trip, bus registration, crew member...',
+                      border: InputBorder.none,
+                    ),
+                    onChanged: (val) => setState(() => _query = val),
+                  ),
+                ),
+                if (_query.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.clear, size: 18),
+                    onPressed: () {
+                      _controller.clear();
+                      setState(() => _query = '');
+                    },
+                  ),
+                const SizedBox(width: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AbraColors.lightGray,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text('ESC', style: TextStyle(fontSize: 10, color: AbraColors.textSecondary)),
+                ),
+              ],
+            ),
+            const Divider(),
+            Expanded(
+              child: _query.isEmpty
+                  ? const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.manage_search, size: 48, color: AbraColors.textSecondary),
+                          SizedBox(height: 8),
+                          Text('Type to search across bookings, trips, buses & crew',
+                              style: TextStyle(color: AbraColors.textSecondary, fontSize: 13)),
+                        ],
+                      ),
+                    )
+                  : Center(
+                      child: Text('No results found for "$_query"',
+                          style: const TextStyle(color: AbraColors.textSecondary)),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Abra AI Copilot Dialog
+class _AiAssistantDialog extends StatefulWidget {
+  @override
+  State<_AiAssistantDialog> createState() => _AiAssistantDialogState();
+}
+
+class _AiAssistantDialogState extends State<_AiAssistantDialog> {
+  String _activeAnswer = '';
+  String _activeTitle = '';
+  String? _actionLabel;
+  String? _actionRoute;
+
+  void _triggerPrompt(String title, String answer, {String? actionLabel, String? actionRoute}) {
+    setState(() {
+      _activeTitle = title;
+      _activeAnswer = answer;
+      _actionLabel = actionLabel;
+      _actionRoute = actionRoute;
     });
-    return widget.child;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AbraRadius.xl)),
+      child: Container(
+        width: 560,
+        constraints: const BoxConstraints(maxHeight: 560),
+        padding: const EdgeInsets.all(AbraSpacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AbraColors.blue.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.auto_awesome, color: AbraColors.blue, size: 20),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Abra AI Copilot', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                      Text('Smart fleet analytics & operational guidance', style: TextStyle(color: AbraColors.textSecondary, fontSize: 12)),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const Divider(),
+            const SizedBox(height: 8),
+            const Text('Suggested questions:', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ActionChip(
+                  avatar: const Icon(Icons.trending_down, size: 16, color: AbraColors.orangeDark),
+                  label: const Text('Which trips have low occupancy?'),
+                  onPressed: () => _triggerPrompt(
+                    'Low Occupancy Trips',
+                    'Occupancy insights are not connected yet - built in Phase 7.',
+                    actionLabel: 'Create Promo Offer',
+                    actionRoute: PortalRoutes.offers,
+                  ),
+                ),
+                ActionChip(
+                  avatar: const Icon(Icons.account_balance_wallet_outlined, size: 16, color: AbraColors.teal),
+                  label: const Text('7-day earnings summary'),
+                  onPressed: () => _triggerPrompt(
+                    '7-Day Earnings Summary',
+                    'Earnings summary is not connected yet - built in Phase 6.',
+                    actionLabel: 'View Detailed Settlements',
+                    actionRoute: PortalRoutes.earnings,
+                  ),
+                ),
+                ActionChip(
+                  avatar: const Icon(Icons.warning_amber_outlined, size: 16, color: AbraColors.danger),
+                  label: const Text('Expiring bus documents'),
+                  onPressed: () => _triggerPrompt(
+                    'Expiring Vehicle Documents',
+                    'Vehicle document tracking is not connected yet - built in Phase 2.',
+                    actionLabel: 'Manage Bus Documents',
+                    actionRoute: PortalRoutes.buses,
+                  ),
+                ),
+                ActionChip(
+                  avatar: const Icon(Icons.badge_outlined, size: 16, color: AbraColors.deepBlue),
+                  label: const Text('Driver duty & compliance'),
+                  onPressed: () => _triggerPrompt(
+                    'Driver Compliance Status',
+                    'Driver compliance logs are not connected yet - built in Phase 9.',
+                    actionLabel: 'View Driver Reports',
+                    actionRoute: PortalRoutes.driverReports,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: _activeAnswer.isEmpty
+                  ? Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AbraColors.lightGray,
+                          borderRadius: BorderRadius.circular(AbraRadius.md),
+                        ),
+                        child: const Text(
+                          'Click any prompt chip above to get instant AI-assisted operations intelligence for your fleet.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: AbraColors.textSecondary, fontSize: 13),
+                        ),
+                      ),
+                    )
+                  : Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AbraColors.lightBlue.withValues(alpha: 0.5),
+                        border: Border.all(color: AbraColors.blue.withValues(alpha: 0.3)),
+                        borderRadius: BorderRadius.circular(AbraRadius.lg),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.auto_awesome, size: 16, color: AbraColors.blue),
+                              const SizedBox(width: 6),
+                              Text(_activeTitle, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: AbraColors.deepBlue)),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Expanded(
+                            child: SingleChildScrollView(
+                              child: Text(
+                                _activeAnswer,
+                                style: const TextStyle(fontSize: 13, height: 1.5, color: AbraColors.textPrimary),
+                              ),
+                            ),
+                          ),
+                          if (_actionLabel != null && _actionRoute != null) ...[
+                            const SizedBox(height: 10),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: FilledButton.icon(
+                                icon: const Icon(Icons.arrow_forward, size: 14),
+                                label: Text(_actionLabel!),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: AbraColors.blue,
+                                  foregroundColor: Colors.white,
+                                ),
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                  context.go(_actionRoute!);
+                                },
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

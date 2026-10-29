@@ -21,14 +21,12 @@ class StartupScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final failure = ref.watch(startupProvider);
-    return Scaffold(
-      body: failure == null
-          ? const AbraBrandSurface(child: AbraLoadingView(onDark: true))
-          : AbraFailureView(
-              failure: failure,
-              onRetry: ref.read(startupProvider.notifier).restore,
-            ),
+    ref.watch(startupProvider);
+    return const Scaffold(
+      backgroundColor: AbraColors.lightGray,
+      body: Center(
+        child: CircularProgressIndicator(color: AbraColors.blue),
+      ),
     );
   }
 }
@@ -191,6 +189,33 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   : (value) => setState(() => _terms = value ?? false),
               controlAffinity: ListTileControlAffinity.leading,
             ),
+            const SizedBox(height: AbraSpacing.sm),
+            AbraButton(
+              label: l10n.text(PortalStrings.signInButton),
+              variant: AbraButtonVariant.callToAction,
+              expand: true,
+              isLoading: state.isBusy,
+              onPressed: _submitPassword,
+            ),
+            const SizedBox(height: AbraSpacing.md),
+            const Row(
+              children: [
+                Expanded(child: Divider(color: AbraColors.divider)),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    'OR',
+                    style: TextStyle(
+                      color: AbraColors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Expanded(child: Divider(color: AbraColors.divider)),
+              ],
+            ),
+            const SizedBox(height: AbraSpacing.md),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,18 +263,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            const Text(
-              'New clients complete KYC before account access. Already registered? Use a login method linked to your existing account.',
-              textAlign: TextAlign.center,
-            ),
             const SizedBox(height: AbraSpacing.md),
-            AbraButton(
-              label: l10n.text(PortalStrings.signInButton),
-              variant: AbraButtonVariant.callToAction,
-              expand: true,
-              isLoading: state.isBusy,
-              onPressed: _submitPassword,
+            const Text(
+              'New clients complete KYC before account access. Already registered? Choose your account to continue.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AbraColors.textSecondary, fontSize: 12),
             ),
           ] else ...<Widget>[
             TextField(

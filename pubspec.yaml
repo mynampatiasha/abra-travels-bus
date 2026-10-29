@@ -11,6 +11,7 @@ workspace:
   - apps/customer_app
   - apps/admin_app
   - apps/client_portal
+  - apps/driver_app
   - packages/shared_core
   - packages/shared_models
   - packages/shared_validation

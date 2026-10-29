@@ -54,8 +54,14 @@ export class RedisIoAdapter extends IoAdapter {
       ...options,
       cors: { origin: [...this.origins], credentials: true },
     } as never);
-    const publisher = new Redis(this.redisUrl, { connectionName: 'abra-socket-pub' });
-    const subscriber = publisher.duplicate({ connectionName: 'abra-socket-sub' });
+    const publisher = new Redis(this.redisUrl, {
+      connectionName: 'abra-socket-pub',
+      maxRetriesPerRequest: null,
+    });
+    const subscriber = publisher.duplicate({
+      connectionName: 'abra-socket-sub',
+      maxRetriesPerRequest: null,
+    });
     for (const client of [publisher, subscriber]) {
       client.on('error', () => undefined);
       this.clients.push(client);

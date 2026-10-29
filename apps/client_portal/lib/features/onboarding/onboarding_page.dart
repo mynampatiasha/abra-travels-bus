@@ -24,9 +24,17 @@ List<JsonMap> _list(Object? value) => value is List
 /// sent, what the reviewer said about each, and the button that sends it all
 /// for review. After a rejection only the rejected documents can be replaced.
 class OnboardingPage extends ConsumerWidget {
-  const OnboardingPage({required this.id, this.embedded = false, super.key});
+  const OnboardingPage({
+    required this.id,
+    this.embedded = false,
+    this.onChanged,
+    super.key,
+  });
 
   final String id;
+
+  /// Told after an upload or the submit, so the screen around it can update its status.
+  final VoidCallback? onChanged;
 
   /// Inside the KYC screen, which already shows the title and the progress.
   final bool embedded;
@@ -35,7 +43,12 @@ class OnboardingPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => AsyncValueView<JsonMap>(
     value: ref.watch(onboardingFileProvider(id)),
     onRetry: () => ref.invalidate(onboardingFileProvider(id)),
-    data: (context, view) => _FileBody(id: id, view: view, embedded: embedded),
+    data: (context, view) => _FileBody(
+      id: id,
+      view: view,
+      embedded: embedded,
+      onChanged: onChanged,
+    ),
   );
 }
 
@@ -44,11 +57,13 @@ class _FileBody extends ConsumerStatefulWidget {
     required this.id,
     required this.view,
     required this.embedded,
+    this.onChanged,
   });
 
   final String id;
   final JsonMap view;
   final bool embedded;
+  final VoidCallback? onChanged;
 
   @override
   ConsumerState<_FileBody> createState() => _FileBodyState();
@@ -63,6 +78,7 @@ class _FileBodyState extends ConsumerState<_FileBody> {
     ref
       ..invalidate(onboardingFileProvider(widget.id))
       ..invalidate(dashboardProvider);
+    widget.onChanged?.call();
   }
 
   Future<void> _submit() async {

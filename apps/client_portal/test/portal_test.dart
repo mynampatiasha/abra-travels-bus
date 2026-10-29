@@ -51,7 +51,7 @@ void main() {
 
       await signIn(tester);
       expect(locationOf(tester), PortalRoutes.dashboard);
-      expect(find.text('My company'), findsWidgets);
+      expect(find.text('Bookings today'), findsOneWidget);
     });
 
     testWidgets('platform staff cannot use the portal', (tester) async {
@@ -60,7 +60,7 @@ void main() {
       await app.pump(tester);
       await signIn(tester);
       expect(locationOf(tester), PortalRoutes.home);
-      expect(find.text('My company'), findsNothing);
+      expect(find.text('Bookings today'), findsNothing);
     });
 
     testWidgets('a wrong password stays on sign-in', (tester) async {
@@ -216,8 +216,8 @@ void main() {
 
       expect(locationOf(tester), PortalRoutes.dashboard);
       expect(find.text('Alpha Lines'), findsWidgets);
-      expect(find.text('Alpha Express'), findsOneWidget);
-      expect(find.textContaining('Your company is approved'), findsOneWidget);
+      expect(find.text('verified partner'), findsOneWidget);
+      expect(find.textContaining('Alpha Express'), findsOneWidget);
     });
 
     testWidgets('with no buses it invites the first one', (tester) async {

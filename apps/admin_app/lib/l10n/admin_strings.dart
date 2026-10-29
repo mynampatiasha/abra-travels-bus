@@ -478,6 +478,9 @@ abstract final class AdminStrings {
   static const deleteRestored = 'deleteRestored';
   static const bnSubtitle = 'bnSubtitle';
   static const bnTabAll = 'bnTabAll';
+  static const bnTabAnalytics = 'bnTabAnalytics';
+  static const bnAnalyticsPhase7 = 'bnAnalyticsPhase7';
+  static const bnAnalyticsPhase7Hint = 'bnAnalyticsPhase7Hint';
   static const bnNew = 'bnNew';
   static const bnNewTitle = 'bnNewTitle';
   static const bnEditTitle = 'bnEditTitle';
@@ -676,6 +679,11 @@ abstract final class AdminStrings {
   static const opJoinedColumn = 'opJoinedColumn';
   static const opSearch = 'opSearch';
   static const opInvite = 'opInvite';
+  static const opColPayout = 'opColPayout';
+  static const opColRating = 'opColRating';
+  static const opFilterPayoutMode = 'opFilterPayoutMode';
+  static const opPayoutAuto = 'opPayoutAuto';
+  static const opPayoutManual = 'opPayoutManual';
   static const opdPayoutMode = 'opdPayoutMode';
   static const opdPayoutAuto = 'opdPayoutAuto';
   static const opdPayoutManual = 'opdPayoutManual';
@@ -731,6 +739,204 @@ abstract final class AdminStrings {
   static const auditViewList = 'auditViewList';
   static const auditEmptyTitle = 'auditEmptyTitle';
   static const auditEmptyMessage = 'auditEmptyMessage';
+  static const navCommission = 'navCommission';
+  static const hintCommission = 'hintCommission';
+  static const commCrumbGroup = 'commCrumbGroup';
+  static const commTabRules = 'commTabRules';
+  static const commTabCalc = 'commTabCalc';
+  static const commTabHistory = 'commTabHistory';
+  static const commRuleOrder = 'commRuleOrder';
+  static const commDefaultTitle = 'commDefaultTitle';
+  static const commDefaultHint = 'commDefaultHint';
+  static const commDefaultNotSaved = 'commDefaultNotSaved';
+  static const commChange = 'commChange';
+  static const commSearch = 'commSearch';
+  static const commAppliesTo = 'commAppliesTo';
+  static const commStatus = 'commStatus';
+  static const commScopeOperator = 'commScopeOperator';
+  static const commScopeRoute = 'commScopeRoute';
+  static const commScopeBusType = 'commScopeBusType';
+  static const commFormScopeOperator = 'commFormScopeOperator';
+  static const commFormScopeRoute = 'commFormScopeRoute';
+  static const commFormScopeBusType = 'commFormScopeBusType';
+  static const commStatusActive = 'commStatusActive';
+  static const commStatusInactive = 'commStatusInactive';
+  static const commNewRule = 'commNewRule';
+  static const commColId = 'commColId';
+  static const commColTarget = 'commColTarget';
+  static const commColCommission = 'commColCommission';
+  static const commColFrom = 'commColFrom';
+  static const commColVersion = 'commColVersion';
+  static const commColNote = 'commColNote';
+  static const commColActions = 'commColActions';
+  static const commEdit = 'commEdit';
+  static const commView = 'commView';
+  static const commDelete = 'commDelete';
+  static const commDeactivate = 'commDeactivate';
+  static const commActivate = 'commActivate';
+  static const commResults = 'commResults';
+  static const commPage = 'commPage';
+  static const commPrevious = 'commPrevious';
+  static const commNext = 'commNext';
+  static const commTableView = 'commTableView';
+  static const commListView = 'commListView';
+  static const commDefaultDialogTitle = 'commDefaultDialogTitle';
+  static const commType = 'commType';
+  static const commTypePercent = 'commTypePercent';
+  static const commTypeFlat = 'commTypeFlat';
+  static const commValue = 'commValue';
+  static const commValueHint = 'commValueHint';
+  static const commValueDefaultLabel = 'commValueDefaultLabel';
+  static const commSave = 'commSave';
+  static const commNewRuleTitle = 'commNewRuleTitle';
+  static const commEditRuleTitle = 'commEditRuleTitle';
+  static const commWhichOne = 'commWhichOne';
+  static const commNote = 'commNote';
+  static const commNoteHint = 'commNoteHint';
+  static const commSaveRule = 'commSaveRule';
+  static const commSaveVersion = 'commSaveVersion';
+  static const commViewTitle = 'commViewTitle';
+  static const commVersions = 'commVersions';
+  static const commVersionLine = 'commVersionLine';
+  static const commErrPercent = 'commErrPercent';
+  static const commErrValue = 'commErrValue';
+  static const commErrDate = 'commErrDate';
+  static const commErrTarget = 'commErrTarget';
+  static const commSavedRule = 'commSavedRule';
+  static const commDefaultSaved = 'commDefaultSaved';
+  static const commRuleOn = 'commRuleOn';
+  static const commRuleOff = 'commRuleOff';
+  static const commDeleted = 'commDeleted';
+  static const commUndo = 'commUndo';
+  static const commRestored = 'commRestored';
+  static const commRestoredOff = 'commRestoredOff';
+  static const commDeleteTitle = 'commDeleteTitle';
+  static const commDeleteMessage = 'commDeleteMessage';
+  static const commCalcTitle = 'commCalcTitle';
+  static const commFare = 'commFare';
+  static const commSeats = 'commSeats';
+  static const commOperator = 'commOperator';
+  static const commRoute = 'commRoute';
+  static const commBusType = 'commBusType';
+  static const commNotChosen = 'commNotChosen';
+  static const commCalculate = 'commCalculate';
+  static const commResultTitle = 'commResultTitle';
+  static const commRuleUsed = 'commRuleUsed';
+  static const commAmtOperatorFare = 'commAmtOperatorFare';
+  static const commAmtCommission = 'commAmtCommission';
+  static const commAmtFareShown = 'commAmtFareShown';
+  static const commAmtGst = 'commAmtGst';
+  static const commAmtFee = 'commAmtFee';
+  static const commAmtCustomer = 'commAmtCustomer';
+  static const commAmtOperator = 'commAmtOperator';
+  static const commSeatsRange = 'commSeatsRange';
+  static const commCalcEmpty = 'commCalcEmpty';
+  static const commHistoryEmpty = 'commHistoryEmpty';
+  static const commHistoryEmptyHint = 'commHistoryEmptyHint';
+  static const commEmptyTitle = 'commEmptyTitle';
+  static const commEmptyMessage = 'commEmptyMessage';
+  static const commResultOne = 'commResultOne';
+  static const commClear = 'commClear';
+  static const commExportCsv = 'commExportCsv';
+  static const commCancel = 'commCancel';
+  static const commClose = 'commClose';
+  static const commEmptyFilteredTitle = 'commEmptyFilteredTitle';
+  static const commEmptyFiltered = 'commEmptyFiltered';
+  static const commClearFilters = 'commClearFilters';
+  static const commDefaultFallback = 'commDefaultFallback';
+  static const settingsPageTitle = 'settingsPageTitle';
+  static const settingsPageSubtitle = 'settingsPageSubtitle';
+  static const settingsTabIntegrations = 'settingsTabIntegrations';
+  static const settingsTabCompany = 'settingsTabCompany';
+  static const settingsTabBookingRules = 'settingsTabBookingRules';
+  static const settingsTabSecurity = 'settingsTabSecurity';
+  static const settingsTabTemplates = 'settingsTabTemplates';
+  static const settingsCompanyTitle = 'settingsCompanyTitle';
+  static const settingsCompanyName = 'settingsCompanyName';
+  static const settingsCompanyEmail = 'settingsCompanyEmail';
+  static const settingsCompanyPhone = 'settingsCompanyPhone';
+  static const settingsCompanyGstin = 'settingsCompanyGstin';
+  static const settingsCompanyAddress = 'settingsCompanyAddress';
+  static const settingsBookingTitle = 'settingsBookingTitle';
+  static const settingsHoldSeconds = 'settingsHoldSeconds';
+  static const settingsHoldSecondsHint = 'settingsHoldSecondsHint';
+  static const settingsMaxSeats = 'settingsMaxSeats';
+  static const settingsCutoffMinutes = 'settingsCutoffMinutes';
+  static const settingsAdvanceDays = 'settingsAdvanceDays';
+  static const settingsBookingNotice = 'settingsBookingNotice';
+  static const settingsReasonTitle = 'settingsReasonTitle';
+  static const settingsReasonField = 'settingsReasonField';
+  static const settingsReasonConfirm = 'settingsReasonConfirm';
+  static const settingsSavedWithReason = 'settingsSavedWithReason';
+  static const settingsSecurityTitle = 'settingsSecurityTitle';
+  static const settingsMfaRequired = 'settingsMfaRequired';
+  static const settingsSessionMinutes = 'settingsSessionMinutes';
+  static const settingsPasswordDays = 'settingsPasswordDays';
+  static const settingsTplColMessage = 'settingsTplColMessage';
+  static const settingsTplColChannels = 'settingsTplColChannels';
+  static const settingsTplColLanguages = 'settingsTplColLanguages';
+  static const settingsTplPreview = 'settingsTplPreview';
+  static const settingsTplPreviewTitle = 'settingsTplPreviewTitle';
+  static const settingsCardSetUp = 'settingsCardSetUp';
+  static const settingsCardConnected = 'settingsCardConnected';
+  static const settingsCardTestMode = 'settingsCardTestMode';
+  static const settingsCardLastTested = 'settingsCardLastTested';
+  static const settingsCardNeverTested = 'settingsCardNeverTested';
+  static const settingsSetupSecretHelp = 'settingsSetupSecretHelp';
+  static const settingsSavedRunTest = 'settingsSavedRunTest';
+  static const settingsConnectionWorks = 'settingsConnectionWorks';
+  static const settingsSetUpFirst = 'settingsSetUpFirst';
+  static const settingsSectionSms = 'settingsSectionSms';
+  static const settingsSectionSmsHint = 'settingsSectionSmsHint';
+  static const settingsSectionRazorpay = 'settingsSectionRazorpay';
+  static const settingsSectionRazorpayHint = 'settingsSectionRazorpayHint';
+  static const settingsSectionMaps = 'settingsSectionMaps';
+  static const settingsSectionMapsHint = 'settingsSectionMapsHint';
+  static const settingsSectionPush = 'settingsSectionPush';
+  static const settingsSectionPushHint = 'settingsSectionPushHint';
+  static const msgPageTitle = 'msgPageTitle';
+  static const msgPageSubtitle = 'msgPageSubtitle';
+  static const msgBreadcrumbSection = 'msgBreadcrumbSection';
+  static const msgStatSentToday = 'msgStatSentToday';
+  static const msgStatWhatsApp = 'msgStatWhatsApp';
+  static const msgStatEmails = 'msgStatEmails';
+  static const msgStatFailed = 'msgStatFailed';
+  static const msgColWhen = 'msgColWhen';
+  static const msgColChannel = 'msgColChannel';
+  static const msgColTo = 'msgColTo';
+  static const msgColType = 'msgColType';
+  static const msgColSubject = 'msgColSubject';
+  static const msgColStatus = 'msgColStatus';
+  static const msgFilterSearch = 'msgFilterSearch';
+  static const msgFilterChannel = 'msgFilterChannel';
+  static const msgFilterType = 'msgFilterType';
+  static const msgFilterStatus = 'msgFilterStatus';
+  static const msgStatusSent = 'msgStatusSent';
+  static const msgStatusFailed = 'msgStatusFailed';
+  static const msgStatusQueued = 'msgStatusQueued';
+  static const msgStatusSkipped = 'msgStatusSkipped';
+  static const msgChannelWhatsApp = 'msgChannelWhatsApp';
+  static const msgChannelEmail = 'msgChannelEmail';
+  static const msgKindBookingConfirmed = 'msgKindBookingConfirmed';
+  static const msgKindBookingCancelled = 'msgKindBookingCancelled';
+  static const msgKindRefundPaid = 'msgKindRefundPaid';
+  static const msgKindPaymentFailed = 'msgKindPaymentFailed';
+  static const msgKindTripDelayed = 'msgKindTripDelayed';
+  static const msgKindBoardingStarted = 'msgKindBoardingStarted';
+  static const msgKindAnnouncement = 'msgKindAnnouncement';
+  static const msgKindGeneral = 'msgKindGeneral';
+  static const msgDetailTitle = 'msgDetailTitle';
+  static const msgDetailReceived = 'msgDetailReceived';
+  static const msgDetailChannel = 'msgDetailChannel';
+  static const msgDetailTo = 'msgDetailTo';
+  static const msgDetailType = 'msgDetailType';
+  static const msgDetailSent = 'msgDetailSent';
+  static const msgDetailStatus = 'msgDetailStatus';
+  static const msgDetailBooking = 'msgDetailBooking';
+  static const msgActionSendAgain = 'msgActionSendAgain';
+  static const msgSentAgainToast = 'msgSentAgainToast';
+  static const msgEmptyTitle = 'msgEmptyTitle';
+  static const msgEmptyMessage = 'msgEmptyMessage';
   static const Set<String> all = <String>{
     appName,
     signInTitle,
@@ -1292,6 +1498,9 @@ abstract final class AdminStrings {
     deleteRestored,
     bnSubtitle,
     bnTabAll,
+    bnTabAnalytics,
+    bnAnalyticsPhase7,
+    bnAnalyticsPhase7Hint,
     bnNew,
     bnNewTitle,
     bnEditTitle,
@@ -1490,6 +1699,11 @@ abstract final class AdminStrings {
     opJoinedColumn,
     opSearch,
     opInvite,
+    opColPayout,
+    opColRating,
+    opFilterPayoutMode,
+    opPayoutAuto,
+    opPayoutManual,
     opdPayoutMode,
     opdPayoutAuto,
     opdPayoutManual,
@@ -1545,5 +1759,203 @@ abstract final class AdminStrings {
     auditViewList,
     auditEmptyTitle,
     auditEmptyMessage,
+    navCommission,
+    hintCommission,
+    commCrumbGroup,
+    commTabRules,
+    commTabCalc,
+    commTabHistory,
+    commRuleOrder,
+    commDefaultTitle,
+    commDefaultHint,
+    commDefaultNotSaved,
+    commChange,
+    commSearch,
+    commAppliesTo,
+    commStatus,
+    commScopeOperator,
+    commScopeRoute,
+    commScopeBusType,
+    commFormScopeOperator,
+    commFormScopeRoute,
+    commFormScopeBusType,
+    commStatusActive,
+    commStatusInactive,
+    commNewRule,
+    commColId,
+    commColTarget,
+    commColCommission,
+    commColFrom,
+    commColVersion,
+    commColNote,
+    commColActions,
+    commEdit,
+    commView,
+    commDelete,
+    commDeactivate,
+    commActivate,
+    commResults,
+    commPage,
+    commPrevious,
+    commNext,
+    commTableView,
+    commListView,
+    commDefaultDialogTitle,
+    commType,
+    commTypePercent,
+    commTypeFlat,
+    commValue,
+    commValueHint,
+    commValueDefaultLabel,
+    commSave,
+    commNewRuleTitle,
+    commEditRuleTitle,
+    commWhichOne,
+    commNote,
+    commNoteHint,
+    commSaveRule,
+    commSaveVersion,
+    commViewTitle,
+    commVersions,
+    commVersionLine,
+    commErrPercent,
+    commErrValue,
+    commErrDate,
+    commErrTarget,
+    commSavedRule,
+    commDefaultSaved,
+    commRuleOn,
+    commRuleOff,
+    commDeleted,
+    commUndo,
+    commRestored,
+    commRestoredOff,
+    commDeleteTitle,
+    commDeleteMessage,
+    commCalcTitle,
+    commFare,
+    commSeats,
+    commOperator,
+    commRoute,
+    commBusType,
+    commNotChosen,
+    commCalculate,
+    commResultTitle,
+    commRuleUsed,
+    commAmtOperatorFare,
+    commAmtCommission,
+    commAmtFareShown,
+    commAmtGst,
+    commAmtFee,
+    commAmtCustomer,
+    commAmtOperator,
+    commSeatsRange,
+    commCalcEmpty,
+    commHistoryEmpty,
+    commHistoryEmptyHint,
+    commEmptyTitle,
+    commEmptyMessage,
+    commResultOne,
+    commClear,
+    commExportCsv,
+    commCancel,
+    commClose,
+    commEmptyFilteredTitle,
+    commEmptyFiltered,
+    commClearFilters,
+    commDefaultFallback,
+    settingsPageTitle,
+    settingsPageSubtitle,
+    settingsTabIntegrations,
+    settingsTabCompany,
+    settingsTabBookingRules,
+    settingsTabSecurity,
+    settingsTabTemplates,
+    settingsCompanyTitle,
+    settingsCompanyName,
+    settingsCompanyEmail,
+    settingsCompanyPhone,
+    settingsCompanyGstin,
+    settingsCompanyAddress,
+    settingsBookingTitle,
+    settingsHoldSeconds,
+    settingsHoldSecondsHint,
+    settingsMaxSeats,
+    settingsCutoffMinutes,
+    settingsAdvanceDays,
+    settingsBookingNotice,
+    settingsReasonTitle,
+    settingsReasonField,
+    settingsReasonConfirm,
+    settingsSavedWithReason,
+    settingsSecurityTitle,
+    settingsMfaRequired,
+    settingsSessionMinutes,
+    settingsPasswordDays,
+    settingsTplColMessage,
+    settingsTplColChannels,
+    settingsTplColLanguages,
+    settingsTplPreview,
+    settingsTplPreviewTitle,
+    settingsCardSetUp,
+    settingsCardConnected,
+    settingsCardTestMode,
+    settingsCardLastTested,
+    settingsCardNeverTested,
+    settingsSetupSecretHelp,
+    settingsSavedRunTest,
+    settingsConnectionWorks,
+    settingsSetUpFirst,
+    settingsSectionSms,
+    settingsSectionSmsHint,
+    settingsSectionRazorpay,
+    settingsSectionRazorpayHint,
+    settingsSectionMaps,
+    settingsSectionMapsHint,
+    settingsSectionPush,
+    settingsSectionPushHint,
+    msgPageTitle,
+    msgPageSubtitle,
+    msgBreadcrumbSection,
+    msgStatSentToday,
+    msgStatWhatsApp,
+    msgStatEmails,
+    msgStatFailed,
+    msgColWhen,
+    msgColChannel,
+    msgColTo,
+    msgColType,
+    msgColSubject,
+    msgColStatus,
+    msgFilterSearch,
+    msgFilterChannel,
+    msgFilterType,
+    msgFilterStatus,
+    msgStatusSent,
+    msgStatusFailed,
+    msgStatusQueued,
+    msgStatusSkipped,
+    msgChannelWhatsApp,
+    msgChannelEmail,
+    msgKindBookingConfirmed,
+    msgKindBookingCancelled,
+    msgKindRefundPaid,
+    msgKindPaymentFailed,
+    msgKindTripDelayed,
+    msgKindBoardingStarted,
+    msgKindAnnouncement,
+    msgKindGeneral,
+    msgDetailTitle,
+    msgDetailReceived,
+    msgDetailChannel,
+    msgDetailTo,
+    msgDetailType,
+    msgDetailSent,
+    msgDetailStatus,
+    msgDetailBooking,
+    msgActionSendAgain,
+    msgSentAgainToast,
+    msgEmptyTitle,
+    msgEmptyMessage,
   };
 }

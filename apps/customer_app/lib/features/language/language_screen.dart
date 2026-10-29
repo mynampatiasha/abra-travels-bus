@@ -10,6 +10,8 @@ import '../../core/ui/sticky_action_bar.dart';
 import '../../l10n/customer_strings.dart';
 import '../../routing/app_routes.dart';
 
+import '../onboarding/first_launch.dart';
+
 /// Lets the user pick the app language, or follow the device. The choice
 /// applies immediately and is remembered on the device. Also the last step
 /// of the first launch ([isFirstLaunch]), with "Continue" to Home.
@@ -32,7 +34,10 @@ class LanguageScreen extends ConsumerWidget {
           ? StickyActionBar(
               actionLabel: l10n.text(AbraStrings.commonContinue),
               actionIcon: Icons.arrow_forward,
-              onAction: () => context.go(AppRoutes.home),
+              onAction: () {
+                ref.read(welcomeSeenProvider.notifier).markSeen();
+                context.go(AppRoutes.home);
+              },
             )
           : null,
       body: AbraPageContainer(

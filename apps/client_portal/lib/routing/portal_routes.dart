@@ -1,46 +1,60 @@
 import 'package:shared_permissions/shared_permissions.dart';
 
-/// Locations of the bus owner portal.
 abstract final class PortalRoutes {
   static const splash = '/splash';
   static const signIn = '/sign-in';
-
-  /// The page the invitation email leads to; reachable without signing in.
   static const acceptInvite = '/accept-invite';
   static const home = '/';
+
+  // Main sections
   static const dashboard = '/dashboard';
-  static const onboardingPrefix = '/onboarding/';
-
-  /// Places: ask Abra for a place, see the places the operator can use.
+  static const kycVerification = '/kyc-verification';
+  static const companyProfile = '/company-profile';
+  static const buses = '/buses';
+  static const seatLayouts = '/seat-layouts';
+  static const crew = '/crew';
+  static const driverReports = '/driver-reports';
+  static const driverRules = '/driver-rules';
+  static const routes = '/routes';
   static const places = '/places';
+  static const fares = '/fares';
+  static const schedules = '/schedules';
+  static const trips = '/trips';
+  static const bookings = '/bookings';
+  static const offers = '/offers';
+  static const earnings = '/earnings';
+  static const commission = '/commission';
+  static const liveTracking = '/live-tracking';
+  static const notifications = '/notifications';
+  static const staffRoles = '/staff-roles';
 
-  /// Company profile and bank account.
+  // Legacy
   static const company = '/company';
-
-  /// The documents of the company or of one bus.
-  static String onboardingOf(String id) => '$onboardingPrefix$id';
-
-  /// Bus KYC: the bus questions, then its documents (only for an approved company).
+  static const onboardingPrefix = '/onboarding/';
   static const busKycPrefix = '/bus-kyc/';
+  static String onboardingOf(String id) => '$onboardingPrefix$id';
   static String busKycOf(String busId) => '$busKycPrefix$busId';
 
-  /// Query parameter that carries where to return to after the session
-  /// check or sign-in.
   static const fromParameter = 'from';
 
-  /// The permission needed to open each section. The backend enforces the
-  /// same permission on its API; this only decides what is offered.
   static const Map<String, String> requiredPermission = <String, String>{
     dashboard: PermissionKeys.documentsView,
     places: PermissionKeys.routesRead,
     company: PermissionKeys.operatorsRead,
+    companyProfile: PermissionKeys.operatorsRead,
+    kycVerification: PermissionKeys.documentsView,
   };
 
-  static const List<String> sections = <String>[dashboard, places, company];
+  static const List<String> sections = <String>[
+    dashboard,
+    places,
+    company,
+    companyProfile,
+    kycVerification,
+  ];
 
-  /// The section a path belongs to: a document file belongs to the dashboard.
   static String sectionOf(String path) =>
       path.startsWith(onboardingPrefix) || path.startsWith(busKycPrefix)
-      ? dashboard
-      : path;
+          ? dashboard
+          : path;
 }

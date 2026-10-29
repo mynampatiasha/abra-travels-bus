@@ -347,7 +347,7 @@ void main() {
 
     test('PermissionKeys is exactly the backend catalogue', () {
       final backend = backendPermissionKeys();
-      expect(backend, hasLength(66), reason: 'backend catalogue size changed');
+      expect(backend, hasLength(74), reason: 'backend catalogue size changed');
       expect(
         PermissionKeys.all.difference(backend),
         isEmpty,
@@ -370,7 +370,7 @@ void main() {
       final backend = RegExp(
         r"'([A-Z_]+)'",
       ).allMatches(list).map((m) => m.group(1)!).toSet();
-      expect(backend, hasLength(12));
+      expect(backend, hasLength(13));
       expect(RoleKeys.all, backend);
     });
   });

@@ -1,5 +1,5 @@
 import 'package:client_portal/app/providers.dart';
-import 'package:client_portal/features/dashboard/dashboard_page.dart';
+import 'package:client_portal/features/dashboard/client_dashboard_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'support/test_portal.dart';
@@ -48,7 +48,7 @@ void main() {
       expect(find.text('Welcome to Abra Travels'), findsOneWidget);
       await open(tester, '/dashboard');
       expect(locationOf(tester), '/kyc');
-      expect(find.text('My company'), findsNothing);
+      expect(find.text('Bookings today'), findsNothing);
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );
@@ -90,7 +90,30 @@ void main() {
       await approval;
       await open(tester, '/dashboard');
       expect(locationOf(tester), '/dashboard');
-      expect(find.byType(DashboardPage), findsOneWidget);
+      expect(find.byType(ClientDashboardScreen), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+  testWidgets(
+    'after Send for review the screen shows the waiting state, not the form',
+    (tester) async {
+      final backend = pendingClient();
+      // Every document is in: the file may be sent.
+      backend.of('submissions').single['canSubmit'] = true;
+      await TestPortal.signedIn(backend).pump(tester);
+      await tester.tap(find.text('Continue to KYC'));
+      await settle(tester);
+      await tester.tap(find.text('No'));
+      await tester.tap(find.text('Save answers and view documents'));
+      await settle(tester);
+      final send = find.text('Send for review');
+      await tester.ensureVisible(send);
+      await tester.tap(send);
+      await settle(tester);
+      expect(find.textContaining('Under verification'), findsOneWidget);
+      expect(find.text('Edit answers'), findsNothing);
+      expect(find.text('Save answers and view documents'), findsNothing);
+      expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );

@@ -6,7 +6,7 @@ import 'package:shared_theme/shared_theme.dart';
 import 'package:shared_ui/shared_ui.dart';
 
 import '../../app/providers.dart';
-import '../onboarding/client_kyc_based_screen.dart';
+import '../kyc/kyc_client_manage_screen.dart';
 
 class ClientNotificationScreen extends ConsumerStatefulWidget {
   const ClientNotificationScreen({super.key});

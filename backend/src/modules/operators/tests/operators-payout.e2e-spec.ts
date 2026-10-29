@@ -172,6 +172,15 @@ describe('Operators payout e2e', () => {
 
     it('then lets payouts be automatic, and back to manual, each audited', async () => {
       const id = network.operator.id;
+      // Automatic needs Razorpay Route switched on in Payout and fees
+      const settings = context.connection.collection('payout_settings');
+      await settings.deleteMany({});
+      const routeOff = await call(admin).put(`/admin/operators/${id}/payout-mode`, {
+        mode: 'AUTO_SPLIT',
+      });
+      expect(routeOff.status).toBe(409);
+      expect(JSON.stringify(routeOff.body)).toContain('Razorpay Route is switched off');
+      await settings.insertOne({ key: 'platform', razorpayRoute: true });
       const auto = dataOf<OperatorDetail>(
         await call(admin)
           .put(`/admin/operators/${id}/payout-mode`, { mode: 'AUTO_SPLIT' })

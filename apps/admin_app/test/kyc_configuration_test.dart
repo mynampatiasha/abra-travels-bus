@@ -284,10 +284,12 @@ void main() {
     tester,
   ) async {
     await start(tester, backend());
-    expect(find.text('KYC configuration'), findsWidgets);
+    expect(find.text('KYC questionnaire'), findsWidgets);
+    expect(find.text('Preview checklist'), findsOneWidget);
     expect(find.text('Do you own or lease buses?'), findsOneWidget);
     expect(button('Add question'), findsOneWidget);
-    expect(button('Export'), findsOneWidget);
+    expect(button('Export CSV'), findsOneWidget);
+    expect(button('Export config'), findsOneWidget);
     expect(button('Import'), findsOneWidget);
     await tap(tester, find.text('Document rules').last);
     expect(find.text('Lease agreement for leased buses'), findsOneWidget);
@@ -306,7 +308,8 @@ void main() {
     await settle(tester);
     expect(find.text('Do you own or lease buses?'), findsNothing);
     expect(find.text('No entries match these filters.'), findsOneWidget);
-    await tap(tester, find.text('Clear filters'));
+    await tester.enterText(textField('Search questions or document rules'), '');
+    await settle(tester);
     expect(find.text('Do you own or lease buses?'), findsOneWidget);
   });
 
@@ -396,7 +399,7 @@ void main() {
         textField('Search questions or document rules'),
         'hidden',
       );
-      await tap(tester, button('Export'));
+      await tap(tester, button('Export CSV'));
       await tap(tester, find.text('Download Excel (.xlsx)'));
       expect(lastDownloadName, 'abra-kyc-configuration.xlsx');
       final data = kycParseSpreadsheet(
@@ -430,9 +433,7 @@ void main() {
       };
       pickSpreadsheet(kycExcelBytes(kycSpreadsheetRows(replacement, [])));
       expect(
-        tester
-            .widget<AbraButton>(button('Import').last)
-            .onPressed,
+        tester.widget<AbraButton>(button('Import').last).onPressed,
         isNull,
       );
       await tap(tester, find.text('Upload Excel or CSV'));
@@ -471,9 +472,7 @@ void main() {
       expect(find.text('Rule refers to a missing question.'), findsOneWidget);
       expect(app.requestsTo(path, 'PUT'), isEmpty);
       expect(
-        tester
-            .widget<AbraButton>(button('Import').last)
-            .onPressed,
+        tester.widget<AbraButton>(button('Import').last).onPressed,
         isNull,
       );
     },
@@ -494,7 +493,7 @@ void main() {
         ],
       });
       final app = await start(tester, source);
-      await tap(tester, button('Preview'));
+      await tap(tester, find.text('Preview checklist'));
       await tap(tester, find.widgetWithText(FilterChip, 'Lease'));
       await tap(tester, button('Show checklist'));
       expect(app.requestsTo('$path/preview', 'POST').single.body, {
@@ -520,7 +519,9 @@ void main() {
     expect(find.byTooltip('Edit'), findsNothing);
     expect(find.byTooltip('Delete'), findsNothing);
     expect(button('Import'), findsNothing);
-    expect(button('Export'), findsOneWidget);
+    expect(button('Export CSV'), findsOneWidget);
+    expect(find.byType(Switch), findsOneWidget);
+    expect(tester.widget<Switch>(find.byType(Switch)).onChanged, isNull);
   });
 
   testWidgets('operator staff cannot open platform KYC configuration', (
@@ -534,39 +535,43 @@ void main() {
       permissions: {'documents.read'},
     );
     final app = await start(tester, backend(operator));
-    expect(find.widgetWithText(ListTile, 'KYC configuration'), findsNothing);
+    expect(find.widgetWithText(ListTile, 'KYC questionnaire'), findsNothing);
     expect(find.byType(AdminKycConfigurationPage), findsNothing);
     expect(app.requestsTo(path), isEmpty);
     expect(button('Add question'), findsNothing);
   });
 
-  testWidgets('status and subject filters restrict records', (tester) async {
-    final source = backend();
-    source.kycConfiguration['questions'] = [
-      ownership(),
-      {
-        ...ownership(),
-        'key': 'bus_owner',
-        'label': 'Who owns this bus?',
-        'appliesTo': 'BUS',
-        'active': false,
-      },
-    ];
-    await start(tester, source);
-    await tap(
-      tester,
-      find.widgetWithText(DropdownButtonFormField<String>, 'Applies to'),
+  testWidgets('the Active switch turns a question off and on', (tester) async {
+    final app = await start(tester, backend());
+    await tap(tester, find.byType(Switch));
+    final sent = app.requestsTo(path, 'PUT').single.body! as Map;
+    expect((sent['questions'] as List).single, containsPair('active', false));
+    expect(sent['reason'], 'Disabled KYC question ownership');
+    await tap(tester, find.byType(Switch));
+    expect(
+      ((app.requestsTo(path, 'PUT').last.body! as Map)['questions'] as List)
+          .single,
+      containsPair('active', true),
     );
-    await tap(tester, find.text('Bus').last);
+  });
+
+  testWidgets('deleting a question can be undone', (tester) async {
+    final app = await start(tester, backend());
+    await tap(tester, find.byTooltip('Delete'));
+    await tap(tester, find.widgetWithText(FilledButton, 'Delete'));
     expect(find.text('Do you own or lease buses?'), findsNothing);
-    expect(find.text('Who owns this bus?'), findsOneWidget);
-    await tap(
-      tester,
-      find.widgetWithText(DropdownButtonFormField<String>, 'Status'),
-    );
-    await tap(tester, find.text('Active').last);
-    expect(find.text('Who owns this bus?'), findsNothing);
-    expect(find.text('No entries match these filters.'), findsOneWidget);
+    await tap(tester, find.text('Undo'));
+    expect(find.text('Do you own or lease buses?'), findsOneWidget);
+    expect(app.requestsTo(path, 'PUT'), hasLength(2));
+  });
+
+  testWidgets('a rule is listed with when it applies and the document asked', (
+    tester,
+  ) async {
+    await start(tester, backend());
+    await tap(tester, find.text('Document rules').last);
+    expect(find.text('Do you own or lease buses?: Lease'), findsOneWidget);
+    expect(find.text('Lease agreement'), findsOneWidget);
   });
 
   testWidgets('question lists are paged', (tester) async {

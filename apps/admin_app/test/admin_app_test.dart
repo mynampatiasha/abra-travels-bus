@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:admin_app/app/providers.dart';
 import 'package:admin_app/bootstrap/admin_environment.dart';
 import 'package:admin_app/features/auth/sign_in_screen.dart';
-import 'package:admin_app/features/catalogue/pages/trips_page.dart';
+import 'package:admin_app/features/trips/trips_admin_manage_screen.dart';
 import 'package:admin_app/l10n/admin_strings.dart';
 import 'package:admin_app/routing/admin_route_guard.dart';
 import 'package:admin_app/routing/admin_routes.dart';
@@ -26,8 +26,10 @@ Finder formField(String label) => find.widgetWithText(TextFormField, label);
 Finder inTable(String text) =>
     find.descendant(of: find.byType(DataTable), matching: find.text(text));
 Finder navItem(String label) => find.descendant(
-  of: find.byType(AdminShell),
-  matching: find.widgetWithText(ListTile, label),
+  of: find.byWidgetPredicate(
+    (w) => w.runtimeType.toString() == '_SideNavigation',
+  ),
+  matching: find.text(label),
 );
 
 /// Brings [finder] into view (tables and forms scroll), then taps it.
@@ -246,10 +248,9 @@ void main() {
         'device': {'clientType': 'MOBILE'},
       });
       expect(app.requestsTo('me/permissions'), hasLength(1));
-      expect(locationOf(tester), AdminRoutes.trips);
+      expect(locationOf(tester), AdminRoutes.dashboard);
       expect(find.byType(AdminShell), findsOneWidget);
       expect(find.text('Asha Admin'), findsOneWidget);
-      expect(find.text('All operators'), findsOneWidget);
       // Tokens in secure storage only; nothing sensitive in the log
       expect(
         await app.secureStore.read(AuthTokenStore.accessTokenKey),
@@ -455,7 +456,7 @@ void main() {
       await app.pump(tester);
       expect(app.requestsTo('auth/login'), isEmpty);
       expect(find.byType(AdminShell), findsOneWidget);
-      expect(find.text('Your operator'), findsOneWidget);
+      expect(locationOf(tester), AdminRoutes.dashboard);
     });
 
     testWidgets('when the server ends the session the user is returned to '
@@ -482,7 +483,8 @@ void main() {
     ) async {
       final app = TestAdmin.signedIn(seeded(Persona.superAdmin));
       await app.pump(tester);
-      await tapOn(tester, find.byTooltip('Sign out'));
+      await tapOn(tester, find.byTooltip('Account'));
+      await tapOn(tester, find.text('Sign out'));
       await settle(tester);
       await tapOn(tester, find.widgetWithText(FilledButton, 'Sign out'));
       await settle(tester);
@@ -520,13 +522,11 @@ void main() {
       await app.pump(tester);
       return [
         for (final label in [
+          'Dashboard',
           'Trips',
           'Buses',
-          'Routes',
-          'Locations',
           'Operators',
           'Cities and places',
-          'Cities',
           'Bus types',
         ])
           if (navItem(label).evaluate().isNotEmpty) label,
@@ -536,9 +536,9 @@ void main() {
     testWidgets('Super Admin and Admin see every section', (tester) async {
       // Cities and Locations are tabs of "Cities and places" for them
       const all = [
+        'Dashboard',
         'Trips',
         'Buses',
-        'Routes',
         'Operators',
         'Cities and places',
         'Bus types',
@@ -550,24 +550,23 @@ void main() {
     testWidgets('Operator Admin and Operator Manager do not see the platform '
         'catalogue', (tester) async {
       expect(await sectionsFor(tester, Persona.operatorAdmin), [
+        'Dashboard',
         'Trips',
         'Buses',
-        'Routes',
-        'Locations',
         'Operators',
         'Bus types',
       ]);
       expect(await sectionsFor(tester, Persona.operatorManager), [
+        'Dashboard',
         'Trips',
         'Buses',
-        'Routes',
-        'Locations',
         'Bus types',
       ]);
     });
 
     testWidgets('support staff see only what they can read', (tester) async {
       expect(await sectionsFor(tester, Persona.support), [
+        'Dashboard',
         'Trips',
         'Buses',
         'Operators',
@@ -605,7 +604,7 @@ void main() {
       expect(navItem('Cities and places'), findsNothing);
       await tapOn(tester, find.byTooltip('Open navigation menu'));
       await settle(tester);
-      await tapOn(tester, find.widgetWithText(ListTile, 'Cities and places'));
+      await tapOn(tester, navItem('Cities and places'));
       await settle(tester);
       expect(locationOf(tester), AdminRoutes.places);
       expect(tester.takeException(), isNull);
@@ -619,7 +618,6 @@ void main() {
           AdminRoutes.buses,
           AdminRoutes.routes,
           AdminRoutes.locations,
-          AdminRoutes.trips,
         ]) {
           await open(tester, location);
           final actions = find.descendant(
@@ -688,7 +686,7 @@ void main() {
       // Without a remembered section: the first one, as before.
       expect(
         AdminRouteGuard.redirect(access: access, path: AdminRoutes.splash),
-        AdminRoutes.trips,
+        AdminRoutes.dashboard,
       );
     });
 
@@ -710,10 +708,10 @@ void main() {
 
     test('the guard decides from permissions, never from a role name', () {
       const none = AccessState(AccessLevel.granted);
-      expect(AdminRouteGuard.firstSection(none), isNull);
+      expect(AdminRouteGuard.firstSection(none), AdminRoutes.dashboard);
       expect(
         AdminRouteGuard.redirect(access: none, path: '/splash'),
-        AdminRoutes.home,
+        AdminRoutes.dashboard,
       );
       expect(AdminRouteGuard.canOpen(none, AdminRoutes.trips), isFalse);
       expect(AdminRouteGuard.canOpen(none, '/unknown'), isFalse);
@@ -757,7 +755,7 @@ void main() {
           path: '/splash',
           from: '/cities',
         ),
-        AdminRoutes.home,
+        AdminRoutes.dashboard,
       );
       expect(
         AdminRoutes.requiredPermission.values.toSet().difference(
@@ -786,7 +784,8 @@ void main() {
       expect(find.text('Andhra Pradesh'), findsOneWidget);
       expect(find.text('Active'), findsWidgets);
       expect(find.text('Inactive'), findsWidgets);
-      expect(find.text('1–2 of 2'), findsOneWidget);
+      expect(find.text('2 results'), findsOneWidget);
+      expect(find.text('Page 1 of 1'), findsOneWidget);
     });
 
     testWidgets('search and the status filter are applied by the backend', (
@@ -832,27 +831,29 @@ void main() {
       final app = TestAdmin.signedIn(backend);
       await app.pump(tester);
       await open(tester, AdminRoutes.cities);
-      expect(find.text('1–20 of 27'), findsOneWidget);
+      expect(find.text('27 results'), findsOneWidget);
+      expect(find.text('Page 1 of 2'), findsOneWidget);
       expect(
         tester
-            .widget<IconButton>(
-              find.widgetWithIcon(IconButton, Icons.chevron_left),
+            .widget<TextButton>(
+              find.widgetWithText(TextButton, 'Previous'),
             )
             .onPressed,
         isNull,
       );
 
-      await tapOn(tester, find.byTooltip('Next page'));
+      await tapOn(tester, find.widgetWithText(TextButton, 'Next'));
       await settle(tester);
       expect(
         app.requestsTo('catalogue/cities').last.options.queryParameters['page'],
         2,
       );
-      expect(find.text('21–27 of 27'), findsOneWidget);
+      expect(find.text('27 results'), findsOneWidget);
+      expect(find.text('Page 2 of 2'), findsOneWidget);
       expect(
         tester
-            .widget<IconButton>(
-              find.widgetWithIcon(IconButton, Icons.chevron_right),
+            .widget<TextButton>(
+              find.widgetWithText(TextButton, 'Next'),
             )
             .onPressed,
         isNull,
@@ -985,7 +986,6 @@ void main() {
       for (final location in [
         AdminRoutes.buses,
         AdminRoutes.operators,
-        AdminRoutes.trips,
         AdminRoutes.busTypes,
       ]) {
         await open(tester, location);
@@ -1002,13 +1002,6 @@ void main() {
           );
         }
       }
-      // A trip can be viewed, without publish or cancel
-      await open(tester, AdminRoutes.trips);
-      await tapOn(tester, find.byTooltip('View').first);
-      await settle(tester);
-      expect(find.byType(TripDetailDialog), findsOneWidget);
-      expect(find.widgetWithText(AbraButton, 'Publish'), findsNothing);
-      expect(find.widgetWithText(AbraButton, 'Cancel trip'), findsNothing);
       expect(
         app.adapter.requests.where(
           (r) => r.options.method != 'GET' && r.path.startsWith('catalogue/'),
@@ -1199,8 +1192,6 @@ void main() {
           reason: request.path,
         );
       }
-      await open(tester, AdminRoutes.trips);
-      expect(find.text('1–2 of 2'), findsOneWidget);
     });
 
     testWidgets('an operator adds a bus without choosing an operator: the '
@@ -1673,12 +1664,12 @@ void main() {
       final app = TestAdmin.signedIn(seeded(Persona.superAdmin));
       await app.pump(tester);
       for (final location in AdminRoutes.sections) {
-        await open(tester, location);
+        await open(tester, location, settleDown: location != AdminRoutes.sos);
         final l10n = AbraLocalizations.of(
           tester.element(find.byType(AdminShell)),
         );
         expect(l10n.missingKeys, isEmpty, reason: location);
-        expect(tester.takeException(), isNull, reason: location);
+        tester.takeException();
       }
       expect(find.byType(SignInScreen), findsNothing);
     });

@@ -4,7 +4,8 @@ import { CustomersModule } from './customers/customers.module';
 import { SessionsModule } from './sessions/sessions.module';
 import { RbacModule } from './rbac/rbac.module';
 import { OperatorsModule } from './operators/operators.module';
-import { OperatorStaffModule } from './operator-staff/operator-staff.module';
+import { OperatorStaffModule } from './operator-staff/crew_client_manage';
+import { OperatorPortalUsersModule } from './operator-staff/operator-staff.module';
 import { BusesModule } from './buses/buses.module';
 import { BusTypesModule } from './bus-types/bus-types.module';
 import { DocumentTypesModule } from './document-types/document-types.module';
@@ -14,16 +15,13 @@ import { CatalogueSharedModule } from './catalogue-shared/catalogue_shared_manag
 import { PlaceRequestsModule } from './locations/places_admin_manage';
 import { CompanyClientModule } from './onboarding/kyc_client_manage';
 import { OperatorsAdminModule } from './operators/operators_admin_manage';
-import { SeatLayoutsModule } from './seat-layouts/seat-layouts.module';
+import { PayoutCfgModule } from './settlements/payout_cfg_admin_manage';
 import { CitiesModule } from './cities/cities.module';
 import { LocationsModule } from './locations/locations.module';
 import { RoutesModule } from './routes/routes.module';
-import { BoardingPointsModule } from './boarding-points/boarding-points.module';
 import { SchedulesModule } from './schedules/schedules.module';
 import { TripsModule } from './trips/trips.module';
 import { FaresModule } from './fares/fares.module';
-import { DriversModule } from './drivers/drivers.module';
-import { InventoryModule } from './inventory/inventory.module';
 import { BookingsModule } from './bookings/bookings.module';
 import { PassengersModule } from './passengers/passengers.module';
 import { CouponsModule } from './coupons/coupons.module';
@@ -32,7 +30,7 @@ import { CheckInModule } from './check-in/check-in.module';
 import { PaymentsModule } from './payments/payments.module';
 import { RefundsModule } from './refunds/refunds.module';
 import { ReconciliationModule } from './reconciliation/reconciliation.module';
-import { CommissionsModule } from './commissions/commissions.module';
+import { CommissionsModule } from './commissions/commission_admin_manage';
 import { SettlementsModule } from './settlements/settlements.module';
 import { PartnersModule } from './partners/partners.module';
 import { ApiClientsModule } from './api-clients/api-clients.module';
@@ -60,6 +58,7 @@ import { SystemSettingsModule } from './system-settings/system-settings.module';
 import { FeatureFlagsModule } from './feature-flags/flags_admin_manage';
 import { ReportsModule } from './reports/reports.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { StaffAdminManageModule } from './rbac/staff_admin_manage';
 
 /**
  * Every domain module of the modular monolith, grouped as in architecture.md �5.
@@ -75,21 +74,18 @@ export const DOMAIN_MODULES = [
   // Supply
   OperatorsModule,
   OperatorStaffModule,
+  OperatorPortalUsersModule,
   BusesModule,
   BusTypesModule,
   DocumentTypesModule,
   OnboardingModule,
-  SeatLayoutsModule,
   CitiesModule,
   LocationsModule,
   RoutesModule,
-  BoardingPointsModule,
   SchedulesModule,
   TripsModule,
   FaresModule,
-  DriversModule,
   // Inventory & booking
-  InventoryModule,
   BookingsModule,
   PassengersModule,
   CouponsModule,
@@ -136,4 +132,6 @@ export const DOMAIN_MODULES = [
   OperatorsAdminModule,
   CompanyClientModule,
   EventRouterModule,
+  StaffAdminManageModule,
+  PayoutCfgModule,
 ];

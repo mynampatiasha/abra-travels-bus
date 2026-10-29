@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_authentication/shared_authentication.dart';
 import 'package:shared_core/shared_core.dart';
@@ -6,6 +7,59 @@ import 'package:shared_notifications/shared_notifications.dart';
 import 'package:shared_permissions/shared_permissions.dart';
 
 import '../bootstrap/app_dependencies.dart';
+
+/// Active theme mode (Light or Dark).
+final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(
+  ThemeModeNotifier.new,
+);
+
+class ThemeModeNotifier extends Notifier<ThemeMode> {
+  @override
+  ThemeMode build() => ThemeMode.light;
+
+  void toggle() {
+    state = state == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+  }
+
+  void setMode(ThemeMode mode) {
+    state = mode;
+  }
+}
+
+/// Dynamic badge counts for navigation items matching demo model state.
+/// The numbers on the side navigation: what waits for an admin, counted by the
+/// server. Keyed by the page the admin is on, so it is read again on every move.
+/// Only pages whose backend exists have a number (KYC reviews and place
+/// requests); payments, refunds, tickets and SOS get theirs in later phases.
+/// A count that cannot be read is simply not shown.
+final navBadgeCountsProvider = FutureProvider.autoDispose
+    .family<Map<String, int>, String>((ref, currentPath) async {
+      final access = ref.watch(accessProvider);
+      final client = ref.watch(appDependenciesProvider).apiClient;
+      final counts = <String, int>{};
+      if (access.can(PermissionKeys.documentsView)) {
+        try {
+          final response = await client.get(
+            'onboarding/submissions',
+            query: <String, Object?>{'status': 'PENDING', 'pageSize': 1},
+          );
+          counts['kyc'] = response.page?.total ?? 0;
+        } on Object {
+          // No number rather than a wrong one.
+        }
+      }
+      if (access.can(PermissionKeys.catalogueRead)) {
+        try {
+          final response = await client.get('admin/place-requests/pending-count');
+          final data = response.data;
+          final pending = data is Map ? data['pending'] : null;
+          counts['places'] = pending is num ? pending.toInt() : 0;
+        } on Object {
+          // No number rather than a wrong one.
+        }
+      }
+      return counts;
+    });
 
 /// Overridden in `bootstrap` (and in tests).
 final appDependenciesProvider = Provider<AppDependencies>(
@@ -118,8 +172,11 @@ class AccessController extends Notifier<AccessState> {
         permissions: permissions,
         user: user,
       ),
-      onFailure: (failure) =>
-          AccessState(AccessLevel.failed, user: user, failure: failure),
+      onFailure: (failure) => AccessState(
+        AccessLevel.failed,
+        user: user,
+        failure: failure,
+      ),
     );
   }
 
@@ -130,6 +187,7 @@ class AccessController extends Notifier<AccessState> {
     state = AccessState(AccessLevel.pending, user: user);
     await _load(user);
   }
+
 }
 
 /// Start-up check of the stored session.

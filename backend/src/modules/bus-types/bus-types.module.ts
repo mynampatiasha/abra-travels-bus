@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { CatalogueSharedModule } from '../catalogue-shared/catalogue_shared_manage';
+import { BusTypeRequestsModule } from './bus_type_requests_admin_manage';
 import { BusTypesExportController } from './bus_types_admin_manage';
 import { MongooseModule } from '@nestjs/mongoose';
 import { RbacModule } from '../rbac/rbac.module';
@@ -18,6 +19,7 @@ import { BusTypesService } from './services/bus-types.service';
   imports: [CatalogueSharedModule, 
     MongooseModule.forFeature([{ name: BUS_TYPE_MODEL, schema: busTypeSchema }]),
     RbacModule,
+    BusTypeRequestsModule,
   ],
   controllers: [BusTypesExportController, BusTypesController, BusTypesManageController],
   providers: [BusTypeRepository, BusTypesService, BusTypesManageService],

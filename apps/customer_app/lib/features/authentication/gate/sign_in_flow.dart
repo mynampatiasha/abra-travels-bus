@@ -98,7 +98,7 @@ class PhoneStep extends ConsumerStatefulWidget {
 class _PhoneStepState extends ConsumerState<PhoneStep>
     with SecondsTicker<PhoneStep> {
   late final TextEditingController _phone;
-  bool _socialTerms = false;
+  bool _socialTerms = true;
   static const SignInCountry _country = SignInCountry.india;
 
   @override
@@ -125,49 +125,6 @@ class _PhoneStepState extends ConsumerState<PhoneStep>
         .requestCode(_phone.text, country: _country);
     if (!mounted || outcome != SendCodeOutcome.codeSent) return;
     widget.onCodeSent();
-  }
-
-  Future<void> _google(
-    String token,
-    String? password, {
-    bool apple = false,
-  }) async {
-    final manager = ref.read(sessionManagerProvider);
-    final result = apple
-        ? await manager.signInWithApple(token, linkPassword: password)
-        : await manager.signInWithGoogle(
-            token,
-            audience: 'CUSTOMER',
-            linkPassword: password,
-          );
-    if (result is MfaChallenge && mounted) {
-      final controller = TextEditingController();
-      final code = await showDialog<String>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Two-step verification'),
-          content: TextField(
-            controller: controller,
-            keyboardType: TextInputType.number,
-            obscureText: true,
-            decoration: const InputDecoration(labelText: 'Authenticator code'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, controller.text.trim()),
-              child: const Text('Verify'),
-            ),
-          ],
-        ),
-      );
-      controller.dispose();
-      if (code == null) throw StateError('Sign-in was cancelled.');
-      await manager.completeMfa(result, code: code);
-    }
   }
 
   @override
@@ -202,25 +159,41 @@ class _PhoneStepState extends ConsumerState<PhoneStep>
           children: [
             SizedBox(
               width: 48,
+              height: 48,
               child: GoogleSignInButton(
                 iconOnly: true,
                 showTerms: false,
                 termsAccepted: _socialTerms,
                 enabled: !signIn.isBusy,
-                exchange: (token, password) => _google(token, password),
+                provider: SocialSignInProvider.google,
+                exchange: (token, password) async {
+                  final manager = ref.read(sessionManagerProvider);
+                  await manager.signInWithGoogle(
+                    token,
+                    audience: 'CUSTOMER',
+                    linkPassword: password,
+                  );
+                },
               ),
             ),
             const SizedBox(width: 16),
             SizedBox(
               width: 48,
+              height: 48,
               child: GoogleSignInButton(
                 iconOnly: true,
                 showTerms: false,
                 termsAccepted: _socialTerms,
                 enabled: !signIn.isBusy,
                 provider: SocialSignInProvider.apple,
-                exchange: (token, password) =>
-                    _google(token, password, apple: true),
+                exchange: (token, password) async {
+                  final manager = ref.read(sessionManagerProvider);
+                  await manager.signInWithApple(
+                    token,
+                    audience: 'CUSTOMER',
+                    linkPassword: password,
+                  );
+                },
               ),
             ),
           ],

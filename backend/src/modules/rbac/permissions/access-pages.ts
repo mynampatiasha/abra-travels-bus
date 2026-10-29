@@ -51,7 +51,7 @@ export const ACCESS_PAGES: readonly AccessPage[] = [
   admin('dreports', 'Driver reports', 'drivers'),
   admin('drules', 'Driver rules (defaults)', 'drivers'),
   admin('commission', 'Commission', 'commissions'),
-  admin('payout', 'Payout and fees', 'settlements'),
+  admin('payout', 'Payout and fees', 'settlements', 'payout'),
   admin('places', 'Cities and places', 'catalogue'),
   admin('bustypes', 'Bus types and amenities', 'catalogue'),
   admin('documents', 'Required documents', 'documents'),

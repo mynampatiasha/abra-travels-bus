@@ -26,35 +26,12 @@ class TripSharingScreen extends ConsumerStatefulWidget {
 }
 
 class _TripSharingScreenState extends ConsumerState<TripSharingScreen> {
-  bool _busy = false;
-
   void _toast(String message) => ScaffoldMessenger.of(context)
     ..clearSnackBars()
     ..showSnackBar(
       SnackBar(duration: const Duration(seconds: 2), content: Text(message)),
     );
 
-  Future<void> _toggle(bool start) async {
-    if (_busy) return;
-    final l10n = AbraLocalizations.of(context);
-    setState(() => _busy = true);
-    try {
-      final controller = ref.read(
-        shareStateProvider(widget.bookingId).notifier,
-      );
-      await (start ? controller.start() : controller.stop());
-      if (!mounted) return;
-      _toast(
-        l10n.text(
-          start ? CustomerStrings.shareStarted : CustomerStrings.shareStopped,
-        ),
-      );
-    } on Object {
-      if (mounted) _toast(l10n.text(AbraStrings.stateErrorMessage));
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
 
   String _message(AbraLocalizations l10n, ShareState state) => l10n.text(
     CustomerStrings.shareMessage,
@@ -108,21 +85,15 @@ class _TripSharingScreenState extends ConsumerState<TripSharingScreen> {
                         gutter,
                         AbraSpacing.md,
                       ),
-                      child: state.isActive
-                          ? AbraButton(
-                              label: l10n.text(CustomerStrings.shareStop),
-                              variant: AbraButtonVariant.secondary,
-                              expand: true,
-                              isLoading: _busy,
-                              onPressed: () => _toggle(false),
-                            )
-                          : AbraButton(
-                              label: l10n.text(CustomerStrings.shareStart),
-                              variant: AbraButtonVariant.primary,
-                              expand: true,
-                              isLoading: _busy,
-                              onPressed: () => _toggle(true),
-                            ),
+                      child: const Tooltip(
+                        message: 'Not connected yet',
+                        child: AbraButton(
+                          label: 'Share live trip',
+                          variant: AbraButtonVariant.primary,
+                          expand: true,
+                          onPressed: null,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -189,7 +160,7 @@ class _Banner extends StatelessWidget {
                   'count': state.people.length,
                   'time': time,
                 })
-        : l10n.text(CustomerStrings.shareOffBanner);
+        : 'Not connected yet - built in Phase 5';
     final foreground = on ? AbraColors.tealDark : const Color(0xFF7A4B00);
     return Semantics(
       liveRegion: true,

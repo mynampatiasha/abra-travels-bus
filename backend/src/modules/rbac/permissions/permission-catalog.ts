@@ -371,6 +371,56 @@ export const AUDIT_PERMISSIONS = definePermissions('audit', {
   },
 });
 
+/** Payout and fees: the platform payout settings, fees and cancellation refund slabs. */
+export const PAYOUT_PERMISSIONS = definePermissions('payout', {
+  read: {
+    name: 'View payout and fees',
+    description: 'View the payout settings, customer fees and cancellation refund slabs.',
+    grantableTo: PLATFORM_ONLY,
+  },
+  manage: {
+    name: 'Change payout and fees',
+    description: 'Change the payout settings, customer fees and add refund slabs.',
+    grantableTo: PLATFORM_ONLY,
+    sensitive: true,
+  },
+  export: {
+    name: 'Export refund slabs',
+    description: 'Download the cancellation refund slabs as CSV or Excel.',
+    grantableTo: PLATFORM_ONLY,
+  },
+  delete: {
+    name: 'Remove refund slabs',
+    description: 'Remove cancellation refund slabs, and restore what was removed.',
+    grantableTo: PLATFORM_ONLY,
+    sensitive: true,
+  },
+});
+
+export const COMMISSION_PERMISSIONS = definePermissions('commissions', {
+  read: {
+    name: 'View commission',
+    description: 'View the commission rules, the default and the change history.',
+    grantableTo: PLATFORM_AND_OPERATOR,
+  },
+  manage: {
+    name: 'Manage commission',
+    description: 'Add commission rules, save new versions, switch them on or off and set the default.',
+    grantableTo: PLATFORM_ONLY,
+  },
+  delete: {
+    name: 'Delete commission rules',
+    description: 'Delete commission rules and restore the ones that were deleted.',
+    grantableTo: PLATFORM_ONLY,
+    sensitive: true,
+  },
+  export: {
+    name: 'Export commission rules',
+    description: 'Download the commission rules as CSV or Excel.',
+    grantableTo: PLATFORM_ONLY,
+  },
+});
+
 /** Every permission of the platform. A new module's group is added to this object. */
 export const PERMISSION_CATALOG = {
   ...USER_PERMISSIONS,
@@ -396,6 +446,8 @@ export const PERMISSION_CATALOG = {
   ...SETTING_PERMISSIONS,
   ...AUDIT_PERMISSIONS,
   ...BANNER_PERMISSIONS,
+  ...COMMISSION_PERMISSIONS,
+  ...PAYOUT_PERMISSIONS,
 } as const;
 
 /** Union of every declared permission key; the only values `@RequirePermission` accepts. */

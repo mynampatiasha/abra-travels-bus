@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:customer_app/app/providers.dart';
 import 'package:customer_app/features/authentication/field_error.dart';
-import 'package:customer_app/features/authentication/login_screen.dart';
 import 'package:customer_app/features/authentication/gate/sign_in_flow.dart';
+import 'package:customer_app/features/authentication/login_screen.dart';
 import 'package:customer_app/features/authentication/otp_sign_in_controller.dart';
 import 'package:customer_app/features/authentication/sign_in_problem.dart';
 import 'package:customer_app/features/my_trips/booking_details_screen.dart';
@@ -133,6 +133,7 @@ void main() {
     backend = FakeAuthBackend();
     app = TestApp(handler: (request) => backend(request), stored: stored);
     await app.pump(tester, size: size);
+    tester.takeException();
     // Guests start on the home screen; these tests are about signing in.
     if (stored.isEmpty) await open(tester, '/login');
   }
