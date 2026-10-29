@@ -207,9 +207,13 @@ describe('Company profile (client portal) e2e', () => {
       await call(admin)
         .post(`/admin/operators/${id}/bank/verify`, { outcome: 'VERIFIED', note: 'Checked' })
         .expect(200);
+      // Automatic payouts need Razorpay Route switched on in Payout and fees
+      const settings = context.connection.collection('payout_settings');
+      await settings.updateOne({ key: 'platform' }, { $set: { razorpayRoute: true } }, { upsert: true });
       await call(admin)
         .put(`/admin/operators/${id}/payout-mode`, { mode: 'AUTO_SPLIT' })
         .expect(200);
+      await settings.deleteMany({ key: 'platform' });
       const replaced = dataOf<Company>(
         await call(owner)
           .put('/client/company/bank', { ...BANK, accountNumber: '998877665544' })
