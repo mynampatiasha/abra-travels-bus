@@ -100,7 +100,7 @@ describe('Payments e2e (abra_supply_test, development gateway)', () => {
   it('makes an order for the booking amount, and the same order when asked again', async () => {
     const booking = await book(anna, '1');
     const first = await order(anna, booking.bookingId);
-    expect(first.amountPaise).toBe(85_000);
+    expect(first.amountPaise).toBe(94_150);
     expect(first.gateway).toBe('development');
     expect(first.gatewayOrderId).toMatch(/^dev_order_/);
     const again = await order(anna, booking.bookingId);
@@ -166,10 +166,10 @@ describe('Payments e2e (abra_supply_test, development gateway)', () => {
       })
       .expect(201);
     const booking = await book(anna, '5', code);
-    expect(booking.amountPaise).toBe(80_000);
+    expect(booking.amountPaise).toBe(89_150);
     expect((await context.connection.collection('coupons').findOne({ code }))?.usedCount).toBe(1);
     const o = await order(anna, booking.bookingId);
-    expect(o.amountPaise).toBe(80_000);
+    expect(o.amountPaise).toBe(89_150);
     await devComplete(anna, o.paymentId, 'failure').expect(200);
     expect((await context.connection.collection('coupons').findOne({ code }))?.usedCount).toBe(0);
     const redemption = await context.connection.collection('coupon_redemptions').findOne({ bookingId: new Types.ObjectId(booking.bookingId) });

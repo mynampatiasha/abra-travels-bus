@@ -6,6 +6,7 @@ import { ApiException } from '../../common/errors/api-exception';
 import { type AuthenticatedUserActor } from '../../common/request-context/request-actor';
 import { TransactionRunner } from '../../database/transaction-runner.service';
 import { CouponsService } from '../coupons/coupons.service';
+import { computeFare } from './booking_pricing';
 
 /*
  * A booking for held seats (documentation/state-machines.md section 3). The customer sends the hold
@@ -52,6 +53,8 @@ export interface BookingRow {
   droppingPointId?: string;
   couponCode?: string;
   baseFarePaise: number;
+  gstPaise: number;
+  convenienceFeePaise: number;
   discountPaise: number;
   amountPaise: number;
   currency: string;
@@ -87,6 +90,8 @@ export const bookingSchema = new Schema<BookingRow>(
     droppingPointId: { type: String },
     couponCode: { type: String },
     baseFarePaise: { type: Number, required: true },
+    gstPaise: { type: Number, required: true, default: 0 },
+    convenienceFeePaise: { type: Number, required: true, default: 0 },
     discountPaise: { type: Number, required: true, default: 0 },
     amountPaise: { type: Number, required: true },
     currency: { type: String, required: true, default: 'INR' },
@@ -115,6 +120,8 @@ export interface BookingView {
   tripId: string;
   seatIds: string[];
   baseFarePaise: number;
+  gstPaise: number;
+  convenienceFeePaise: number;
   discountPaise: number;
   amountPaise: number;
   currency: string;
@@ -167,6 +174,8 @@ export class BookingsCustomerService {
       tripId: row.tripId.toHexString(),
       seatIds: row.passengers.map((p) => p.seatId),
       baseFarePaise: row.baseFarePaise,
+      gstPaise: row.gstPaise ?? 0,
+      convenienceFeePaise: row.convenienceFeePaise ?? 0,
       discountPaise: row.discountPaise,
       amountPaise: row.amountPaise,
       currency: row.currency,
@@ -223,7 +232,8 @@ export class BookingsCustomerService {
       if (!check.valid) throw new ApiException('COUPON_INVALID', check.reason ?? 'This code is not valid.');
       discountPaise = check.discountPaise;
     }
-    const amountPaise = baseFarePaise - discountPaise;
+    const fare = computeFare(baseFarePaise, discountPaise);
+    const amountPaise = fare.amountPaise;
     if (input.expectedAmountPaise !== undefined && input.expectedAmountPaise !== amountPaise) {
       throw new ApiException('PAYMENT_AMOUNT_MISMATCH', 'The price changed. Please check the new amount.', {
         amountPaise,
@@ -248,7 +258,9 @@ export class BookingsCustomerService {
             ...(group.droppingPointId ? { droppingPointId: group.droppingPointId } : {}),
             ...(input.couponCode ? { couponCode: input.couponCode } : {}),
             baseFarePaise,
-            discountPaise,
+            gstPaise: fare.gstPaise,
+            convenienceFeePaise: fare.convenienceFeePaise,
+            discountPaise: fare.discountPaise,
             amountPaise,
             currency: 'INR',
             holdExpiresAt: group.expiresAt,

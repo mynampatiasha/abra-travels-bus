@@ -78,12 +78,15 @@ describe('Booking held seats e2e (abra_supply_test)', () => {
       lockId: h.lockId,
       passengers: [passenger('1'), passenger('2', 'Ravi Rao')],
       contact,
-      expectedAmountPaise: 175_000,
+      expectedAmountPaise: 188_650,
     }).expect(201);
     const booking = dataOf<BookingView>(res);
     expect(booking.status).toBe('PAYMENT_PENDING');
     expect(booking.baseFarePaise).toBe(175_000);
-    expect(booking.amountPaise).toBe(175_000);
+    // 175,000 + 5% GST (8,750) + the Rs 49 fee
+    expect(booking.gstPaise).toBe(8_750);
+    expect(booking.convenienceFeePaise).toBe(4_900);
+    expect(booking.amountPaise).toBe(188_650);
     expect(booking.seatIds.sort()).toEqual(['1', '2']);
     expect(booking.pnr).toMatch(/^ABR[A-Z2-9]{7}$/);
 
