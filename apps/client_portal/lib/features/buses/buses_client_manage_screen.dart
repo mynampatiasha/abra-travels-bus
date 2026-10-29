@@ -21,15 +21,21 @@ class ClientBusItem {
     required this.seatCapacity,
     required this.seatLayoutType,
     required this.status,
+    this.make,
+    String? displayName,
     this.insuranceExpiryDate,
     this.statusReason,
-  });
+  }) : displayName = displayName ?? (make == null ? busTypeName : '$make $busTypeName');
 
   final String id;
   final String registrationNumber;
   final String name;
   final String busTypeId;
   final String busTypeName;
+  final String? make;
+
+  /// Ready-made name for lists, e.g. "Volvo AC Sleeper" (the bus type alone when there is no make).
+  final String displayName;
   final int seatCapacity;
   final String seatLayoutType;
   final String status;
@@ -43,6 +49,8 @@ class ClientBusItem {
       name: json['name'] as String? ?? '',
       busTypeId: json['busTypeId'] as String? ?? '',
       busTypeName: json['busTypeName'] as String? ?? json['type'] as String? ?? 'Standard',
+      make: json['make'] as String?,
+      displayName: json['displayName'] as String?,
       seatCapacity: (json['seatCapacity'] as num?)?.toInt() ?? (json['seats'] as num?)?.toInt() ?? 40,
       seatLayoutType: json['seatLayoutType'] as String? ?? json['layout'] as String? ?? '2+2 Seater',
       status: json['status'] as String? ?? 'ACTIVE',
@@ -404,7 +412,7 @@ class _ClientBusesViewState extends ConsumerState<_ClientBusesView> {
                                     cells: [
                                       DataCell(Text(bus.registrationNumber, style: const TextStyle(fontWeight: FontWeight.w700))),
                                       DataCell(Text(bus.name)),
-                                      DataCell(Text(bus.busTypeName)),
+                                      DataCell(Text(bus.displayName)),
                                       DataCell(Text('${bus.seatCapacity} seats')),
                                       DataCell(Text(bus.seatLayoutType)),
                                       DataCell(PortalStatusChip(status: bus.status)),
@@ -477,6 +485,123 @@ class _ClientBusesViewState extends ConsumerState<_ClientBusesView> {
     '2+1 Semi-sleeper',
   ];
 
+  /// Makers an operator can pick; "Other" lets them type one.
+  static const _makes = <String>[
+    'Volvo',
+    'Scania',
+    'BharatBenz',
+    'Ashok Leyland',
+    'Tata',
+    'Eicher',
+    'Mercedes-Benz',
+  ];
+  static const _otherMake = 'Other';
+
+  /// What an operator can say about a bus type they ask for (the server's berth types).
+  static const _berthChoices = <String, String>{
+    'SEATER': 'Seater',
+    'SLEEPER': 'Sleeper',
+    'SEMI_SLEEPER': 'Semi-sleeper',
+    'MIXED': 'Seater + Sleeper',
+  };
+
+  /// "My bus type isn't listed": asks Abra to add a bus type. Abra approves it on the Bus types
+  /// page and the operator is told.
+  Future<void> _showBusTypeRequestDialog(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AbraLocalizations.of(context);
+    final nameCtrl = TextEditingController();
+    var isAc = true;
+    var berthType = 'SLEEPER';
+    String? error;
+    var saving = false;
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlg) {
+          Future<void> submit() async {
+            if (nameCtrl.text.trim().length < 2) {
+              setDlg(() => error = 'Enter the bus type name.');
+              return;
+            }
+            setDlg(() {
+              error = null;
+              saving = true;
+            });
+            try {
+              await ref.read(appDependenciesProvider).apiClient.post(
+                'client/bus-type-requests',
+                body: <String, dynamic>{
+                  'name': nameCtrl.text.trim(),
+                  'isAc': isAc,
+                  'berthType': berthType,
+                },
+              );
+              if (ctx.mounted) Navigator.of(ctx).pop();
+              messenger.showSnackBar(
+                const SnackBar(
+                  content: Text('Request sent to Abra. We will tell you when the bus type is added.'),
+                ),
+              );
+            } catch (e) {
+              setDlg(() {
+                saving = false;
+                error = failureText(l10n, e);
+              });
+            }
+          }
+
+          return AlertDialog(
+            title: const Text("My bus type isn't listed"),
+            content: SizedBox(
+              width: 400,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextField(
+                    controller: nameCtrl,
+                    decoration: const InputDecoration(labelText: 'Bus type name (e.g. Mini Coach)*'),
+                  ),
+                  const SizedBox(height: 12),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Air-conditioned (AC)'),
+                    value: isAc,
+                    onChanged: (v) => setDlg(() => isAc = v),
+                  ),
+                  DropdownButtonFormField<String>(
+                    initialValue: berthType,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Seats and berths*'),
+                    items: [
+                      for (final entry in _berthChoices.entries)
+                        DropdownMenuItem<String>(value: entry.key, child: Text(entry.value)),
+                    ],
+                    onChanged: (v) => setDlg(() => berthType = v ?? berthType),
+                  ),
+                  if (error != null) ...[
+                    const SizedBox(height: 12),
+                    Text(error!, style: const TextStyle(color: AbraColors.danger)),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: saving ? null : () => Navigator.pop(ctx), child: const Text('Cancel')),
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: AbraColors.blue),
+                onPressed: saving ? null : submit,
+                child: Text(saving ? 'Sending…' : 'Send request'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   /// The bus types and amenities Abra has switched on, from the server.
   Future<(List<Map<String, dynamic>>, List<Map<String, dynamic>>)> _loadBusChoices() async {
     final client = ref.read(appDependenciesProvider).apiClient;
@@ -527,6 +652,8 @@ class _ClientBusesViewState extends ConsumerState<_ClientBusesView> {
     final nameCtrl = TextEditingController();
     final seatsCtrl = TextEditingController();
     String? busTypeId;
+    String? make;
+    final otherMakeCtrl = TextEditingController();
     String? arrangement;
     DateTime? insuranceExpiry;
     final selectedAmenities = <String>{};
@@ -539,7 +666,10 @@ class _ClientBusesViewState extends ConsumerState<_ClientBusesView> {
         builder: (ctx, setDlg) {
           Future<void> submit() async {
             final seats = int.tryParse(seatsCtrl.text.trim());
-            final problem = regCtrl.text.trim().isEmpty
+            final makeText = make == _otherMake ? otherMakeCtrl.text.trim() : make;
+            final problem = make == _otherMake && makeText!.length < 2
+                ? 'Type the make of the bus, or choose one from the list.'
+                : regCtrl.text.trim().isEmpty
                 ? 'Enter the registration number.'
                 : nameCtrl.text.trim().length < 2
                     ? 'Enter the bus name.'
@@ -564,6 +694,7 @@ class _ClientBusesViewState extends ConsumerState<_ClientBusesView> {
                   'registrationNumber': regCtrl.text.trim(),
                   'name': nameCtrl.text.trim(),
                   'busTypeId': busTypeId,
+                  if (makeText != null && makeText.isNotEmpty) 'make': makeText,
                   'seatCapacity': seats,
                   'seatLayoutType': ?arrangement,
                   if (insuranceExpiry != null)
@@ -615,6 +746,31 @@ class _ClientBusesViewState extends ConsumerState<_ClientBusesView> {
                       ],
                       onChanged: (v) => setDlg(() => busTypeId = v),
                     ),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(
+                        onPressed: saving ? null : () => _showBusTypeRequestDialog(ctx),
+                        child: const Text("My bus type isn't listed"),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    DropdownButtonFormField<String>(
+                      initialValue: make,
+                      isExpanded: true,
+                      decoration: const InputDecoration(labelText: 'Make (optional)'),
+                      items: [
+                        for (final m in [..._makes, _otherMake])
+                          DropdownMenuItem<String>(value: m, child: Text(m == _otherMake ? 'Other (type it)' : m)),
+                      ],
+                      onChanged: (v) => setDlg(() => make = v),
+                    ),
+                    if (make == _otherMake) ...[
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: otherMakeCtrl,
+                        decoration: const InputDecoration(labelText: 'Make of the bus*'),
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       initialValue: arrangement,
@@ -705,7 +861,7 @@ class _ClientBusesViewState extends ConsumerState<_ClientBusesView> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Type: ${bus.busTypeName}'),
+            Text('Type: ${bus.displayName}'),
             const SizedBox(height: 6),
             Text('Capacity: ${bus.seatCapacity} seats'),
             const SizedBox(height: 6),

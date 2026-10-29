@@ -76,6 +76,9 @@ export interface ClientBusView {
   name: string;
   busTypeId: string;
   busTypeName?: string;
+  make?: string;
+  /** Ready-made name for lists, e.g. "Volvo AC Sleeper"; without a make, the bus type name. */
+  displayName: string;
   amenities: string[];
   seatCapacity: number;
   seatLayoutType: string;
@@ -299,6 +302,7 @@ export class BusesClientManageService {
                 registrationNumber: input.registrationNumber,
                 name: input.name,
                 busTypeId,
+                ...(input.make ? { make: input.make } : {}),
                 amenities: input.amenities,
                 seatCapacity,
                 seatLayoutType,
@@ -359,6 +363,7 @@ export class BusesClientManageService {
 
     const set: Partial<Bus> = {};
     if (input.name !== undefined) set.name = input.name;
+    if (input.make !== undefined) set.make = input.make;
     if (input.amenities !== undefined) {
       await this.amenities.assertUsable(input.amenities, before.amenities);
       set.amenities = input.amenities;
@@ -588,12 +593,16 @@ export class BusesClientManageService {
       .exec();
     const typeMap = new Map<string, string>(types.map((t) => [t._id.toHexString(), t.name]));
 
-    return buses.map((b) => ({
+    return buses.map((b) => {
+      const busTypeName = typeMap.get(b.busTypeId.toHexString()) ?? 'Standard Bus';
+      return {
       id: b._id.toHexString(),
       registrationNumber: b.registrationNumber,
       name: b.name,
       busTypeId: b.busTypeId.toHexString(),
-      busTypeName: typeMap.get(b.busTypeId.toHexString()) ?? 'Standard Bus',
+      busTypeName,
+      ...(b.make ? { make: b.make } : {}),
+      displayName: b.make ? `${b.make} ${busTypeName}` : busTypeName,
       amenities: [...b.amenities],
       seatCapacity: b.seatCapacity ?? 40,
       seatLayoutType: b.seatLayoutType ?? '2+2 Seater',
@@ -602,7 +611,8 @@ export class BusesClientManageService {
       status: b.status,
       statusReason: b.statusReason,
       createdAt: b.createdAt ? b.createdAt.toISOString() : undefined,
-    }));
+      };
+    });
   }
 
   private requireOperatorId(actor: AuthenticatedUserActor): Types.ObjectId {

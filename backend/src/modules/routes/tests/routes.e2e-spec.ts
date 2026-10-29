@@ -59,6 +59,11 @@ describe('Routes Management e2e (abra_supply_test)', () => {
     network = await buildNetwork(catalogueApi(context, superAdmin), `${runId}routes`);
     operatorA = await signIn('OPERATOR_ADMIN', network.operator.id);
 
+    // Routes now need real cities: the cities these tests use are listed first.
+    for (const name of ['Bengaluru', 'Hyderabad', 'Anantapur', 'Chennai']) {
+      await catalogueApi(context, superAdmin).create<Identified>('/cities', { name, state: 'Test State' });
+    }
+
     const operatorBRecord = await catalogueApi(context, superAdmin).create<Identified>('/operators', {
       companyName: `Operator B ${runId} Routes Pvt Ltd`,
       displayName: `Operator B ${runId}`,
@@ -96,6 +101,31 @@ describe('Routes Management e2e (abra_supply_test)', () => {
     expect(route.name).toBe('Bengaluru to Hyderabad Express');
     expect(route.stops).toHaveLength(3);
     expect(route.status).toBe('ACTIVE');
+
+    // The route points at the real cities, not made-up ids.
+    const stored = await context.connection
+      .collection('routes')
+      .findOne({ _id: new Types.ObjectId(route.id) });
+    const cityIds = [stored?.originCityId, stored?.destinationCityId];
+    const found = await context.connection
+      .collection('cities')
+      .countDocuments({ _id: { $in: cityIds } });
+    expect(found).toBe(2);
+  });
+
+  it('A2: refuses a route whose city Abra does not list', async () => {
+    const res = await call(operatorA).post('/client/routes', {
+      from: 'Bengaluru',
+      to: 'Atlantis',
+      km: 570,
+      hours: 10,
+      stops: [
+        { placeId: 'PL1', name: 'Majestic', city: 'Bengaluru', offset: 0, type: 'BOARDING' },
+        { placeId: 'PL3', name: 'Harbour', city: 'Atlantis', offset: 600, type: 'DROPPING' },
+      ],
+    });
+    expect(res.status).toBe(400);
+    expect(JSON.stringify(res.body)).toContain('Atlantis');
   });
 
   it('B: rejects route creation if distance or duration is invalid', async () => {

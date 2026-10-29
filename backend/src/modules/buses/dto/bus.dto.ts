@@ -6,6 +6,8 @@ import { BUS_STATUSES, MANUAL_BUS_STATUSES } from '../schemas/bus.schema';
 const fields = {
   name: z.string().trim().min(2).max(80),
   busTypeId: objectIdString,
+  /** Maker of the bus (a listed make or a typed one). */
+  make: z.string().trim().min(2).max(40).optional(),
   /** Keys of amenities that are switched on (`GET /catalogue/amenities`). */
   amenities: z
     .array(z.string().regex(/^[A-Z][A-Z0-9_]{1,39}$/, 'must be an amenity key'))
@@ -35,6 +37,7 @@ export class UpdateBusDto extends createZodDto(
   z.object({
     name: fields.name.optional(),
     busTypeId: fields.busTypeId.optional(),
+    make: fields.make,
     amenities: fields.amenities.optional(),
     seatCapacity: fields.seatCapacity.optional(),
     insuranceExpiryDate: fields.insuranceExpiryDate,

@@ -74,6 +74,19 @@ describe('Fares Management e2e (abra_supply_test)', () => {
       .expect(201);
     operatorB = await signIn('OPERATOR_ADMIN', operatorBRecord.id);
 
+    // A fare is priced per bus type and a route needs real cities: list them first.
+    // ("AC Sleeper" already exists from the network.)
+    const admin = catalogueApi(context, superAdmin);
+    await admin.create<Identified>('/bus-types', {
+      key: `AC_SEATER_${runId.toUpperCase()}FARES`,
+      name: 'AC Seater',
+      isAc: true,
+      berthType: 'SEATER',
+    });
+    for (const name of ['Bengaluru', 'Chennai']) {
+      await admin.create<Identified>('/cities', { name, state: 'Test State' });
+    }
+
     // Create a route for operator A
     const routeRes = await call(operatorA).post('/client/routes', {
       from: 'Bengaluru',
@@ -124,6 +137,20 @@ describe('Fares Management e2e (abra_supply_test)', () => {
     expect(fare.customerPaysWeekday.gst).toBe(5400);
     expect(fare.customerPaysWeekday.fee).toBe(500);
     expect(fare.customerPaysWeekday.total).toBe(113900);
+  });
+
+  it('A2: refuses a seat type that is not an active bus type', async () => {
+    const res = await call(operatorA).post('/client/fares', {
+      routeId: routeIdA,
+      seatType: 'Luxury Hovercraft',
+      weekday: 100000,
+      weekend: 110000,
+      festival: 125000,
+      from: '2026-10-15',
+      status: 'ACTIVE',
+    });
+    expect(res.status).toBe(400);
+    expect(JSON.stringify(res.body)).toContain('is not an active bus type');
   });
 
   it('B: prevents creating a duplicate active fare for the same route and seat type', async () => {

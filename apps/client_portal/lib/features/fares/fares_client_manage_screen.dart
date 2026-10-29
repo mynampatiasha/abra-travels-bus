@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_localization/shared_localization.dart';
 import 'package:shared_theme/shared_theme.dart';
 import '../../app/providers.dart';
 import '../../core/browser_files.dart';
+import '../../core/failure_text.dart';
 import '../../core/widgets/portal_section_title.dart';
 import '../../core/widgets/portal_status_chip.dart';
 import '../routes/routes_client_manage_screen.dart';
@@ -368,12 +370,53 @@ class _ClientFaresScreenState extends ConsumerState<ClientFaresScreen> {
     );
   }
 
+  /// The names of the bus types Abra has switched on, from the server. A fare is priced per
+  /// bus type, so the seat type can only be one of these.
+  Future<List<String>> _loadSeatTypes() async {
+    final response = await ref.read(appDependenciesProvider).apiClient.get(
+      'catalogue/bus-types',
+      query: <String, dynamic>{'active': true, 'pageSize': 100},
+    );
+    final data = response.data;
+    final raw = data is Map && data['items'] is List
+        ? data['items'] as List
+        : data is List
+            ? data
+            : const <Object?>[];
+    return <String>[
+      for (final item in raw)
+        if (item is Map && item['isActive'] != false && (item['name'] as String? ?? '').isNotEmpty)
+          item['name'] as String,
+    ];
+  }
+
   Future<void> _showFareDialog(BuildContext context, {ClientFareItem? existingFare}) async {
     final isEdit = existingFare != null;
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AbraLocalizations.of(context);
+    final List<String> seatTypes;
+    try {
+      seatTypes = await _loadSeatTypes();
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Could not load bus types: ${failureText(l10n, e)}')));
+      return;
+    }
+    if (!context.mounted) return;
+    if (seatTypes.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Abra has not added any bus types yet. A fare needs a bus type, so please contact Abra support.'),
+          backgroundColor: AbraColors.danger,
+        ),
+      );
+      return;
+    }
     int weekday = isEdit ? existingFare.weekday : 80000;
     int weekend = isEdit ? existingFare.weekend : 90000;
     int festival = isEdit ? existingFare.festival : 110000;
-    String seatType = isEdit ? existingFare.seatType : 'AC Sleeper';
+    String seatType = isEdit ? existingFare.seatType : seatTypes.first;
+    // An old fare may use a name that is no longer an active bus type; keep it visible.
+    final seatChoices = seatTypes.contains(seatType) ? seatTypes : <String>[seatType, ...seatTypes];
     String status = isEdit ? existingFare.status : 'ACTIVE';
     String? selectedRouteId = isEdit ? existingFare.routeId : null;
 
@@ -428,12 +471,8 @@ class _ClientFaresScreenState extends ConsumerState<ClientFaresScreen> {
                     DropdownButtonFormField<String>(
                       initialValue: seatType,
                       decoration: const InputDecoration(labelText: 'Seat type *'),
-                      items: const [
-                        DropdownMenuItem(value: 'AC Sleeper', child: Text('AC Sleeper')),
-                        DropdownMenuItem(value: 'AC Seater', child: Text('AC Seater')),
-                        DropdownMenuItem(value: 'Non-AC Sleeper', child: Text('Non-AC Sleeper')),
-                        DropdownMenuItem(value: 'Volvo Multi-Axle AC', child: Text('Volvo Multi-Axle AC')),
-                        DropdownMenuItem(value: 'Luxury AC', child: Text('Luxury AC')),
+                      items: [
+                        for (final name in seatChoices) DropdownMenuItem(value: name, child: Text(name)),
                       ],
                       onChanged: (v) => setDState(() => seatType = v ?? seatType),
                     ),

@@ -1004,7 +1004,8 @@ class FakeBackend {
         }),
       );
     }
-    if (resource == 'place-requests' && parts[1] == 'pending-count') {
+    if (const {'place-requests', 'bus-type-requests'}.contains(resource) &&
+        parts[1] == 'pending-count') {
       return FakeResponse.ok(<String, Object?>{
         'pending': of(
           resource,

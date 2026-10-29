@@ -51,7 +51,7 @@ export const CLIENT_BUSES_EXPORT_KIND: ExportKind<ClientBusView> = {
   columns: [
     { header: 'Registration', value: (bus) => bus.registrationNumber },
     { header: 'Bus Name', value: (bus) => bus.name },
-    { header: 'Type', value: (bus) => bus.busTypeName ?? '' },
+    { header: 'Type', value: (bus) => bus.displayName },
     { header: 'Seats', value: (bus) => bus.seatCapacity },
     { header: 'Layout', value: (bus) => bus.seatLayoutType },
     { header: 'Insurance Expiry', value: (bus) => (bus.insuranceExpiryDate ? timeOf(bus.insuranceExpiryDate) : '-') },

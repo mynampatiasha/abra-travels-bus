@@ -43,6 +43,8 @@ export interface Bus {
   /** Name customers see, e.g. "Abra Express Volvo". */
   name: string;
   busTypeId: Types.ObjectId;
+  /** Maker of the bus, e.g. "Volvo" or "Scania". Optional. */
+  make?: string;
   amenities: BusAmenity[];
   /**
    * Number of seats and berths sold on this bus. Catalogue information until seat layouts exist;
@@ -72,6 +74,7 @@ export const busSchema = new Schema<Bus>(
     },
     name: { type: String, required: true, trim: true, maxlength: 80 },
     busTypeId: { type: Schema.Types.ObjectId, required: true },
+    make: { type: String, trim: true, maxlength: 40 },
     amenities: { type: [String], match: /^[A-Z][A-Z0-9_]{1,39}$/, default: [] },
     seatCapacity: { type: Number, min: 1, max: 100, validate: Number.isInteger },
     activeSeatLayoutVersionId: { type: Schema.Types.ObjectId },

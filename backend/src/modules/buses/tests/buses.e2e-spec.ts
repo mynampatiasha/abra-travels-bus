@@ -32,6 +32,7 @@ interface BusView {
   name: string;
   operatorId?: string;
   busTypeId: string;
+  busTypeName?: string; make?: string; displayName: string;
   seatCapacity: number;
   seatLayoutType: string;
   activeSeatLayoutVersionId: string | null;
@@ -194,6 +195,32 @@ describe('Buses & Seat Layouts e2e (abra_supply_test)', () => {
       const layout = dataOf<SeatLayoutView>(layoutRes);
       expect(layout.version).toBe(1);
       expect(layout.seats.length).toBeGreaterThan(0);
+    });
+
+    it('a bus keeps its make and shows a ready-made name; a bus without a make shows its bus type', async () => {
+      // The bus above was added without a make: the name is the bus type's name
+      expect(createdBus.make).toBeUndefined();
+      expect(createdBus.displayName).toBe(createdBus.busTypeName);
+
+      const withMake = dataOf<BusView>(
+        await call(operatorA)
+          .post('/client/buses', {
+            registrationNumber: uniqueRegistration(),
+            name: 'Volvo Star',
+            busTypeId: busType.id,
+            make: 'Volvo',
+            seatCapacity: 36,
+            amenities: [],
+          })
+          .expect(201),
+      );
+      expect(withMake.make).toBe('Volvo');
+      expect(withMake.displayName).toBe(`Volvo ${withMake.busTypeName}`);
+      expect(withMake.displayName).toBe('Volvo AC Sleeper');
+
+      // A typed make ("Other") is kept as written; it can be changed later
+      const edited = await call(operatorA).patch(`/client/buses/${withMake.id}`, { make: 'Force Motors' });
+      expect(dataOf<BusView>(edited).displayName).toBe('Force Motors AC Sleeper');
     });
 
     it('operator edits bus details (name, amenities, insuranceExpiryDate)', async () => {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_localization/shared_localization.dart';
 import 'package:shared_permissions/shared_permissions.dart';
 import 'package:shared_theme/shared_theme.dart';
@@ -9,15 +10,64 @@ import '../../../app/providers.dart';
 import '../../../l10n/admin_strings.dart';
 import '../catalogue_repository.dart';
 import '../widgets/amenities_card.dart';
+import '../widgets/bus_type_requests_tab.dart';
 import '../widgets/catalogue_common.dart';
 import '../widgets/import_dialog.dart';
 import '../widgets/record_actions.dart';
 import '../widgets/resource_form.dart';
 import '../widgets/resource_page.dart';
 
-/// Bus types: the kinds of bus operators register and customers filter by.
-class BusTypesPage extends ConsumerWidget {
+/// Bus types: the kinds of bus operators register and customers filter by, and
+/// (second tab) the bus types operators ask for. `?tab=requests` opens the
+/// second tab, where a "Bus type request" notification leads.
+class BusTypesPage extends ConsumerStatefulWidget {
   const BusTypesPage({super.key});
+
+  @override
+  ConsumerState<BusTypesPage> createState() => _BusTypesPageState();
+}
+
+class _BusTypesPageState extends ConsumerState<BusTypesPage> {
+  bool? _requests;
+
+  @override
+  Widget build(BuildContext context) {
+    final canSeeRequests = ref
+        .watch(accessProvider)
+        .can(PermissionKeys.catalogueRead);
+    final asked = GoRouterState.of(context).uri.queryParameters['tab'];
+    final showRequests =
+        canSeeRequests && (_requests ?? asked == 'requests');
+    if (!canSeeRequests) return const _BusTypesList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AbraSpacing.xl,
+            AbraSpacing.md,
+            AbraSpacing.xl,
+            0,
+          ),
+          child: BusTypesTabStrip(
+            showRequests: true,
+            requestsSelected: showRequests,
+            pending: ref.watch(busTypeRequestsPendingProvider).value,
+            onSelect: (requests) => setState(() => _requests = requests),
+          ),
+        ),
+        Expanded(
+          child: showRequests
+              ? const BusTypeRequestsTab()
+              : const _BusTypesList(),
+        ),
+      ],
+    );
+  }
+}
+
+class _BusTypesList extends ConsumerWidget {
+  const _BusTypesList();
 
   static const _editFields = <FieldSpec>[
     TextSpec('name', AdminStrings.fieldName, isRequired: true),
