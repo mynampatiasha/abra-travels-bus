@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Abra Travels</title>
+<style>
+:root{
+  --navy:#0c2238; --navy2:#0B3B6E; --blue:#1677C8; --sky:#36BDF5; --deep:#0B4EA2;
+  --teal:#1B8A5A; --orange:#F28C28; --white:#fff; --ink:#0F2233; --mute:#6B8196;
+  --glass:rgba(255,255,255,.1); --glass2:rgba(255,255,255,.16);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:"Segoe UI",Roboto,system-ui,-apple-system,sans-serif;background:var(--navy);color:var(--white);overflow:hidden}
+.stage{position:fixed;inset:0;overflow:hidden;background:radial-gradient(120% 90% at 80% 0%,#0f5fae 0%,transparent 55%),radial-gradient(90% 80% at 0% 100%,#0b3b6e 0%,transparent 60%),linear-gradient(160deg,#0a1d31,#0b2a47 55%,#0d3a66)}
+.aurora{position:absolute;inset:-20%;background:conic-gradient(from 0deg at 70% 30%,rgba(54,189,245,.0),rgba(54,189,245,.28),rgba(22,119,200,.0),rgba(242,140,40,.12),rgba(54,189,245,.0));filter:blur(60px);animation:aur 26s linear infinite;pointer-events:none}
+@keyframes aur{to{transform:rotate(360deg)}}
+.grid{position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.12) 1px,transparent 1.4px);background-size:34px 34px;mask-image:radial-gradient(70% 70% at 70% 40%,#000,transparent 80%);-webkit-mask-image:radial-gradient(70% 70% at 70% 40%,#000,transparent 80%);pointer-events:none}
+.screen{position:absolute;inset:0;display:none;opacity:0}
+.screen.on{display:flex;animation:fadein .6s ease both}
+@keyframes fadein{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+
+/* ---------- first screen ---------- */
+#first.on{flex-direction:column;padding:22px 22px 26px;overflow-y:auto}
+.brand{display:flex;align-items:center;gap:12px;position:relative;z-index:3}
+.brand img{width:48px;height:48px;border-radius:14px;background:#fff;padding:3px;box-shadow:0 10px 28px rgba(0,0,0,.4)}
+.brand b{font-size:21px;letter-spacing:.2px}
+.cols{flex:1;display:flex;flex-direction:column;justify-content:center;gap:14px;position:relative;z-index:2;min-height:0;padding-top:14px}
+.hero{order:-1}
+.hero{position:relative;flex:1 1 0;min-height:200px;max-height:46vh}
+.hero svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.chip{position:absolute;display:flex;align-items:center;gap:8px;padding:9px 14px;border-radius:14px;background:var(--glass2);border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font-size:13px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,.28);animation:float 5s ease-in-out infinite;white-space:nowrap}
+.chip i{width:9px;height:9px;border-radius:50%;background:var(--sky);box-shadow:0 0 0 0 rgba(54,189,245,.7);animation:ping 2s infinite}
+.chip.g i{background:#3ddc97}.chip.o i{background:var(--orange)}
+@keyframes ping{70%{box-shadow:0 0 0 10px rgba(54,189,245,0)}100%{box-shadow:0 0 0 0 rgba(54,189,245,0)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+.copy{position:relative;z-index:3}
+.copy h1{font-size:clamp(30px,8vw,52px);line-height:1.08;font-weight:800;letter-spacing:-.8px}
+.copy h1 span{background:linear-gradient(90deg,#7fdcff,#36BDF5 40%,#6aa8ff);-webkit-background-clip:text;background-clip:text;color:transparent;background-size:200% 100%;animation:sheen 5s linear infinite}
+@keyframes sheen{to{background-position:-200% 0}}
+.copy p{margin-top:12px;color:#c3d9ec;font-size:clamp(15px,3.8vw,19px);line-height:1.5;min-height:50px;max-width:520px;transition:opacity .45s,transform .45s}
+.copy p.out{opacity:0;transform:translateY(8px)}
+.btns{display:flex;flex-direction:column;gap:12px;margin-top:20px;position:relative;z-index:3;max-width:520px}
+.btn{appearance:none;border:0;cursor:pointer;font:inherit;font-weight:700;font-size:17px;padding:17px 26px;border-radius:18px;transition:transform .15s,box-shadow .25s,background .25s;position:relative;overflow:hidden;flex:1;color:#fff}
+.btn:active{transform:scale(.97)}
+.btn:hover{transform:translateY(-2px)}
+.btn.primary{background:linear-gradient(135deg,#43c6ff,#1677C8 70%);box-shadow:0 14px 36px rgba(22,119,200,.55)}
+.btn.primary::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-20deg);animation:shine 3.4s 1.2s infinite}
+@keyframes shine{0%{left:-60%}35%,100%{left:140%}}
+.btn.ghost{background:var(--glass);border:1.5px solid rgba(255,255,255,.4);backdrop-filter:blur(8px)}
+.btn.ghost:hover{background:var(--glass2)}
+.btn:focus-visible,.skip:focus-visible,.back:focus-visible{outline:3px solid #fff;outline-offset:3px}
+.foot{margin-top:16px;font-size:13px;color:#98b8d2;position:relative;z-index:3}
+.foot a{color:#9fe3ff;cursor:pointer;text-decoration:underline}
+.stars i{position:absolute;width:3px;height:3px;border-radius:50%;background:#fff;opacity:0;animation:twinkle 3.2s ease-in-out infinite}
+@keyframes twinkle{0%,100%{opacity:0}50%{opacity:.9}}
+
+/* wide: two columns */
+@media (min-width:900px){
+  #first.on{padding:34px 64px 38px}
+  .cols{flex-direction:row;align-items:center;gap:40px}
+  .copyblock{flex:0 0 46%;display:flex;flex-direction:column;justify-content:center}
+  .hero{order:0;flex:1 1 0;max-height:none;height:min(66vh,560px)}
+  .btns{flex-direction:row}
+}
+
+/* scene parts */
+.par{transition:transform .25s ease-out}
+.road-dash{stroke-dasharray:26 20;animation:road .8s linear infinite}
+@keyframes road{to{stroke-dashoffset:-46}}
+.sky-far{animation:farmove 40s linear infinite}
+@keyframes farmove{from{transform:translateX(0)}to{transform:translateX(-300px)}}
+.sky-near{animation:farmove 16s linear infinite}
+.bob{animation:bob .9s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+.wheel{transform-box:fill-box;transform-origin:center;animation:spin .5s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.cloud{animation:cloud 30s linear infinite}
+@keyframes cloud{from{transform:translateX(-120px)}to{transform:translateX(760px)}}
+.pulse{transform-box:fill-box;transform-origin:center;animation:pulse 2.2s ease-out infinite}
+@keyframes pulse{0%{transform:scale(.4);opacity:.9}100%{transform:scale(2.6);opacity:0}}
+.orbit{transform-box:fill-box;transform-origin:center;animation:spin 20s linear infinite}
+.flow{stroke-dasharray:8 10;animation:flow 1.4s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-36}}
+.blink{animation:blink 1.6s steps(2) infinite}
+@keyframes blink{50%{opacity:.25}}
+.float2{animation:float 3s ease-in-out infinite}
+.busmove{animation:busmove 4s ease-in-out infinite alternate}
+@keyframes busmove{from{transform:translateX(0)}to{transform:translateX(170px)}}
+
+/* ---------- tour ---------- */
+#tour.on{flex-direction:column;padding:22px 22px 26px}
+.top{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:3}
+.back{background:none;border:0;color:#d4e6f5;font:inherit;cursor:pointer;padding:8px 6px;font-size:15px}
+.skip{background:var(--glass2);border:0;color:#fff;font:inherit;font-size:14px;cursor:pointer;padding:10px 18px;border-radius:22px}
+.progress{height:4px;border-radius:4px;background:rgba(255,255,255,.18);margin:10px 0 0;overflow:hidden}
+.progress i{display:block;height:100%;width:25%;background:linear-gradient(90deg,#36BDF5,#7fdcff);border-radius:4px;transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.slides{flex:1;position:relative;min-height:0}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;opacity:0;visibility:hidden;transform:translateX(60px);transition:all .6s cubic-bezier(.2,.8,.2,1);padding:6px 4px}
+.slide.on{opacity:1;visibility:visible;transform:none}
+.slide.out{transform:translateX(-60px)}
+.art{width:100%;flex:1 1 0;min-height:0;max-height:380px;display:flex;align-items:center;justify-content:center}
+.art svg{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 20px 40px rgba(0,0,0,.35))}
+.txt{flex:none;max-width:560px}
+.slide h2{font-size:clamp(26px,6vw,40px);margin-top:14px;letter-spacing:-.5px}
+.slide p{margin-top:10px;color:#c3d9ec;font-size:clamp(15px,3.6vw,19px);line-height:1.55}
+.dots{display:flex;gap:8px;justify-content:center;margin:12px 0 14px}
+.dots i{width:8px;height:8px;border-radius:8px;background:rgba(255,255,255,.3);transition:all .35s}
+.dots i.on{width:30px;background:var(--sky)}
+.choice{display:flex;align-items:center;gap:10px;justify-content:center;font-size:14px;color:#c3d9ec;margin-bottom:14px;cursor:pointer;user-select:none}
+.choice input{width:19px;height:19px;accent-color:var(--sky)}
+.navrow{display:flex;gap:12px;max-width:520px;width:100%;margin:0 auto}
+@media (min-width:900px){
+  #tour.on{padding:34px 64px 38px}
+  .slide{flex-direction:row;text-align:left;gap:70px;justify-content:center}
+  .art{width:50%;flex:none;height:78%;max-height:none}
+  .txt{max-width:460px}
+  .slide h2{margin-top:0}
+}
+.seat{fill:rgba(255,255,255,.16)}
+.slide.on .seat.pick{animation:pick .5s both;animation-delay:calc(var(--i)*.22s + .5s)}
+@keyframes pick{to{fill:var(--sky)}}
+.slide.on .seat.taken{fill:rgba(255,255,255,.4)}
+.slide.on .drawline{stroke-dasharray:520;stroke-dashoffset:520;animation:draw 2s .3s forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.slide.on .grow{transform-origin:bottom;transform-box:fill-box;animation:grow 1s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i)*.15s + .3s)}
+@keyframes grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+.slide.on .pop{transform-origin:center;transform-box:fill-box;animation:popin .6s cubic-bezier(.3,1.6,.5,1) both;animation-delay:calc(var(--i)*.25s + .3s)}
+@keyframes popin{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+.slide.on .slidein{animation:slidein .7s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i)*.2s + .2s)}
+@keyframes slidein{from{transform:translateX(90px);opacity:0}to{transform:none;opacity:1}}
+.slide.on .scan{animation:scan 2.2s ease-in-out infinite}
+@keyframes scan{0%,100%{transform:translateY(0)}50%{transform:translateY(80px)}}
+.slide.on .tick{stroke-dasharray:40;stroke-dashoffset:40;animation:draw .6s 1.4s forwards}
+
+/* ---------- sign-in mock ---------- */
+#signin.on{flex-direction:column;padding:22px;align-items:center}
+#signin .top{width:100%;max-width:520px}
+.card{margin:auto;width:100%;max-width:440px;background:#fff;color:var(--ink);border-radius:28px;padding:30px 26px;box-shadow:0 30px 80px rgba(0,0,0,.45)}
+.card h3{font-size:24px}
+.card p.s{color:var(--mute);font-size:14.5px;margin:6px 0 18px;line-height:1.5}
+.card label{display:block;font-size:13px;color:var(--mute);margin:12px 0 6px}
+.card input[type=text],.card input[type=password]{width:100%;padding:15px;border:1.5px solid #d6e2ec;border-radius:14px;font:inherit;font-size:16px}
+.card input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 4px rgba(22,119,200,.15)}
+.card .btn{width:100%;margin-top:20px;flex:none}
+.card .note{font-size:12.5px;color:var(--mute);text-align:center;margin-top:14px}
+.card .check{width:68px;height:68px;border-radius:50%;background:#e4f6ec;display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+.toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,30px);background:#fff;color:var(--ink);padding:12px 18px;border-radius:14px;font-size:14px;box-shadow:0 12px 30px rgba(0,0,0,.35);opacity:0;transition:all .4s;z-index:9;white-space:nowrap}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001s!important;animation-iteration-count:1!important;transition-duration:.001s!important}}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="aurora"></div><div class="grid"></div>
+  <div class="screen on" id="first"></div>
+  <div class="screen" id="tour"></div>
+  <div class="screen" id="signin"></div>
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+window.ROLE = 'customer';
+var ROLE = window.ROLE || 'customer';
+var LOGO = 'shared/abra_logo.png';
+var KEY = 'abra_tour_hidden_' + ROLE;
+
+/* ---------------- what each app says ---------------- */
+var CFG = {
+  customer: {
+    canStart: true, scene: 'road',
+    title: 'Book your bus <span>in a minute</span>',
+    lines: ['Search buses between cities, with real seats and fares.', 'Pick your exact seat. We hold it for you while you pay.', 'Pay with UPI or card and carry your ticket with a QR.'],
+    chips: [['Seat 12 booked', 'g', '8%', '12%'], ['Verified operators', '', '66%', '6%'], ['On time · 9h 00m', 'o', '60%', '72%']],
+    login: 'Login', signTitle: 'Welcome back', signSub: 'Enter your mobile number and we will send a code.', f1: 'Mobile number', f2: null, signBtn: 'Send code',
+    startNote: 'New here? Take a 30 second tour first.',
+    slides: [
+      {h: 'Find your bus', p: 'Choose where you go and when. See every bus, its time and its price.', art: 'route'},
+      {h: 'Pick your seat', p: 'See the real seat map. Tap your seats and we hold them while you finish.', art: 'seats'},
+      {h: 'Pay safely', p: 'UPI, cards or net banking. Add a coupon and see the full price before you pay.', art: 'pay'},
+      {h: 'Your ticket, always with you', p: 'Show the QR to the conductor. Share the trip or add it to your calendar.', art: 'ticket'}
+    ]
+  },
+  client: {
+    canStart: true, scene: 'fleet',
+    title: 'Run your buses, <span>all in one place</span>',
+    lines: ['Add buses, crew and routes. Publish a week of trips in minutes.', 'Watch bookings and seats fill up live.', 'See your earnings and payouts clearly.'],
+    chips: [['38 of 40 seats booked', 'g', '4%', '8%'], ['Payout ₹1.08L', '', '62%', '6%'], ['Licence renews in 12 days', 'o', '52%', '74%']],
+    login: 'Login', signTitle: 'Operator sign in', signSub: 'Use the email and password you registered with.', f1: 'Email', f2: 'Password', signBtn: 'Sign in',
+    startNote: 'New operator? See how it works first.',
+    slides: [
+      {h: 'Your fleet and crew', p: 'Keep every bus, seat layout, driver and document in one list, with reminders before anything expires.', art: 'fleet'},
+      {h: 'Routes, fares and trips', p: 'Set a route once, set fares, and a schedule creates your trips for the week.', art: 'calendar'},
+      {h: 'Bookings live', p: 'See who booked, which seats are left and how full each trip is, as it happens.', art: 'bars'},
+      {h: 'Clear payouts', p: 'Every booking, commission and payout is listed, so there are no surprises.', art: 'payout'}
+    ]
+  },
+  driver: {
+    canStart: true, noSignup: true, scene: 'night',
+    title: 'Your trip, <span>ready when you are</span>',
+    lines: ['See today\'s trip and the passengers on board.', 'Check in passengers by scanning their QR.', 'Share your live location with the people waiting.'],
+    chips: [['32 passengers on board', 'g', '4%', '10%'], ['Next stop in 12 min', '', '60%', '6%'], ['Sharing live location', 'o', '56%', '74%']],
+    login: 'Login', signTitle: 'Driver sign in', signSub: 'Your operator created your login. Use your phone number and password.', f1: 'Phone number', f2: 'Password', signBtn: 'Sign in',
+    startNote: 'Your login is made by your operator. Take a quick tour of the app first.',
+    slides: [
+      {h: 'Your trip for today', p: 'Open the app and see where you start, where you stop and when, with the bus and your conductor.', art: 'trip'},
+      {h: 'Check in passengers', p: 'Scan each passenger QR as they board. The app tells you at once if a ticket is wrong.', art: 'scan'},
+      {h: 'Share your live location', p: 'People waiting at the stop can see the bus coming. You just keep driving.', art: 'pin'},
+      {h: 'Never miss a document', p: 'Get a reminder before your licence or any document expires, so you are never stopped.', art: 'bell'}
+    ]
+  },
+  admin: {
+    canStart: true, noSignup: true, scene: 'control',
+    title: 'The whole platform, <span>in your control</span>',
+    lines: ['Review operators and approve their KYC.', 'Set commission, offers and refund rules.', 'Watch bookings, payments and support in one view.'],
+    chips: [['12 operators waiting for KYC', 'o', '2%', '8%'], ['Bookings today 1,284', 'g', '58%', '6%'], ['Payments reconciled', '', '54%', '76%']],
+    login: 'Login', signTitle: 'Staff sign in', signSub: 'Use your Abra staff email and password.', f1: 'Email', f2: 'Password', signBtn: 'Sign in',
+    startNote: 'Your login is made by a Super Admin. Take a quick tour first.',
+    slides: [
+      {h: 'Operators and KYC', p: 'Invite bus owners, check their documents one by one, and approve or send back only what is wrong.', art: 'kyc'},
+      {h: 'Rules in one place', p: 'Set commission, offers and refund rules once. Every booking follows them.', art: 'rules'},
+      {h: 'Everything live', p: 'Bookings, payments and trips update as they happen, so you see problems early.', art: 'bars'},
+      {h: 'Support and safety', p: 'Answer customers, follow up on complaints and keep every action in the audit log.', art: 'shield'}
+    ]
+  }
+};
+var C = CFG[ROLE];
+
+/* ---------------- drawings ---------------- */
+function bus(x, y, s, color){
+  s = s || 1; color = color || '#fff';
+  return '<g transform="translate('+x+','+y+') scale('+s+')"><g class="bob">'+
+   '<rect x="0" y="0" width="150" height="62" rx="14" fill="'+color+'"/>'+
+   '<rect x="12" y="10" width="26" height="22" rx="5" fill="#36BDF5"/><rect x="44" y="10" width="26" height="22" rx="5" fill="#36BDF5"/>'+
+   '<rect x="76" y="10" width="26" height="22" rx="5" fill="#36BDF5"/><rect x="118" y="10" width="24" height="36" rx="5" fill="#1677C8"/>'+
+   '<rect x="0" y="42" width="150" height="7" fill="#1677C8"/><rect x="0" y="49" width="150" height="3" fill="#F28C28"/>'+
+   '<g class="wheel"><circle cx="36" cy="66" r="12" fill="#0c2238"/><circle cx="36" cy="66" r="5" fill="#cfd8e0"/><rect x="35" y="60" width="2" height="12" fill="#0c2238"/></g>'+
+   '<g class="wheel"><circle cx="114" cy="66" r="12" fill="#0c2238"/><circle cx="114" cy="66" r="5" fill="#cfd8e0"/><rect x="113" y="60" width="2" height="12" fill="#0c2238"/></g>'+
+   '<circle cx="148" cy="48" r="5" fill="#ffd36b"/></g></g>';
+}
+function skyline(seed, fill, base, hmax){
+  var o='',x=0;
+  for(var i=0;i<18;i++){var w=24+((i*37+seed)%26),h=40+((i*53+seed)%hmax);o+='<rect x="'+x+'" y="'+(base-h)+'" width="'+w+'" height="'+h+'" fill="'+fill+'"/>';x+=w+4;}
+  return o;
+}
+function sceneBase(inner, night){
+  var stars=''; if(night){for(var i=0;i<22;i++)stars+='<circle cx="'+((i*61)%600)+'" cy="'+((i*37)%170+10)+'" r="1.7" fill="#fff" class="blink" style="animation-delay:'+(-i*.3)+'s"/>';}
+  return '<svg viewBox="0 0 600 440" preserveAspectRatio="xMidYMid meet" aria-hidden="true">'+
+   (night?stars+'<circle cx="500" cy="80" r="34" fill="#ffe9b0"/><circle cx="516" cy="72" r="32" fill="#0b2a47"/>':
+    '<g class="cloud" opacity=".55"><ellipse cx="60" cy="70" rx="46" ry="16" fill="#fff"/><ellipse cx="90" cy="60" rx="30" ry="13" fill="#fff"/></g><g class="cloud" style="animation-delay:-15s" opacity=".35"><ellipse cx="60" cy="130" rx="38" ry="13" fill="#fff"/><ellipse cx="84" cy="122" rx="24" ry="10" fill="#fff"/></g>')+
+   '<g class="par" data-p="6"><g class="sky-far" opacity=".16">'+skyline(7,'#fff',300,120)+'<g transform="translate(900,0)">'+skyline(7,'#fff',300,120)+'</g></g></g>'+
+   '<g class="par" data-p="12"><g class="sky-near" opacity=".24">'+skyline(19,'#9fd8ff',330,90)+'<g transform="translate(900,0)">'+skyline(19,'#9fd8ff',330,90)+'</g></g></g>'+
+   '<rect x="-20" y="330" width="640" height="120" fill="#08203a"/><rect x="-20" y="330" width="640" height="4" fill="#36BDF5" opacity=".6"/>'+
+   '<line x1="-20" y1="392" x2="620" y2="392" stroke="#fff" stroke-width="4" class="road-dash" opacity=".75"/>'+
+   inner+'</svg>';
+}
+function sceneRoad(){
+  return sceneBase(
+   '<g><circle cx="70" cy="318" r="10" fill="#36BDF5"/><circle cx="70" cy="318" r="10" fill="none" stroke="#36BDF5" class="pulse"/><text x="70" y="298" fill="#bfe6fa" font-size="14" text-anchor="middle">Hyderabad</text></g>'+
+   '<g><circle cx="530" cy="318" r="10" fill="#f28c28"/><circle cx="530" cy="318" r="10" fill="none" stroke="#f28c28" class="pulse" style="animation-delay:-1s"/><text x="530" y="298" fill="#ffd9a8" font-size="14" text-anchor="middle">Bengaluru</text></g>'+
+   '<path d="M70 318 C200 220 400 220 530 318" stroke="#36BDF5" stroke-width="3" fill="none" class="flow" opacity=".8"/>'+
+   '<g class="busmove" style="animation-duration:6s"><g transform="translate(40,300)">'+bus(0,0,1.15)+'</g></g>');
+}
+function sceneFleet(){
+  var o='';
+  for(var i=0;i<3;i++) o+='<g style="animation:float '+(4+i)+'s ease-in-out infinite"><g transform="translate('+(40+i*30)+','+(120+i*62)+')">'+bus(0,0,.62,i==1?'#dff3fd':'#fff')+'</g></g>';
+  o+='<g transform="translate(360,110)"><rect width="190" height="170" rx="18" fill="rgba(255,255,255,.14)" stroke="rgba(255,255,255,.25)"/>';
+  for(var j=0;j<4;j++) o+='<rect x="18" y="'+(18+j*36)+'" width="154" height="24" rx="8" fill="rgba(255,255,255,.2)"/><circle cx="34" cy="'+(30+j*36)+'" r="6" fill="'+(j==2?'#f28c28':'#3ddc97')+'" class="pulse" style="animation-delay:'+(-j*.5)+'s"/>';
+  return sceneBase(o+'</g>');
+}
+function sceneNight(){
+  return sceneBase(
+   '<g transform="translate(470,170)" style="animation:float 4s ease-in-out infinite"><path d="M0 0 a26 26 0 1 1 .1 0 L0 48Z" fill="#f28c28"/><circle cx="0" cy="-2" r="9" fill="#fff"/></g><circle cx="470" cy="226" r="12" fill="none" stroke="#f28c28" class="pulse"/>'+
+   '<g class="busmove" style="animation-duration:7s"><g transform="translate(60,300)">'+bus(0,0,1.15)+'<path d="M172 40 L300 4 L300 84Z" fill="#ffe9b0" opacity=".16"/></g></g>', true);
+}
+function sceneControl(){
+  return sceneBase(
+   '<g transform="translate(300,200)">'+
+   '<circle r="150" fill="none" stroke="rgba(255,255,255,.16)" stroke-dasharray="4 9"/><circle r="100" fill="none" stroke="rgba(255,255,255,.2)"/>'+
+   '<g class="orbit" style="animation-duration:24s"><circle cx="150" cy="0" r="13" fill="#36BDF5"/><circle cx="-150" cy="0" r="10" fill="#f28c28"/><circle cx="0" cy="-150" r="11" fill="#3ddc97"/></g>'+
+   '<g class="orbit" style="animation-duration:15s;animation-direction:reverse"><circle cx="100" cy="0" r="9" fill="#fff"/><circle cx="-100" cy="0" r="9" fill="#9fe3ff"/></g>'+
+   '<rect x="-64" y="-44" width="128" height="88" rx="14" fill="#fff"/><rect x="-48" y="-26" width="24" height="52" rx="4" fill="#1677C8"/><rect x="-16" y="-6" width="24" height="32" rx="4" fill="#36BDF5"/><rect x="16" y="-16" width="24" height="42" rx="4" fill="#1B8A5A"/></g>');
+}
+var SCENE={road:sceneRoad,fleet:sceneFleet,night:sceneNight,control:sceneControl};
+
+function artRoute(){return '<svg viewBox="0 0 400 300"><path class="drawline" d="M60 220 C120 60 280 60 340 220" stroke="#36BDF5" stroke-width="4" fill="none" stroke-dasharray="8 8"/><circle class="pop" style="--i:0" cx="60" cy="220" r="12" fill="#36BDF5"/><circle class="pop" style="--i:6" cx="340" cy="220" r="12" fill="#f28c28"/><g class="busmove" style="animation-duration:3.6s"><g transform="translate(40,70)">'+bus(0,0,.5)+'</g></g><text x="60" y="256" fill="#bfe6fa" font-size="14" text-anchor="middle">From</text><text x="340" y="256" fill="#ffd9a8" font-size="14" text-anchor="middle">To</text></svg>';}
+function artSeats(){
+  var o='<svg viewBox="0 0 400 300"><rect x="100" y="14" width="200" height="272" rx="26" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.2)"/>';
+  var pickI=0;
+  for(var r=0;r<5;r++)for(var c=0;c<4;c++){
+    var x=122+c*44+(c>1?24:0), y=34+r*50, k=r*4+c, cls='seat';
+    if(k==5||k==6||k==13) cls+=' pick" style="--i:'+(pickI++);
+    else if(k==9||k==14) cls+=' taken';
+    o+='<rect class="'+cls+'" x="'+x+'" y="'+y+'" width="34" height="36" rx="8"/>';
+  }
+  return o+'</svg>';
+}
+function artPay(){return '<svg viewBox="0 0 400 300"><g class="slidein" style="--i:0"><rect x="70" y="40" width="260" height="80" rx="16" fill="rgba(255,255,255,.16)"/><text x="94" y="88" fill="#fff" font-size="20" font-weight="700">UPI</text><circle cx="300" cy="80" r="14" fill="#1B8A5A"/><path class="tick" d="M293 80 l5 6 l10 -12" stroke="#fff" stroke-width="3" fill="none"/></g><g class="slidein" style="--i:1"><rect x="70" y="136" width="260" height="80" rx="16" fill="rgba(255,255,255,.16)"/><text x="94" y="184" fill="#fff" font-size="20" font-weight="700">Card</text><rect x="276" y="162" width="40" height="28" rx="6" fill="#36BDF5"/></g><g class="pop" style="--i:4"><rect x="120" y="236" width="160" height="40" rx="20" fill="#f28c28"/><text x="200" y="262" fill="#fff" font-size="15" font-weight="700" text-anchor="middle">Coupon applied</text></g></svg>';}
+function artTicket(){return '<svg viewBox="0 0 400 300"><g class="slidein" style="--i:0"><rect x="90" y="20" width="220" height="260" rx="22" fill="#fff"/><circle cx="90" cy="170" r="14" fill="#0c2238"/><circle cx="310" cy="170" r="14" fill="#0c2238"/><line x1="112" y1="170" x2="288" y2="170" stroke="#cdd9e3" stroke-dasharray="6 6"/><text x="200" y="64" font-size="15" font-weight="700" fill="#12304A" text-anchor="middle">Hyderabad to Bengaluru</text><text x="200" y="90" font-size="12" fill="#6b8196" text-anchor="middle">Seat 1, 2 &#183; PNR ABR7K2M9QX</text>'+
+ '<g transform="translate(152,112)"><g fill="#12304A"><rect x="0" y="0" width="30" height="30"/><rect x="66" y="0" width="30" height="30"/><rect x="0" y="66" width="30" height="30"/><rect x="38" y="8" width="8" height="8"/><rect x="38" y="38" width="20" height="8"/><rect x="62" y="44" width="8" height="26"/><rect x="40" y="60" width="14" height="14"/><rect x="76" y="76" width="20" height="20"/></g><rect class="scan" x="-6" y="6" width="108" height="4" rx="2" fill="#36BDF5"/></g></g></svg>';}
+function artFleet(){var o='<svg viewBox="0 0 400 300">';for(var i=0;i<3;i++)o+='<g class="slidein" style="--i:'+i+'"><rect x="50" y="'+(30+i*84)+'" width="300" height="68" rx="16" fill="rgba(255,255,255,.16)"/><g transform="translate(62,'+(38+i*84)+')">'+bus(0,0,.36,'#fff')+'</g><rect x="150" y="'+(50+i*84)+'" width="120" height="8" rx="4" fill="rgba(255,255,255,.4)"/><rect x="150" y="'+(68+i*84)+'" width="80" height="8" rx="4" fill="rgba(255,255,255,.22)"/><circle cx="318" cy="'+(64+i*84)+'" r="9" fill="'+(i==2?'#f28c28':'#1B8A5A')+'"/></g>';return o+'</svg>';}
+function artCalendar(){var o='<svg viewBox="0 0 400 300"><rect x="50" y="20" width="300" height="260" rx="20" fill="rgba(255,255,255,.12)" stroke="rgba(255,255,255,.2)"/>';var n=0;for(var r=0;r<4;r++)for(var c=0;c<7;c++){var on=(r*7+c)%3!=1;o+='<rect class="'+(on?'pop':'')+'" style="--i:'+(n++*0.25)+'" x="'+(66+c*40)+'" y="'+(56+r*54)+'" width="32" height="40" rx="8" fill="'+(on?'#36BDF5':'rgba(255,255,255,.14)')+'"/>';}return o+'<text x="200" y="44" fill="#fff" font-size="15" font-weight="700" text-anchor="middle">This week\'s trips</text></svg>';}
+function artBars(){var h=[90,140,110,190,160,220],o='<svg viewBox="0 0 400 300"><line x1="50" y1="260" x2="350" y2="260" stroke="rgba(255,255,255,.3)"/>';for(var i=0;i<6;i++)o+='<rect class="grow" style="--i:'+i+'" x="'+(66+i*48)+'" y="'+(260-h[i])+'" width="32" height="'+h[i]+'" rx="8" fill="'+(i==5?'#f28c28':'#36BDF5')+'"/>';return o+'<g class="pop" style="--i:6"><rect x="236" y="22" width="120" height="40" rx="20" fill="#1B8A5A"/><text x="296" y="48" fill="#fff" font-size="15" font-weight="700" text-anchor="middle">38 of 40 booked</text></g></svg>';}
+function artPayout(){return '<svg viewBox="0 0 400 300"><g class="slidein" style="--i:0"><rect x="40" y="90" width="120" height="120" rx="20" fill="rgba(255,255,255,.16)"/><text x="100" y="140" fill="#bfe6fa" font-size="13" text-anchor="middle">Bookings</text><text x="100" y="176" fill="#fff" font-size="26" font-weight="800" text-anchor="middle">₹1.2L</text></g><path class="drawline" d="M170 150 H228" stroke="#36BDF5" stroke-width="4" stroke-dasharray="6 6"/><g class="slidein" style="--i:3"><rect x="240" y="90" width="120" height="120" rx="20" fill="#1B8A5A"/><text x="300" y="140" fill="#d4f5e3" font-size="13" text-anchor="middle">Your payout</text><text x="300" y="176" fill="#fff" font-size="26" font-weight="800" text-anchor="middle">₹1.08L</text></g><g class="pop" style="--i:8"><circle cx="352" cy="82" r="16" fill="#f28c28"/><text x="352" y="88" fill="#fff" font-size="16" font-weight="800" text-anchor="middle">₹</text></g></svg>';}
+
+function artTrip(){return '<svg viewBox="0 0 400 300"><g class="slidein" style="--i:0"><rect x="40" y="30" width="320" height="150" rx="22" fill="rgba(255,255,255,.16)" stroke="rgba(255,255,255,.22)"/><circle cx="84" cy="74" r="9" fill="#36BDF5"/><line x1="84" y1="86" x2="84" y2="132" stroke="#fff" stroke-dasharray="4 6" opacity=".6"/><circle cx="84" cy="144" r="9" fill="#f28c28"/><text x="108" y="79" fill="#fff" font-size="16" font-weight="700">Hyderabad  9:30 PM</text><text x="108" y="149" fill="#fff" font-size="16" font-weight="700">Bengaluru  6:30 AM</text></g><g class="slidein" style="--i:2"><rect x="40" y="198" width="150" height="72" rx="18" fill="rgba(255,255,255,.16)"/><text x="115" y="226" fill="#bfe6fa" font-size="12" text-anchor="middle">Passengers</text><text x="115" y="256" fill="#fff" font-size="26" font-weight="800" text-anchor="middle">32</text></g><g class="slidein" style="--i:3"><rect x="210" y="198" width="150" height="72" rx="18" fill="#1B8A5A"/><text x="285" y="226" fill="#d4f5e3" font-size="12" text-anchor="middle">Status</text><text x="285" y="256" fill="#fff" font-size="20" font-weight="800" text-anchor="middle">On time</text></g></svg>';}
+function artScan(){return '<svg viewBox="0 0 400 300"><g class="slidein" style="--i:0"><rect x="110" y="20" width="180" height="260" rx="26" fill="#0c2238" stroke="rgba(255,255,255,.35)" stroke-width="3"/><rect x="128" y="50" width="144" height="144" rx="14" fill="rgba(255,255,255,.1)"/><g transform="translate(160,82)" fill="#fff"><rect width="30" height="30"/><rect x="50" width="30" height="30"/><rect y="50" width="30" height="30"/><rect x="40" y="40" width="14" height="14"/><rect x="58" y="58" width="22" height="22"/></g><rect class="scan" x="132" y="58" width="136" height="4" rx="2" fill="#36BDF5"/></g><g class="pop" style="--i:5"><rect x="130" y="212" width="140" height="44" rx="22" fill="#1B8A5A"/><text x="200" y="240" fill="#fff" font-size="15" font-weight="700" text-anchor="middle">Seat 12 checked in</text></g></svg>';}
+function artPin(){return '<svg viewBox="0 0 400 300"><rect x="30" y="30" width="340" height="240" rx="22" fill="rgba(255,255,255,.1)" stroke="rgba(255,255,255,.2)"/><path class="drawline" d="M60 230 C130 90 230 220 330 80" stroke="#36BDF5" stroke-width="5" fill="none"/><g class="pop" style="--i:6"><circle cx="330" cy="80" r="12" fill="#f28c28"/></g><g class="busmove" style="animation-duration:4s"><g transform="translate(40,190)"><path d="M0 0 a18 18 0 1 1 .1 0 L0 34Z" fill="#36BDF5"/><circle cx="0" cy="-2" r="7" fill="#fff"/></g></g></svg>';}
+function artBell(){return '<svg viewBox="0 0 400 300"><g class="float2"><path d="M200 40 C150 40 138 90 138 130 C138 170 120 180 110 200 H290 C280 180 262 170 262 130 C262 90 250 40 200 40Z" fill="#fff"/><circle cx="200" cy="224" r="16" fill="#f28c28"/></g><g class="pop" style="--i:2"><circle cx="262" cy="64" r="20" fill="#f28c28"/><text x="262" y="71" fill="#fff" font-size="20" font-weight="800" text-anchor="middle">1</text></g><g class="slidein" style="--i:3"><rect x="60" y="250" width="280" height="40" rx="20" fill="rgba(255,255,255,.18)"/><text x="200" y="276" fill="#fff" font-size="14" font-weight="600" text-anchor="middle">Licence renews in 30 days</text></g></svg>';}
+function artKyc(){var o='<svg viewBox="0 0 400 300">';for(var i=0;i<4;i++)o+='<g class="slidein" style="--i:'+i+'"><rect x="60" y="'+(24+i*66)+'" width="280" height="52" rx="14" fill="rgba(255,255,255,.16)"/><rect x="84" y="'+(44+i*66)+'" width="130" height="10" rx="5" fill="rgba(255,255,255,.45)"/><circle cx="310" cy="'+(50+i*66)+'" r="14" fill="'+(i==2?'#f28c28':'#1B8A5A')+'"/><path class="tick" d="M303 '+(50+i*66)+' l5 6 l9 -11" stroke="#fff" stroke-width="3" fill="none"/></g>';return o+'</svg>';}
+function artRules(){var o='<svg viewBox="0 0 400 300">';for(var i=0;i<3;i++){var x=[120,230,170][i];o+='<g class="slidein" style="--i:'+i+'"><rect x="50" y="'+(40+i*80)+'" width="300" height="12" rx="6" fill="rgba(255,255,255,.2)"/><rect x="50" y="'+(40+i*80)+'" width="'+(x-50)+'" height="12" rx="6" fill="#36BDF5"/><circle cx="'+x+'" cy="'+(46+i*80)+'" r="16" fill="#fff"/></g>';}return o+'</svg>';}
+function artShield(){return '<svg viewBox="0 0 400 300"><g class="slidein" style="--i:0"><path d="M200 24 L318 66 V150 C318 214 266 254 200 280 C134 254 82 214 82 150 V66 Z" fill="#fff"/><path class="tick" d="M150 150 l36 36 l66 -78" stroke="#1B8A5A" stroke-width="14" fill="none" stroke-linecap="round" stroke-linejoin="round"/></g><g class="pop" style="--i:4"><rect x="270" y="30" width="110" height="40" rx="20" fill="#f28c28"/><text x="325" y="56" fill="#fff" font-size="14" font-weight="700" text-anchor="middle">Audit log</text></g></svg>';}
+var ART={trip:artTrip,scan:artScan,pin:artPin,bell:artBell,kyc:artKyc,rules:artRules,shield:artShield,route:artRoute,seats:artSeats,pay:artPay,ticket:artTicket,fleet:artFleet,calendar:artCalendar,bars:artBars,payout:artPayout};
+
+/* ---------------- build the screens ---------------- */
+function $(id){return document.getElementById(id);}
+function stars(){var s='<div class="stars">';for(var i=0;i<26;i++)s+='<i style="left:'+((i*47)%100)+'%;top:'+((i*29)%70)+'%;animation-delay:'+(-i*.37)+'s"></i>';return s+'</div>';}
+function brand(){return '<div class="brand"><img src="'+LOGO+'" alt="Abra Travels logo"><b>Abra Travels</b></div>';}
+
+function buildFirst(){
+  var hidden = false; try{hidden = localStorage.getItem(KEY)==='1';}catch(e){}
+  var btns = '';
+  if(C.canStart) btns += '<button class="btn primary" id="bStart">Get started</button>';
+  btns += '<button class="btn '+(C.canStart?'ghost':'primary')+'" id="bLogin">'+C.login+'</button>';
+  var foot = C.canStart && hidden ? 'You chose to skip the tour. <a id="bReplay">Show the tour again</a>' : C.startNote;
+  var chips = C.chips.map(function(c,i){return '<div class="chip '+c[1]+' par" data-p="'+(10+i*8)+'" style="left:'+c[2]+';top:'+c[3]+';animation-delay:'+(-i*1.4)+'s"><i></i>'+c[0]+'</div>';}).join('');
+  $('first').innerHTML = stars()+brand()+
+    '<div class="cols"><div class="copyblock"><div class="copy"><h1>'+C.title+'</h1><p id="rot">'+C.lines[0]+'</p></div>'+
+    '<div class="btns">'+btns+'</div><div class="foot">'+foot+'</div></div>'+
+    '<div class="hero" id="hero">'+SCENE[C.scene]()+chips+'</div></div>';
+  var i=0, rot=$('rot');
+  clearInterval(window.__rotTimer);
+  window.__rotTimer=setInterval(function(){rot.classList.add('out');setTimeout(function(){i=(i+1)%C.lines.length;rot.textContent=C.lines[i];rot.classList.remove('out');},450);},3800);
+  $('bLogin').onclick=function(){goSign(false);};
+  if(C.canStart){
+    $('bStart').onclick=function(){ if(hidden){goSign(!C.noSignup);} else {show('tour');setSlide(0);} };
+    var rp=$('bReplay'); if(rp) rp.onclick=function(){try{localStorage.removeItem(KEY);}catch(e){} buildFirst(); toast('The tour will show again.');};
+  }
+}
+/* the picture moves a little with the mouse */
+document.addEventListener('mousemove',function(e){
+  var x=(e.clientX/innerWidth-.5), y=(e.clientY/innerHeight-.5);
+  document.querySelectorAll('.par').forEach(function(el){var p=+el.dataset.p||8; el.style.transform='translate('+(-x*p)+'px,'+(-y*p)+'px)';});
+});
+
+var cur=0;
+function buildTour(){
+  var s=C.slides, h='';
+  h+='<div class="top"><button class="back" id="tBack">&larr; Back</button><button class="skip" id="tSkip">Skip</button></div><div class="progress"><i id="prog"></i></div><div class="slides">';
+  s.forEach(function(sl,i){h+='<div class="slide" id="sl'+i+'"><div class="art">'+ART[sl.art]()+'</div><div class="txt"><h2>'+sl.h+'</h2><p>'+sl.p+'</p></div></div>';});
+  h+='</div><div class="dots" id="dots">'+s.map(function(){return '<i></i>';}).join('')+'</div>'+
+     '<label class="choice"><input type="checkbox" id="noShow"> Do not show this tour again</label>'+
+     '<div class="navrow"><button class="btn primary" id="tNext">Next</button></div>';
+  $('tour').innerHTML=h;
+  $('tSkip').onclick=function(){finishTour();};
+  $('tBack').onclick=function(){ if(cur>0) setSlide(cur-1); else show('first'); };
+  $('tNext').onclick=function(){ if(cur<C.slides.length-1) setSlide(cur+1); else finishTour(); };
+}
+function setSlide(n){
+  cur=n;
+  C.slides.forEach(function(_,i){var el=$('sl'+i);el.classList.remove('on','out');if(i===n)el.classList.add('on');else if(i<n)el.classList.add('out');});
+  var d=$('dots').children;for(var i=0;i<d.length;i++)d[i].className=i===n?'on':'';
+  $('prog').style.width=((n+1)/C.slides.length*100)+'%';
+  $('tNext').textContent = n===C.slides.length-1 ? (C.noSignup ? 'Go to login' : 'Create my account') : 'Next';
+}
+function finishTour(){
+  if($('noShow').checked){try{localStorage.setItem(KEY,'1');}catch(e){} toast('Got it. We will not show the tour again.');}
+  goSign(!C.noSignup);
+}
+
+function goSign(isNew){ buildSign(isNew); show('signin'); }
+function buildSign(isNew){
+  var title = isNew ? 'Create your account' : C.signTitle;
+  var sub = isNew ? (ROLE==='client'?'Tell us who you are. Admin reviews your company before you go live.':'Enter your mobile number and we will send a code. Your account is made when you verify it.') : C.signSub;
+  var f2 = (!isNew && C.f2) ? '<label>'+C.f2+'</label><input type="password" placeholder="Your password">' : '';
+  var f1label = isNew && ROLE==='client' ? 'Email' : C.f1;
+  $('signin').innerHTML='<div class="top"><button class="back" id="sBack">&larr; Back</button><span></span></div>'+
+   '<div class="card" id="card"><h3>'+title+'</h3><p class="s">'+sub+'</p><label>'+f1label+'</label><input type="text" placeholder="'+f1label+'">'+f2+
+   '<button class="btn primary" id="sGo">'+(isNew?'Continue':C.signBtn)+'</button>'+
+   '<div class="note">This is a demo screen. Nothing is sent.</div></div>';
+  $('sBack').onclick=function(){show('first');};
+  $('sGo').onclick=function(){
+    $('card').innerHTML='<div class="check"><svg width="36" height="36" viewBox="0 0 34 34"><path d="M8 18 l7 7 l12 -14" stroke="#1B8A5A" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="40" stroke-dashoffset="40"><animate attributeName="stroke-dashoffset" to="0" dur=".6s" fill="freeze"/></path></svg></div><h3 style="text-align:center">You are in</h3><p class="s" style="text-align:center">The app opens here, on the home screen.</p><button class="btn primary" id="again">Back to the first screen</button>';
+    $('again').onclick=function(){show('first');};
+  };
+}
+
+function show(id){
+  ['first','tour','signin'].forEach(function(k){$(k).classList.remove('on');});
+  $(id).classList.add('on');
+  if(id==='first') buildFirst();
+}
+var tt;function toast(m){var t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(function(){t.classList.remove('on');},2600);}
+
+buildFirst(); if(C.canStart) buildTour();
+</script>
+</body>
+</html>
