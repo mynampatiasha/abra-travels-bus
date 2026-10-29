@@ -1,9 +1,16 @@
 import { Module } from '@nestjs/common';
+import { BookingsModule } from '../bookings/bookings.module';
+import { TicketsCustomerController } from './tickets_customer';
+import { TicketsCustomerService } from './tickets_customer.service';
 
 /**
- * `tickets` — Inventory & booking domain (documentation/architecture.md §5).
- * Structure only: no controllers, services or collections yet. Implemented in Phase 5
- * (documentation/implementation-plan.md), following the module layout in project-structure.md §2.
+ * `tickets`: the e-ticket of a confirmed booking with a signed QR. The PDF, the calendar file,
+ * sharing and the conductor check-in come later.
  */
-@Module({})
+@Module({
+  imports: [BookingsModule],
+  controllers: [TicketsCustomerController],
+  providers: [TicketsCustomerService],
+  exports: [TicketsCustomerService],
+})
 export class TicketsModule {}
