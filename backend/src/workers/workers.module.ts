@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { InventoryModule } from '../modules/inventory/inventory.module';
 import { EventRouterModule } from '../modules/notifications/event_router_core';
+import { PaymentsModule } from '../modules/payments/payments.module';
 import { OperatorStaffModule } from '../modules/operator-staff/crew_client_manage';
 import { CrewDocumentReminderWorker } from './crew-document-reminder.worker';
 import { DomainEventDispatchProcessor } from './domain-event-dispatch.processor';
@@ -10,7 +11,7 @@ import { SeatLockExpiryWorker } from './seat-lock-expiry.worker';
 
 /** Background processing. Imported only by WorkerModule — never by the HTTP API. */
 @Module({
-  imports: [OperatorStaffModule, EventRouterModule, InventoryModule],
+  imports: [OperatorStaffModule, EventRouterModule, InventoryModule, PaymentsModule],
   providers: [
     DomainEventDispatchProcessor,
     QueueWorkerHost,

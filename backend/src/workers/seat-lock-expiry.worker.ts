@@ -4,6 +4,7 @@ import {
   Logger,
   type OnApplicationBootstrap,
 } from '@nestjs/common';
+import { PaymentsCustomerService } from '../modules/payments/payments_customer.service';
 import { SeatLocksService } from '../modules/inventory/seat_locks_customer.service';
 
 /** Every 15 seconds, as in seat-locking.md. A late run only delays the tidy-up: an expired hold is already free. */
@@ -16,7 +17,10 @@ export class SeatLockExpiryWorker implements OnApplicationBootstrap, BeforeAppli
   private timer: NodeJS.Timeout | undefined;
   private running = false;
 
-  constructor(private readonly seatLocks: SeatLocksService) {}
+  constructor(
+    private readonly seatLocks: SeatLocksService,
+    private readonly payments: PaymentsCustomerService,
+  ) {}
 
   onApplicationBootstrap(): void {
     this.timer = setInterval(() => void this.run(), EVERY_MS);
@@ -31,6 +35,9 @@ export class SeatLockExpiryWorker implements OnApplicationBootstrap, BeforeAppli
     if (this.running) return;
     this.running = true;
     try {
+      // Unpaid bookings first: they give the coupon back along with the seats
+      const unpaid = await this.payments.expireUnpaid(now);
+      if (unpaid.bookings > 0) this.logger.log(unpaid, 'Expired unpaid bookings');
       const result = await this.seatLocks.expireOverdue(now);
       if (result.groups > 0) this.logger.log(result, 'Expired seat holds');
     } catch (error) {

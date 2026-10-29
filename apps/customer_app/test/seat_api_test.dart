@@ -1,7 +1,9 @@
 import 'package:customer_app/features/booking/models/booking_models.dart';
+import 'package:customer_app/features/booking/models/payment_models.dart';
 import 'package:customer_app/features/booking/models/seat_models.dart';
 import 'package:customer_app/features/booking/models/ticket_models.dart';
 import 'package:customer_app/features/booking/repositories/booking_repository.dart';
+import 'package:customer_app/features/booking/repositories/payment_repository.dart';
 import 'package:customer_app/features/booking/repositories/seat_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -120,6 +122,40 @@ void main() {
 
     test('a listed coupon gives its code', () {
       expect(couponCodeFromJson(<String, Object?>{'code': 'SAVE10'}), 'SAVE10');
+    });
+  });
+
+  group('the payment answer from the backend', () {
+    test('a confirmed booking is a success', () {
+      final result = paymentOutcomeOf(
+        paymentResultFromJson(<String, Object?>{'status': 'SUCCESS', 'bookingStatus': 'CONFIRMED', 'refundDue': false}),
+        bookingId: 'bk1',
+        reference: 'order1',
+      );
+      expect(result.outcome, PaymentOutcome.success);
+      expect(result.bookingId, 'bk1');
+    });
+
+    test('seats lost after paying are a timeout, a failed payment is a failure', () {
+      final lost = paymentOutcomeOf(
+        paymentResultFromJson(<String, Object?>{'status': 'SUCCESS', 'bookingStatus': 'EXPIRED', 'refundDue': true}),
+        bookingId: 'bk1',
+        reference: 'order1',
+      );
+      expect(lost.outcome, PaymentOutcome.timeout);
+      final failed = paymentOutcomeOf(
+        paymentResultFromJson(<String, Object?>{'status': 'FAILED', 'bookingStatus': 'FAILED', 'refundDue': false}),
+        bookingId: 'bk1',
+        reference: 'order1',
+      );
+      expect(failed.outcome, PaymentOutcome.failed);
+      expect(failed.reference, 'order1');
+    });
+
+    test('reads the order to pay', () {
+      final order = paymentOrderFromJson(<String, Object?>{'paymentId': 'p1', 'gatewayOrderId': 'o1', 'keyId': 'development'});
+      expect(order.paymentId, 'p1');
+      expect(order.keyId, 'development');
     });
   });
 }

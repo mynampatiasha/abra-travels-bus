@@ -13,6 +13,6 @@ import { BOOKING_MODEL, BookingsCustomerService, bookingSchema } from './booking
   imports: [MongooseModule.forFeature([{ name: BOOKING_MODEL, schema: bookingSchema }]), CouponsModule],
   controllers: [BookingsCustomerController],
   providers: [BookingsCustomerService],
-  exports: [BookingsCustomerService],
+  exports: [BookingsCustomerService, MongooseModule],
 })
 export class BookingsModule {}
