@@ -2,6 +2,7 @@ import { Body, Controller, Get, HttpCode, Param, Patch, Post, Query } from '@nes
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Types } from 'mongoose';
 import { z } from 'zod';
+import { PublicEndpoint } from '../../common/decorators/public-endpoint.decorator';
 import { AuthenticatedOnly } from '../../common/decorators/authenticated-only.decorator';
 import { CurrentActor } from '../../common/decorators/current-actor.decorator';
 import { ZodApiBody } from '../../common/openapi/zod-api-body';
@@ -9,7 +10,7 @@ import { createZodDto } from '../../common/pipes/zod-dto.factory';
 import { type AuthenticatedUserActor } from '../../common/request-context/request-actor';
 import { ApiException } from '../../common/errors/api-exception';
 import { RequirePermission } from '../rbac/decorators/require-permission.decorator';
-import { type CouponCheck, type CouponView, CouponsService } from './coupons.service';
+import { type CouponCheck, type CouponView, CouponsService, type PublicOfferView } from './coupons.service';
 
 class ValidateCouponDto extends createZodDto(
   z.object({
@@ -62,6 +63,23 @@ export class CouponsCustomerController {
   @ApiOperation({ summary: 'Codes on offer', description: 'Customer. Active codes that are in date and not used up.' })
   list(@Query('tripId') _tripId?: string): Promise<CouponView[]> {
     return this.coupons.suggestions();
+  }
+}
+
+/** Offers for everyone, signed in or not. */
+@ApiTags('coupons')
+@PublicEndpoint()
+@Controller('offers')
+export class OffersPublicController {
+  constructor(private readonly coupons: CouponsService) {}
+
+  @Get()
+  @ApiOperation({
+    summary: 'Offers you can use',
+    description: 'Public. Active offers that are in date and not used up, with what they give and their conditions.',
+  })
+  list(): Promise<PublicOfferView[]> {
+    return this.coupons.publicOffers();
   }
 }
 

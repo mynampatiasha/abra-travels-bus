@@ -5,6 +5,8 @@ import 'package:customer_app/features/booking/models/ticket_models.dart';
 import 'package:customer_app/features/booking/repositories/booking_repository.dart';
 import 'package:customer_app/features/booking/repositories/payment_repository.dart';
 import 'package:customer_app/features/booking/repositories/seat_repository.dart';
+import 'package:customer_app/features/booking/repositories/ticket_repository.dart';
+import 'package:customer_app/features/notifications/repositories/notifications_repositories.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -156,6 +158,61 @@ void main() {
       final order = paymentOrderFromJson(<String, Object?>{'paymentId': 'p1', 'gatewayOrderId': 'o1', 'keyId': 'development'});
       expect(order.paymentId, 'p1');
       expect(order.keyId, 'development');
+    });
+  });
+
+  group('the ticket from the backend', () {
+    test('reads the trip, the passengers, the points and the QR text', () {
+      final ticket = ticketFromJson(<String, Object?>{
+        'bookingId': 'bk1',
+        'tripId': 't1',
+        'pnr': 'ABR7K2M9QX',
+        'operatorName': 'Demo Travels',
+        'busTypeName': 'AC Seater',
+        'originName': 'Hyderabad',
+        'destinationName': 'Bengaluru',
+        'travelDate': '2026-10-29',
+        'timezone': 'Asia/Kolkata',
+        'departureAt': '2026-10-29T16:00:00.000Z',
+        'arrivalAt': '2026-10-30T01:00:00.000Z',
+        'durationMinutes': 540,
+        'passengers': <Object?>[
+          <String, Object?>{'name': 'Asha Rao', 'seatId': '1', 'age': 31, 'gender': 'FEMALE'},
+          <String, Object?>{'name': 'Ravi Rao', 'seatId': '2', 'age': 32, 'gender': 'MALE'},
+        ],
+        'boarding': <String, Object?>{'name': 'Ameerpet Metro', 'time': '2026-10-29T16:00:00.000Z', 'address': 'Ameerpet'},
+        'dropping': <String, Object?>{'name': 'Majestic', 'time': '2026-10-30T01:00:00.000Z'},
+        'paidPaise': 170000,
+        'currency': 'INR',
+        'qrPayload': 'ABR1.bk1.ABR7K2M9QX.sig',
+        'operatorPhone': '9000011111',
+      });
+      expect(ticket.pnr, 'ABR7K2M9QX');
+      expect(ticket.seatIds, <String>['1', '2']);
+      expect(ticket.boarding.name, 'Ameerpet Metro');
+      expect(ticket.boarding.address, 'Ameerpet');
+      expect(ticket.dropping.address, isNull);
+      expect(ticket.paidPaise, 170000);
+      expect(ticket.qrPayload, startsWith('ABR1.'));
+      expect(ticket.operatorPhone, '9000011111');
+      expect(ticket.departureAt.toUtc(), DateTime.utc(2026, 10, 29, 16));
+    });
+  });
+
+  group('the offers from the backend', () {
+    test('reads the code, the words, the last day and the conditions', () {
+      final offer = offerFromJson(<String, Object?>{
+        'code': 'SAVE10',
+        'title': 'Ten percent',
+        'description': '10% off up to Rs 100',
+        'validTill': '2026-12-31T18:29:59.000Z',
+        'terms': <Object?>['One use for each customer.', 'For your first booking only.'],
+      });
+      expect(offer.code, 'SAVE10');
+      expect(offer.description, '10% off up to Rs 100');
+      expect(offer.terms, hasLength(2));
+      expect(offer.isValidOn(DateTime(2026, 10, 29)), isTrue);
+      expect(offer.isValidOn(DateTime(2027, 2, 1)), isFalse);
     });
   });
 }

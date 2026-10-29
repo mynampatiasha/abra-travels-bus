@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_models/shared_models.dart';
+import 'package:shared_network/shared_network.dart';
 import 'package:shared_notifications/shared_notifications.dart';
 
 import '../../../app/providers.dart';
@@ -48,8 +50,16 @@ abstract interface class OffersRepository {
 
 /// Backend implementation for offers and banners.
 class ApiOffersRepository implements OffersRepository {
+  ApiOffersRepository(this._client);
+
+  final ApiClient _client;
+
+  /// `GET /offers` (public): active offers, in date and not used up.
   @override
-  Future<List<Offer>> offers() async => const <Offer>[];
+  Future<List<Offer>> offers() async {
+    final response = await _client.get('offers', authenticated: false);
+    return response.decodeList(offerFromJson);
+  }
 
   @override
   Future<List<OfferBanner>> banners() async => const <OfferBanner>[];
@@ -62,5 +72,17 @@ final notificationFeedProvider = Provider<NotificationFeed>(
 );
 
 final offersRepositoryProvider = Provider<OffersRepository>(
-  (ref) => ApiOffersRepository(),
+  (ref) => ApiOffersRepository(ref.read(appDependenciesProvider).apiClient),
+);
+
+/// An offer as the backend sends it: the code, what it gives, the last day
+/// and the conditions in words.
+Offer offerFromJson(JsonMap json) => Offer(
+  code: '${json['code']}',
+  description: '${json['description'] ?? ''}',
+  validTill: DateTime.parse('${json['validTill']}').toLocal(),
+  terms: <String>[
+    if (json['terms'] is List)
+      for (final line in json['terms'] as List<Object?>) '$line',
+  ],
 );

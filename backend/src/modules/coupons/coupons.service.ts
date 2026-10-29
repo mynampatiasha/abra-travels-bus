@@ -91,6 +91,15 @@ export interface CouponCheck {
   reason?: string;
 }
 
+/** An offer as a guest sees it: the code, what it gives, until when, and the conditions. */
+export interface PublicOfferView {
+  code: string;
+  title: string;
+  description: string;
+  validTill: string;
+  terms: string[];
+}
+
 export interface CouponInput {
   code: string;
   title: string;
@@ -246,6 +255,30 @@ export class CouponsService {
       if (bookings > 0) return refuse('This code is for your first booking only.');
     }
     return { code, valid: true, discountPaise: discountFor(coupon, basePaise) };
+  }
+
+  /** Offers open to guests: active, in date and not used up, with the conditions in words. */
+  async publicOffers(): Promise<PublicOfferView[]> {
+    const rows = await this.suggestions();
+    return rows.map((c) => {
+      const rupees = (paise: number) => `Rs ${paise % 100 === 0 ? paise / 100 : (paise / 100).toFixed(2)}`;
+      const gives =
+        c.discountType === 'PERCENT'
+          ? `${c.value}% off${c.maxDiscountPaise ? ` up to ${rupees(c.maxDiscountPaise)}` : ''}`
+          : `${rupees(c.value)} off`;
+      const terms: string[] = [];
+      if (c.minBookingPaise > 0) terms.push(`Valid on bookings of ${rupees(c.minBookingPaise)} or more.`);
+      if (c.newUsersOnly) terms.push('For your first booking only.');
+      terms.push(c.perCustomerLimit === 1 ? 'One use for each customer.' : `Up to ${c.perCustomerLimit} uses for each customer.`);
+      if (c.usageLimit > 0) terms.push('Limited number of uses in total.');
+      return {
+        code: c.code,
+        title: c.title,
+        description: c.description ? `${gives}. ${c.description}` : gives,
+        validTill: c.endsAt,
+        terms,
+      };
+    });
   }
 
   /** Codes worth showing for a trip: active, in date and not used up. */

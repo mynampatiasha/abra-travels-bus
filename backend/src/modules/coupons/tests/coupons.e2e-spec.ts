@@ -147,7 +147,8 @@ describe('Coupons e2e (abra_supply_test)', () => {
     const booking = dataOf<BookingView>(await book(anna, h.lockId, '1', c).expect(201));
     expect(booking.baseFarePaise).toBe(85_000);
     expect(booking.discountPaise).toBe(10_000);
-    expect(booking.amountPaise).toBe(75_000);
+    // 85,000 + GST 4,250 + fee 4,900 - 10,000
+    expect(booking.amountPaise).toBe(84_150);
 
     const second = await hold(anna, ['2']);
     const refused = await book(anna, second.lockId, '2', c).expect(422);
@@ -176,6 +177,21 @@ describe('Coupons e2e (abra_supply_test)', () => {
     const row = await context.connection.collection('coupons').findOne({ code: c });
     expect(row?.usedCount).toBe(1);
   }, 120_000);
+
+  it('shows guests the offers with what they give and the conditions in words', async () => {
+    const c = code('GUEST');
+    await make({ code: c, title: 'Guest deal', discountType: 'PERCENT', value: 15, maxDiscountPaise: 20_000, minBookingPaise: 100_000, newUsersOnly: true }).expect(201);
+    const res = await client(context).get(`${API}/offers`).expect(200);
+    const offers = dataOf<Array<{ code: string; description: string; validTill: string; terms: string[] }>>(res);
+    const mine = offers.find((o) => o.code === c);
+    expect(mine?.description).toBe('15% off up to Rs 200');
+    expect(mine?.terms).toEqual([
+      'Valid on bookings of Rs 1000 or more.',
+      'For your first booking only.',
+      'One use for each customer.',
+    ]);
+    expect(new Date(mine?.validTill ?? '').getTime()).toBeGreaterThan(Date.now());
+  });
 
   it('lists the codes on offer for a customer', async () => {
     const res = await client(context).get(`${API}/coupons?tripId=${tripId.toHexString()}`).set(...auth(anna)).expect(200);
