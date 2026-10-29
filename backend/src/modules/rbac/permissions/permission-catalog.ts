@@ -421,6 +421,19 @@ export const COMMISSION_PERMISSIONS = definePermissions('commissions', {
   },
 });
 
+export const OFFER_PERMISSIONS = definePermissions('offers', {
+  read: {
+    name: 'View offers and coupons',
+    description: 'View the offers and coupons, and how often each was used.',
+    grantableTo: PLATFORM_AND_OPERATOR,
+  },
+  manage: {
+    name: 'Manage offers and coupons',
+    description: 'Create coupons, change them, and pause or resume them.',
+    grantableTo: PLATFORM_ONLY,
+  },
+});
+
 /** Every permission of the platform. A new module's group is added to this object. */
 export const PERMISSION_CATALOG = {
   ...USER_PERMISSIONS,
@@ -447,6 +460,7 @@ export const PERMISSION_CATALOG = {
   ...AUDIT_PERMISSIONS,
   ...BANNER_PERMISSIONS,
   ...COMMISSION_PERMISSIONS,
+  ...OFFER_PERMISSIONS,
   ...PAYOUT_PERMISSIONS,
 } as const;
 

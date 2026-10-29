@@ -98,4 +98,28 @@ void main() {
       expect(created.amountPaise, 175000);
     });
   });
+
+  group('coupons from the backend', () {
+    test('a good code carries the discount, a refused one does not', () {
+      final good = couponResultFromJson(<String, Object?>{
+        'code': 'SAVE10',
+        'valid': true,
+        'discountPaise': 8500,
+      });
+      expect(good.isValid, isTrue);
+      expect(good.discountPaise, 8500);
+      final bad = couponResultFromJson(<String, Object?>{
+        'code': 'OLD',
+        'valid': false,
+        'discountPaise': 0,
+        'reason': 'This code is not active right now.',
+      });
+      expect(bad.isValid, isFalse);
+      expect(bad.discountPaise, 0);
+    });
+
+    test('a listed coupon gives its code', () {
+      expect(couponCodeFromJson(<String, Object?>{'code': 'SAVE10'}), 'SAVE10');
+    });
+  });
 }

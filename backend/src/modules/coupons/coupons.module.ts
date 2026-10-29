@@ -1,9 +1,18 @@
 import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+import { RbacModule } from '../rbac/rbac.module';
+import { CouponsAdminController, CouponsCustomerController } from './coupons';
+import { COUPON_MODEL, CouponsService, couponSchema } from './coupons.service';
 
 /**
- * `coupons` — Inventory & booking domain (documentation/architecture.md §5).
- * Structure only: no controllers, services or collections yet. Implemented in Phase 4
- * (documentation/implementation-plan.md), following the module layout in project-structure.md §2.
+ * `coupons`: Inventory and booking domain (documentation/architecture.md section 5). Admin makes
+ * coupons, a customer checks a code, and a booking reserves it. The offers pages for operators
+ * and the website come later.
  */
-@Module({})
+@Module({
+  imports: [MongooseModule.forFeature([{ name: COUPON_MODEL, schema: couponSchema }]), RbacModule],
+  controllers: [CouponsCustomerController, CouponsAdminController],
+  providers: [CouponsService],
+  exports: [CouponsService],
+})
 export class CouponsModule {}

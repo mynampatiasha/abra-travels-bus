@@ -5,6 +5,7 @@ import { type Connection, type Model, Schema, Types } from 'mongoose';
 import { ApiException } from '../../common/errors/api-exception';
 import { type AuthenticatedUserActor } from '../../common/request-context/request-actor';
 import { TransactionRunner } from '../../database/transaction-runner.service';
+import { CouponsService } from '../coupons/coupons.service';
 
 /*
  * A booking for held seats (documentation/state-machines.md section 3). The customer sends the hold
@@ -155,6 +156,7 @@ export class BookingsCustomerService {
     @InjectConnection() private readonly connection: Connection,
     @InjectModel(BOOKING_MODEL) private readonly bookings: Model<BookingRow>,
     private readonly transactions: TransactionRunner,
+    private readonly coupons: CouponsService,
   ) {}
 
   private view(row: BookingRow & { _id: Types.ObjectId }): BookingView {
@@ -214,8 +216,13 @@ export class BookingsCustomerService {
       farePaise: priceOf.get(p.seatId) ?? 0,
     }));
     const baseFarePaise = passengers.reduce((sum, p) => sum + p.farePaise, 0);
-    // Coupons come with the offers step; until then no discount is given
-    const discountPaise = 0;
+    // The discount is worked out here from the coupon, never taken from the app
+    let discountPaise = 0;
+    if (input.couponCode) {
+      const check = await this.coupons.check(customerId, group.tripId.toHexString(), input.couponCode, baseFarePaise);
+      if (!check.valid) throw new ApiException('COUPON_INVALID', check.reason ?? 'This code is not valid.');
+      discountPaise = check.discountPaise;
+    }
     const amountPaise = baseFarePaise - discountPaise;
     if (input.expectedAmountPaise !== undefined && input.expectedAmountPaise !== amountPaise) {
       throw new ApiException('PAYMENT_AMOUNT_MISMATCH', 'The price changed. Please check the new amount.', {
@@ -250,6 +257,7 @@ export class BookingsCustomerService {
         { session },
       );
       if (!row) throw new Error('The booking could not be saved');
+      if (input.couponCode) await this.coupons.reserve(customerId, row._id, input.couponCode, session);
       return row.toObject() as BookingRow & { _id: Types.ObjectId };
     });
     return this.view(created);

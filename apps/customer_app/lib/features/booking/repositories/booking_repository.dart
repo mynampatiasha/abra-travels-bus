@@ -114,11 +114,26 @@ class ApiBookingRepository implements BookingRepository {
     required String tripId,
     required String code,
     required int basePaise,
-  }) => _rest.applyCoupon(tripId: tripId, code: code, basePaise: basePaise);
+  }) async {
+    final response = await _client.post(
+      'coupons/validate',
+      body: <String, Object?>{
+        'tripId': tripId,
+        'code': code,
+        'basePaise': basePaise,
+      },
+    );
+    return response.decodeObject(couponResultFromJson);
+  }
 
   @override
-  Future<List<String>> suggestedCoupons(String tripId) =>
-      _rest.suggestedCoupons(tripId);
+  Future<List<String>> suggestedCoupons(String tripId) async {
+    final response = await _client.get(
+      'coupons',
+      query: <String, Object?>{'tripId': tripId},
+    );
+    return response.decodeList(couponCodeFromJson);
+  }
 
   @override
   Future<List<CancellationRule>> cancellationPolicy(String tripId) =>
@@ -217,3 +232,14 @@ BookingCreated bookingCreatedFromJson(JsonMap json) => BookingCreated(
   bookingId: '${json['bookingId']}',
   amountPaise: (json['amountPaise'] as num?)?.toInt() ?? 0,
 );
+
+/// The answer to "is this code good for this booking?".
+CouponResult couponResultFromJson(JsonMap json) => json['valid'] == true
+    ? CouponResult.valid(
+        code: '${json['code']}',
+        discountPaise: (json['discountPaise'] as num?)?.toInt() ?? 0,
+      )
+    : CouponResult.invalid('${json['code']}');
+
+/// A code on offer, from the coupon list.
+String couponCodeFromJson(JsonMap json) => '${json['code']}';

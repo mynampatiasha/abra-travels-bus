@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { CouponsModule } from '../coupons/coupons.module';
 import { BookingsCustomerController } from './bookings_customer';
 import { BOOKING_MODEL, BookingsCustomerService, bookingSchema } from './bookings_customer.service';
 
@@ -9,7 +10,7 @@ import { BOOKING_MODEL, BookingsCustomerService, bookingSchema } from './booking
  * operator lists follow in the next steps of Phase 3.
  */
 @Module({
-  imports: [MongooseModule.forFeature([{ name: BOOKING_MODEL, schema: bookingSchema }])],
+  imports: [MongooseModule.forFeature([{ name: BOOKING_MODEL, schema: bookingSchema }]), CouponsModule],
   controllers: [BookingsCustomerController],
   providers: [BookingsCustomerService],
   exports: [BookingsCustomerService],
