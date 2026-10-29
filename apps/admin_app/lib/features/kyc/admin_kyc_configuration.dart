@@ -1874,7 +1874,6 @@ class _ImportDialogState extends State<_ImportDialog> {
   String? _filename;
   String? _error;
   bool _busy = false;
-  bool _replace = false;
   String _ruleDescription(JsonMap rule) {
     final document = widget.documents
         .where((d) => d['key'] == rule['documentKey'])
@@ -1896,7 +1895,6 @@ class _ImportDialogState extends State<_ImportDialog> {
     setState(() {
       _validated = null;
       _parsed = null;
-      _replace = false;
       _error = null;
       _filename = null;
       _busy = true;
@@ -2029,14 +2027,6 @@ class _ImportDialogState extends State<_ImportDialog> {
           '${_t(context, 'ValidImport')}: ${_rows(_validated!['questions']).length} ${_t(context, 'Questions')}, ${_rows(_validated!['rules']).length} ${_t(context, 'Rules')}',
           style: const TextStyle(color: AbraColors.tealDark),
         ),
-      CheckboxListTile(
-        contentPadding: EdgeInsets.zero,
-        title: Text(_t(context, 'ReplaceConfirm')),
-        value: _replace,
-        onChanged: _busy || _validated == null
-            ? null
-            : (v) => setState(() => _replace = v == true),
-      ),
       if (_error != null)
         Text(_error!, style: const TextStyle(color: AbraColors.danger)),
     ],
@@ -2048,7 +2038,7 @@ class _ImportDialogState extends State<_ImportDialog> {
       AbraButton(
         label: _t(context, 'Import'),
         isLoading: _busy,
-        onPressed: _validated != null && _replace ? _save : null,
+        onPressed: _validated != null ? _save : null,
       ),
     ],
   );
