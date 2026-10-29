@@ -93,8 +93,21 @@ class ApiBookingRepository implements BookingRepository {
   }
 
   @override
-  Future<BookingCreated> createBooking(BookingRequest request) =>
-      _rest.createBooking(request);
+  Future<BookingCreated> createBooking(BookingRequest request) async {
+    try {
+      final response = await _client.post(
+        'bookings',
+        body: bookingBody(request),
+      );
+      return response.decodeObject(bookingCreatedFromJson);
+    } on AppException catch (error) {
+      final failure = error.failure;
+      if (failure is ApiFailure && failure.code == 'SEAT_LOCK_EXPIRED') {
+        throw const SeatsUnavailableException();
+      }
+      rethrow;
+    }
+  }
 
   @override
   Future<CouponResult> applyCoupon({
@@ -162,4 +175,45 @@ final bookingRepositoryProvider = Provider<BookingRepository>(
 /// The current time for the seat hold. Overridden in tests.
 final bookingClockProvider = Provider<DateTime Function()>(
   (ref) => DateTime.now,
+);
+
+/// `POST /bookings`: the hold, one passenger per seat and the contact. The
+/// prices are not sent; the backend reads them from the seats.
+Map<String, Object?> bookingBody(BookingRequest request) {
+  final gst = request.gst;
+  final coupon = request.couponCode;
+  return <String, Object?>{
+    'lockId': request.lockId,
+    'passengers': <Map<String, Object?>>[
+      for (final seatId in request.seatIds)
+        <String, Object?>{
+          'seatId': seatId,
+          'name': (request.passengers[seatId]?.name ?? '').trim(),
+          'age': int.tryParse(request.passengers[seatId]?.age ?? '') ?? 0,
+          'gender': switch (request.passengers[seatId]?.gender) {
+            Gender.female => 'FEMALE',
+            Gender.other => 'OTHER',
+            _ => 'MALE',
+          },
+        },
+    ],
+    'contact': <String, Object?>{
+      'mobile': request.contact.mobile.trim(),
+      'email': request.contact.email.trim(),
+    },
+    if (gst.enabled)
+      'gst': <String, Object?>{
+        'gstin': gst.gstin.trim(),
+        'company': gst.company.trim(),
+      },
+    if (coupon != null && coupon.isNotEmpty) 'couponCode': coupon,
+    if (request.expectedAmountPaise > 0)
+      'expectedAmountPaise': request.expectedAmountPaise,
+  };
+}
+
+/// The booking as the backend sends it: its id and the amount to pay.
+BookingCreated bookingCreatedFromJson(JsonMap json) => BookingCreated(
+  bookingId: '${json['bookingId']}',
+  amountPaise: (json['amountPaise'] as num?)?.toInt() ?? 0,
 );

@@ -1,4 +1,6 @@
+import 'package:customer_app/features/booking/models/booking_models.dart';
 import 'package:customer_app/features/booking/models/seat_models.dart';
+import 'package:customer_app/features/booking/models/ticket_models.dart';
 import 'package:customer_app/features/booking/repositories/booking_repository.dart';
 import 'package:customer_app/features/booking/repositories/seat_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -56,6 +58,44 @@ void main() {
       });
       expect(lock.lockId, 'abc-123');
       expect(lock.expiresAt.toUtc(), DateTime.utc(2026, 10, 26, 10, 10));
+    });
+  });
+
+  group('the booking sent to the backend', () {
+    test('sends the hold, one passenger per seat and the contact, no prices', () {
+      final body = bookingBody(
+        const BookingRequest(
+          tripId: 't1',
+          lockId: 'lock-1',
+          seatIds: <String>['1', '2'],
+          passengers: <String, PassengerEntry>{
+            '1': PassengerEntry(name: ' Asha Rao ', age: '31', gender: Gender.female),
+            '2': PassengerEntry(name: 'Ravi Rao', age: '34', gender: Gender.male),
+          },
+          contact: ContactEntry(mobile: '9876543210', email: 'asha@example.com'),
+          boardingPointId: 'b',
+          droppingPointId: 'd',
+          expectedAmountPaise: 170000,
+        ),
+      );
+      expect(body['lockId'], 'lock-1');
+      final passengers = body['passengers']! as List<Object?>;
+      expect(passengers, hasLength(2));
+      expect((passengers.first! as Map<String, Object?>)['name'], 'Asha Rao');
+      expect((passengers.first! as Map<String, Object?>)['age'], 31);
+      expect((passengers.first! as Map<String, Object?>)['gender'], 'FEMALE');
+      expect((passengers.last! as Map<String, Object?>)['gender'], 'MALE');
+      expect(body['expectedAmountPaise'], 170000);
+      expect(body.containsKey('gst'), isFalse);
+    });
+
+    test('reads the booking id and the amount to pay', () {
+      final created = bookingCreatedFromJson(<String, Object?>{
+        'bookingId': 'bk1',
+        'amountPaise': 175000,
+      });
+      expect(created.bookingId, 'bk1');
+      expect(created.amountPaise, 175000);
     });
   });
 }
