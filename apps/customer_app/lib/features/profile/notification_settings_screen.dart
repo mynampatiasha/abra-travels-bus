@@ -1,109 +1,166 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_theme/shared_theme.dart';
 import 'package:shared_ui/shared_ui.dart';
 
+import '../../core/async_value_view.dart';
 import '../../core/ui/gradient_header.dart';
-import '../home/widgets/home_offers_slider.dart';
+import 'profile_repository.dart';
 
-class NotificationSettingsScreen extends StatefulWidget {
+/// For each kind of message, which of WhatsApp, email and push the customer wants. A change is
+/// saved at once; if the server cannot be reached the switch goes back and says so.
+class NotificationSettingsScreen extends ConsumerWidget {
   const NotificationSettingsScreen({super.key});
 
   @override
-  State<NotificationSettingsScreen> createState() =>
-      _NotificationSettingsScreenState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Scaffold(
+      appBar: const GradientAppBar(title: 'Notification settings'),
+      body: AbraPageContainer(
+        maxWidth: AbraSizes.maxFormWidth * 1.3,
+        child: AsyncValueView<NotificationSettings>(
+          value: ref.watch(notificationSettingsProvider),
+          onRetry: () => ref.invalidate(notificationSettingsProvider),
+          data: (context, settings) => _SettingsList(initial: settings),
+        ),
+      ),
+    );
+  }
 }
 
-class _NotificationSettingsScreenState
-    extends State<NotificationSettingsScreen> {
-  final bool _booking = true;
-  final bool _offers = true;
-  final bool _safety = true; // locked always-on
-  final bool _whatsapp = true;
+const _topicTitles = <String, (String, String)>{
+  'bookings': (
+    'Bookings and refunds',
+    'Tickets, payments, cancellations and refunds',
+  ),
+  'trips': (
+    'Trip updates',
+    'Delays and boarding reminders',
+  ),
+  'offers': (
+    'Offers and promotions',
+    'Discounts, coupon codes and new routes',
+  ),
+};
+
+class _SettingsList extends ConsumerStatefulWidget {
+  const _SettingsList({required this.initial});
+
+  final NotificationSettings initial;
+
+  @override
+  ConsumerState<_SettingsList> createState() => _SettingsListState();
+}
+
+class _SettingsListState extends ConsumerState<_SettingsList> {
+  late NotificationSettings _settings = widget.initial;
+  bool _saving = false;
+
+  Future<void> _change(String topic, ChannelChoices choices) async {
+    final before = _settings;
+    final next = <String, ChannelChoices>{..._settings, topic: choices};
+    setState(() {
+      _settings = next;
+      _saving = true;
+    });
+    try {
+      final saved = await ref.read(profileRepositoryProvider).saveNotificationSettings(next);
+      if (mounted) setState(() => _settings = saved);
+    } on ProfileProblem catch (problem) {
+      if (!mounted) return;
+      setState(() => _settings = before);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(problem.message)));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Widget _switch(String label, bool value, ValueChanged<bool> onChanged) => SwitchListTile(
+    activeThumbColor: AbraColors.teal,
+    dense: true,
+    title: Text(label),
+    value: value,
+    onChanged: _saving ? null : onChanged,
+  );
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const GradientAppBar(
-        title: 'Notification settings',
+    final textTheme = Theme.of(context).textTheme;
+    return ListView(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AbraSpacing.md,
+        vertical: AbraSpacing.lg,
       ),
-      body: AbraPageContainer(
-        maxWidth: AbraSizes.maxFormWidth * 1.3,
-        child: ListView(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AbraSpacing.md,
-            vertical: AbraSpacing.lg,
-          ),
-          children: [
-            const HomeNotConnectedCard(
-              icon: Icons.cloud_off_outlined,
-              text: 'Not connected yet - built in Phase 7',
-            ),
-            const SizedBox(height: AbraSpacing.md),
+      children: <Widget>[
+        for (final topic in notificationTopics)
+          if (_settings[topic] case final choices?) ...<Widget>[
             AbraCard(
-              padding: EdgeInsets.zero,
+              padding: const EdgeInsets.symmetric(vertical: AbraSpacing.sm),
               child: Column(
-                children: [
-                  SwitchListTile(
-                    activeThumbColor: AbraColors.teal,
-                    title: const Text(
-                      'Booking and trip updates',
-                      style: TextStyle(fontWeight: FontWeight.w600),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AbraSpacing.lg,
+                      AbraSpacing.sm,
+                      AbraSpacing.lg,
+                      AbraSpacing.xs,
                     ),
-                    subtitle: const Text(
-                      'Tickets, delays, boarding reminders and refunds',
-                      style: TextStyle(color: AbraColors.textSecondary, fontSize: 13),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          _topicTitles[topic]!.$1,
+                          style: textTheme.titleSmall,
+                        ),
+                        Text(
+                          _topicTitles[topic]!.$2,
+                          style: textTheme.bodySmall?.copyWith(
+                            color: AbraColors.textSecondary,
+                          ),
+                        ),
+                      ],
                     ),
-                    value: _booking,
-                    onChanged: null, // saving needs the server: not connected yet
                   ),
-                  const Divider(height: 1),
-                  SwitchListTile(
-                    activeThumbColor: AbraColors.teal,
-                    title: const Text(
-                      'Offers and promotions',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: const Text(
-                      'Discounts, coupon codes and new routes',
-                      style: TextStyle(color: AbraColors.textSecondary, fontSize: 13),
-                    ),
-                    value: _offers,
-                    onChanged: null, // saving needs the server: not connected yet
+                  _switch(
+                    'WhatsApp',
+                    choices.whatsapp,
+                    (value) => _change(topic, choices.copyWith(whatsapp: value)),
                   ),
-                  const Divider(height: 1),
-                  SwitchListTile(
-                    activeThumbColor: AbraColors.teal,
-                    title: const Text(
-                      'Safety alerts',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: const Text(
-                      'Always on while you travel (cannot be turned off)',
-                      style: TextStyle(color: AbraColors.textSecondary, fontSize: 13),
-                    ),
-                    value: _safety,
-                    onChanged: null, // locked switch matching demo
+                  _switch(
+                    'Email',
+                    choices.email,
+                    (value) => _change(topic, choices.copyWith(email: value)),
                   ),
-                  const Divider(height: 1),
-                  SwitchListTile(
-                    activeThumbColor: AbraColors.teal,
-                    title: const Text(
-                      'WhatsApp messages',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: const Text(
-                      'Receive ticket PDF, boarding details and live link on WhatsApp',
-                      style: TextStyle(color: AbraColors.textSecondary, fontSize: 13),
-                    ),
-                    value: _whatsapp,
-                    onChanged: null, // saving needs the server: not connected yet
+                  _switch(
+                    'Push notification',
+                    choices.push,
+                    (value) => _change(topic, choices.copyWith(push: value)),
                   ),
                 ],
               ),
             ),
+            const SizedBox(height: AbraSpacing.md),
           ],
+        AbraCard(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const Icon(Icons.shield_outlined, color: AbraColors.teal),
+              const SizedBox(width: AbraSpacing.md),
+              Expanded(
+                child: Text(
+                  'Safety alerts are always on while you travel and cannot be turned off. '
+                  'Everything is also kept in your notifications list in the app.',
+                  style: textTheme.bodySmall,
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }

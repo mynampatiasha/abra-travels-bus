@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_authentication/shared_authentication.dart';
 import 'package:shared_localization/shared_localization.dart';
 import 'package:shared_theme/shared_theme.dart';
 
@@ -11,6 +14,7 @@ import '../../l10n/customer_strings.dart';
 import '../../routing/app_routes.dart';
 
 import '../onboarding/first_launch.dart';
+import '../profile/profile_repository.dart';
 
 /// Lets the user pick the app language, or follow the device. The choice
 /// applies immediately and is remembered on the device. Also the last step
@@ -19,6 +23,18 @@ class LanguageScreen extends ConsumerWidget {
   const LanguageScreen({this.isFirstLaunch = false, super.key});
 
   final bool isFirstLaunch;
+
+  /// Applies the choice on this device and, for a signed-in customer, keeps it on the account so
+  /// that messages and a new phone use the same language. A failure here changes nothing on screen.
+  Future<void> _choose(WidgetRef ref, Locale? locale) async {
+    await ref.read(appDependenciesProvider).localeController.selectLocale(locale);
+    if (locale == null || ref.read(authStateProvider) is! AuthSignedIn) return;
+    try {
+      await ref.read(profileRepositoryProvider).update(language: locale.languageCode);
+    } on Object {
+      // The device already uses the language; the account catches up on the next choice
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -50,7 +66,7 @@ class LanguageScreen extends ConsumerWidget {
               _LanguageOption(
                 label: l10n.text(AbraStrings.languageFollowDevice),
                 isSelected: controller.followsDevice,
-                onTap: () => controller.selectLocale(null),
+                onTap: () => unawaited(_choose(ref, null)),
               ),
               const Divider(),
               for (final language in controller.config.languages)
@@ -59,7 +75,7 @@ class LanguageScreen extends ConsumerWidget {
                   label: language.nativeName,
                   locale: language.locale,
                   isSelected: controller.userSelected == language.locale,
-                  onTap: () => controller.selectLocale(language.locale),
+                  onTap: () => unawaited(_choose(ref, language.locale)),
                 ),
             ],
           ),

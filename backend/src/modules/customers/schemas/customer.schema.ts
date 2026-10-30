@@ -16,6 +16,8 @@ export interface Customer {
   notificationPreferences: NotificationPreferences;
   /** Marketing consent as given at sign-up; `at` records when it was last changed. */
   marketingConsent: { granted: boolean; at: Date };
+  /** Which kinds of message the customer wants on WhatsApp, email and push (absent = the defaults). */
+  notificationSettings?: Record<string, { whatsapp: boolean; email: boolean; push: boolean }> | null;
   /** Set while staff have blocked the account; the reason is kept for staff only. */
   blocked?: { reason: string; at: Date; by: Types.ObjectId } | null;
   /** Staff deleted the account (it can be brought back). */
@@ -44,6 +46,7 @@ export const customerSchema = new Schema<Customer>(
       granted: { type: Boolean, required: true, default: false },
       at: { type: Date, required: true },
     },
+    notificationSettings: { type: Schema.Types.Mixed, default: null },
     blocked: {
       type: new Schema(
         {

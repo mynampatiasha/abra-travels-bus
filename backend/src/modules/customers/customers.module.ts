@@ -8,6 +8,7 @@ import { CustomersAdminController } from './customers_admin_manage';
 import { CustomersAdminService } from './customers_admin_manage.service';
 import { CustomersCustomerController } from './customers_customer';
 import { CustomersCustomerService } from './customers_customer.service';
+import { CustomerPreferenceService } from './notification_settings.service';
 import { CUSTOMER_MODEL, customerSchema } from './schemas/customer.schema';
 import { CustomersService } from './services/customers.service';
 
@@ -31,7 +32,8 @@ import { CustomersService } from './services/customers.service';
     CustomersService,
     CustomersCustomerService,
     CustomersAdminService,
+    CustomerPreferenceService,
   ],
-  exports: [CustomersService],
+  exports: [CustomersService, CustomerPreferenceService],
 })
 export class CustomersModule {}

@@ -368,6 +368,45 @@ describe('Customers e2e', () => {
     });
   });
 
+  describe('my notification settings', () => {
+    const all = (value: boolean) => ({ whatsapp: value, email: value, push: value });
+
+    it('start with bookings and trips on and offers off, for a customer who never chose', async () => {
+      const me = await newCustomer();
+      const settings = dataOf<Record<string, Record<string, boolean>>>(
+        await asCustomer(me, 'get', '/notification-settings').expect(200),
+      );
+      expect(settings).toEqual({ bookings: all(true), trips: all(true), offers: all(false) });
+    });
+
+    it('are saved per kind and channel, and stay saved', async () => {
+      const me = await newCustomer();
+      const chosen = {
+        bookings: { whatsapp: false, email: true, push: true },
+        trips: all(false),
+        offers: { whatsapp: true, email: false, push: false },
+      };
+      await asCustomer(me, 'put', '/notification-settings', chosen).expect(200);
+      const again = dataOf<typeof chosen>(await asCustomer(me, 'get', '/notification-settings').expect(200));
+      expect(again).toEqual(chosen);
+      const stored = await context.connection
+        .collection('customers')
+        .findOne({ userId: new Types.ObjectId(me.id) });
+      expect(stored?.['notificationSettings']).toEqual(chosen);
+    });
+
+    it('refuse a set with a kind or a channel missing, and a staff account', async () => {
+      const me = await newCustomer();
+      await asCustomer(me, 'put', '/notification-settings', { bookings: all(true), trips: all(true) }).expect(400);
+      await asCustomer(me, 'put', '/notification-settings', {
+        bookings: { whatsapp: true, email: true },
+        trips: all(true),
+        offers: all(false),
+      }).expect(400);
+      await asCustomer({ tokens: support.tokens }, 'get', '/notification-settings').expect(403);
+    });
+  });
+
   describe('audit', () => {
     it('every change left an entry, and none holds a phone number or an email', async () => {
       const entries = await context.connection

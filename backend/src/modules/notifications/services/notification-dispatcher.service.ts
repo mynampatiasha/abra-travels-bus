@@ -66,7 +66,11 @@ export class NotificationDispatcher {
   ) {}
 
   /** @returns false when a channel failed and the event should be tried again later. */
-  async deliver(recipient: Recipient, content: NotificationContent): Promise<boolean> {
+  async deliver(
+    recipient: Recipient,
+    content: NotificationContent,
+    options: { off?: ReadonlySet<DeliveryChannel> } = {},
+  ): Promise<boolean> {
     const { notification } = await this.notifications.insertOnce({
       userId: recipient.userId,
       eventId: content.eventId,
@@ -83,6 +87,16 @@ export class NotificationDispatcher {
     const results: NotificationDelivery[] = [];
     for (const channel of DELIVERY_CHANNELS) {
       if (settled.has(channel)) continue;
+      if (options.off?.has(channel)) {
+        // The customer turned this channel off for this kind of message
+        results.push({
+          channel,
+          at: new Date(),
+          status: 'SKIPPED',
+          detail: 'The customer turned this off.',
+        });
+        continue;
+      }
       results.push(await this.attempt(channel, recipient, content, notification._id.toHexString()));
     }
     if (results.length > 0) await this.notifications.recordDeliveries(notification._id, results);

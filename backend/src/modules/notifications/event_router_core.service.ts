@@ -1,4 +1,4 @@
-import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, Optional, type OnModuleInit } from '@nestjs/common';
 import { Types } from 'mongoose';
 import {
   DomainEventHandlerRegistry,
@@ -10,11 +10,26 @@ import {
   type MessageChannel,
   type MessageKind,
 } from '../messages/messages_admin_manage.service';
+import {
+  isOn,
+  topicOfEvent,
+  topicOfMessageKind,
+  type NotificationChannel,
+  type NotificationTopic,
+} from '../customers/notification_settings';
+import { CustomerPreferenceService } from '../customers/notification_settings.service';
 import { LivePublisher } from '../realtime/live_updates_channel.service';
 import { ALL_PERMISSIONS_WILDCARD } from '../rbac/permissions/permission-registry';
 import { RoleRepository } from '../rbac/repositories/role.repository';
 import { UsersService } from '../users/services/users.service';
 import { NotificationDispatcher, type Recipient } from './services/notification-dispatcher.service';
+import { type DeliveryChannel } from './schemas/notification.schema';
+
+const DELIVERY_OF: Readonly<Record<NotificationChannel, DeliveryChannel>> = {
+  whatsapp: 'WHATSAPP',
+  email: 'EMAIL',
+  push: 'PUSH',
+};
 
 /*
  * The event router: the one place that turns a business event (`trip.cancelled`, `refund.updated`)
@@ -138,6 +153,8 @@ export class EventRouter implements DomainEventHandler, OnModuleInit {
     private readonly messages: MessageSenderService,
     private readonly roles: RoleRepository,
     private readonly users: UsersService,
+    /** What each customer wants to be told; without it everybody is told everything. */
+    @Optional() private readonly preferences?: CustomerPreferenceService,
   ) {}
 
   /** The events that have a rule; read when an event arrives, so late registrations count. */
@@ -189,15 +206,32 @@ export class EventRouter implements DomainEventHandler, OnModuleInit {
         if (!told.has(key)) told.set(key, { recipient, notice });
       }
     }
+    const topic = topicOfEvent(event.type);
+    const wishes = topic && this.preferences
+      ? await this.preferences.forUsers([...told.values()].map((item) => item.recipient.userId))
+      : undefined;
     for (const { recipient, notice } of told.values()) {
       const goTo = renderText(notice.goTo, payload);
-      const ok = await this.dispatcher.deliver(recipient, {
-        eventId: event.eventId,
-        type: event.type,
-        title: renderText(notice.title, payload),
-        body: renderText(notice.body, payload),
-        data: noticeData(payload, goTo),
-      });
+      const settings = wishes?.get(recipient.userId.toHexString());
+      const off = new Set<DeliveryChannel>();
+      if (topic && settings) {
+        for (const [channel, delivery] of Object.entries(DELIVERY_OF) as Array<
+          [NotificationChannel, DeliveryChannel]
+        >) {
+          if (!isOn(settings, topic, channel)) off.add(delivery);
+        }
+      }
+      const ok = await this.dispatcher.deliver(
+        recipient,
+        {
+          eventId: event.eventId,
+          type: event.type,
+          title: renderText(notice.title, payload),
+          body: renderText(notice.body, payload),
+          data: noticeData(payload, goTo),
+        },
+        { off },
+      );
       if (!ok) failures += 1;
     }
     if (told.size === 0 && (rule.notices?.length ?? 0) > 0) {
@@ -243,7 +277,16 @@ export class EventRouter implements DomainEventHandler, OnModuleInit {
     const userId = contact.userField ? textOf(payload[contact.userField]) : '';
     const bookingId = contact.bookingField ? textOf(payload[contact.bookingField]) : '';
     let failed = 0;
+    const topic: NotificationTopic | null = topicOfMessageKind(rule.kind);
+    const settings =
+      topic && userId && Types.ObjectId.isValid(userId) && this.preferences
+        ? (await this.preferences.forUsers([new Types.ObjectId(userId)])).get(userId)
+        : undefined;
     for (const channel of rule.channels) {
+      // The customer turned this channel off for this kind of message: nothing to send, nothing to retry
+      if (topic && settings && !isOn(settings, topic, channel === 'WHATSAPP' ? 'whatsapp' : 'email')) {
+        continue;
+      }
       const address = textOf(
         payload[(channel === 'WHATSAPP' ? contact.phoneField : contact.emailField) ?? ''],
       );

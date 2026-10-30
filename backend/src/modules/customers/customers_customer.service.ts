@@ -8,6 +8,12 @@ import { type AuthenticatedUserActor } from '../../common/request-context/reques
 import { AuditedChangeRunner } from '../rbac/services/audited-change.service';
 import { SessionsService } from '../sessions/services/sessions.service';
 import { USER_MODEL, type User } from '../users/schemas/user.schema';
+import {
+  NOTIFICATION_CHANNELS,
+  NOTIFICATION_TOPICS,
+  type NotificationSettings,
+} from './notification_settings';
+import { CustomerPreferenceService } from './notification_settings.service';
 import { CUSTOMER_MODEL, type Customer } from './schemas/customer.schema';
 
 /*
@@ -107,6 +113,7 @@ export class CustomersCustomerService {
     @InjectConnection() private readonly connection: Connection,
     private readonly changes: AuditedChangeRunner,
     private readonly sessions: SessionsService,
+    private readonly preferences: CustomerPreferenceService,
   ) {}
 
   async get(actor: AuthenticatedUserActor): Promise<ProfileView> {
@@ -177,6 +184,26 @@ export class CustomersCustomerService {
    * Deletes the account: the personal data goes, the bookings and payments stay as financial
    * records. Refused while a booking is still to be travelled on.
    */
+  /** Which kinds of message I want on WhatsApp, email and push. Safety alerts are not in here: they are always sent. */
+  async notificationSettings(actor: AuthenticatedUserActor): Promise<NotificationSettings> {
+    const me = await this.mine(actor);
+    return this.preferences.forUser(me._id);
+  }
+
+  async saveNotificationSettings(
+    actor: AuthenticatedUserActor,
+    settings: NotificationSettings,
+  ): Promise<NotificationSettings> {
+    const me = await this.mine(actor);
+    const clean = {} as NotificationSettings;
+    for (const topic of NOTIFICATION_TOPICS) {
+      clean[topic] = { whatsapp: false, email: false, push: false };
+      for (const channel of NOTIFICATION_CHANNELS) clean[topic][channel] = settings[topic][channel];
+    }
+    await this.preferences.save(me._id, clean);
+    return clean;
+  }
+
   async deleteAccount(actor: AuthenticatedUserActor, client: ClientRequestInfo): Promise<void> {
     const before = await this.mine(actor);
     await assertNoUpcomingBookings(this.connection, before._id, 'you');

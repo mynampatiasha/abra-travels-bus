@@ -67,8 +67,54 @@ class ProfileProblem implements Exception {
   }
 }
 
+/// Which channels the customer wants one kind of message on.
+@immutable
+final class ChannelChoices {
+  const ChannelChoices({
+    required this.whatsapp,
+    required this.email,
+    required this.push,
+  });
+
+  factory ChannelChoices.fromJson(JsonMap json) {
+    final reader = JsonReader(json);
+    return ChannelChoices(
+      whatsapp: reader.boolean('whatsapp'),
+      email: reader.boolean('email'),
+      push: reader.boolean('push'),
+    );
+  }
+
+  final bool whatsapp;
+  final bool email;
+  final bool push;
+
+  ChannelChoices copyWith({bool? whatsapp, bool? email, bool? push}) => ChannelChoices(
+    whatsapp: whatsapp ?? this.whatsapp,
+    email: email ?? this.email,
+    push: push ?? this.push,
+  );
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'whatsapp': whatsapp,
+    'email': email,
+    'push': push,
+  };
+}
+
+/// The kinds of message a customer can choose for, in the order they are shown.
+const notificationTopics = <String>['bookings', 'trips', 'offers'];
+
+/// `GET /customer/notification-settings`: a [ChannelChoices] for each kind.
+typedef NotificationSettings = Map<String, ChannelChoices>;
+
 final profileRepositoryProvider = Provider<ProfileRepository>(
   (ref) => ProfileRepository(ref.watch(appDependenciesProvider).apiClient),
+);
+
+/// The notification settings as the server holds them.
+final notificationSettingsProvider = FutureProvider.autoDispose<NotificationSettings>(
+  (ref) => ref.watch(profileRepositoryProvider).notificationSettings(),
 );
 
 /// The profile as the server holds it. Loaded again when the screen opens.
@@ -107,6 +153,31 @@ class ProfileRepository {
       throw ProfileProblem.from(error);
     }
   }
+
+  Future<NotificationSettings> notificationSettings() async {
+    final response = await _client.get('customer/notification-settings');
+    return _settingsFrom(_object(response.data));
+  }
+
+  Future<NotificationSettings> saveNotificationSettings(NotificationSettings settings) async {
+    try {
+      final response = await _client.put(
+        'customer/notification-settings',
+        body: <String, Object?>{
+          for (final entry in settings.entries) entry.key: entry.value.toJson(),
+        },
+      );
+      return _settingsFrom(_object(response.data));
+    } on Object catch (error) {
+      throw ProfileProblem.from(error);
+    }
+  }
+
+  NotificationSettings _settingsFrom(JsonMap json) => <String, ChannelChoices>{
+    for (final topic in notificationTopics)
+      if (json[topic] is Map)
+        topic: ChannelChoices.fromJson(asJsonMap(json[topic]! as Map)),
+  };
 
   Future<void> deleteAccount() async {
     try {

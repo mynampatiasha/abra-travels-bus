@@ -1,5 +1,6 @@
 /* eslint-disable max-lines -- the routing rules are one data table, plan Appendix B */
 import { Injectable, Module, type OnModuleInit } from '@nestjs/common';
+import { CustomersModule } from '../customers/customers.module';
 import { MessagesModule } from '../messages/messages_admin_manage';
 import { RbacModule } from '../rbac/rbac.module';
 import { RealtimeModule } from '../realtime/live_updates_channel';
@@ -614,7 +615,14 @@ export class CoreEventRulesRegistration implements OnModuleInit {
  * EventRouter and calling addRules in its onModuleInit.
  */
 @Module({
-  imports: [NotificationsModule, MessagesModule, RealtimeModule, RbacModule, UsersModule],
+  imports: [
+    NotificationsModule,
+    MessagesModule,
+    RealtimeModule,
+    RbacModule,
+    UsersModule,
+    CustomersModule,
+  ],
   providers: [EventRouter, CoreEventRulesRegistration],
   exports: [EventRouter],
 })
