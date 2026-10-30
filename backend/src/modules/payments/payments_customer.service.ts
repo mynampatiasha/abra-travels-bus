@@ -4,8 +4,11 @@ import { type ClientSession, type Connection, type Model, Schema, Types } from '
 import { ApiException } from '../../common/errors/api-exception';
 import { type AuthenticatedUserActor } from '../../common/request-context/request-actor';
 import { TransactionRunner } from '../../database/transaction-runner.service';
+import { OutboxService } from '../../events/outbox.service';
+import { confirmationPayload } from '../bookings/booking_confirmation';
 import { BOOKING_MODEL, type BookingRow } from '../bookings/bookings_customer.service';
 import { SeatLocksService } from '../inventory/seat_locks_customer.service';
+import { createHash } from 'node:crypto';
 import { PAYMENT_GATEWAY, type PaymentGateway } from './payment_gateway';
 
 /*
@@ -32,6 +35,9 @@ export interface PaymentRow {
   failureReason?: string;
   /** Set when money was taken but the seats could not be kept: the customer is owed a refund. */
   refundDue?: 'LOCK_EXPIRED_AFTER_PAYMENT';
+  /** Money sent back so far, in paise. */
+  refundedPaise?: number;
+  refunds?: Array<{ gatewayRefundId: string; amountPaise: number; reason: string; status: 'PENDING' | 'COMPLETED'; at: Date }>;
   paidAt?: Date;
   createdAt?: Date;
 }
@@ -49,6 +55,20 @@ export const paymentSchema = new Schema<PaymentRow>(
     status: { type: String, enum: PAYMENT_STATUSES, required: true },
     failureReason: { type: String },
     refundDue: { type: String },
+    refundedPaise: { type: Number, default: 0 },
+    refunds: {
+      type: [
+        {
+          _id: false,
+          gatewayRefundId: { type: String, required: true },
+          amountPaise: { type: Number, required: true },
+          reason: { type: String, required: true },
+          status: { type: String, enum: ['PENDING', 'COMPLETED'], required: true },
+          at: { type: Date, required: true },
+        },
+      ],
+      default: [],
+    },
     paidAt: { type: Date },
   },
   { collection: 'payments', timestamps: true, versionKey: false },
@@ -59,6 +79,32 @@ paymentSchema.index(
   { gatewayPaymentId: 1 },
   { unique: true, partialFilterExpression: { gatewayPaymentId: { $type: 'string' } } },
 );
+
+export const PAYMENT_EVENT_MODEL = 'PaymentGatewayEvent';
+
+export interface PaymentEventRow {
+  gateway: string;
+  eventId: string;
+  type: string;
+  gatewayOrderId?: string;
+  gatewayPaymentId?: string;
+  outcome: string;
+  createdAt?: Date;
+}
+
+/** `payment_gateway_events`: every webhook seen once. A repeat of the same event id does nothing. */
+export const paymentEventSchema = new Schema<PaymentEventRow>(
+  {
+    gateway: { type: String, required: true },
+    eventId: { type: String, required: true },
+    type: { type: String, required: true },
+    gatewayOrderId: { type: String },
+    gatewayPaymentId: { type: String },
+    outcome: { type: String, required: true },
+  },
+  { collection: 'payment_gateway_events', timestamps: true, versionKey: false },
+);
+paymentEventSchema.index({ gateway: 1, eventId: 1 }, { unique: true });
 
 export interface PaymentOrderView {
   paymentId: string;
@@ -76,6 +122,8 @@ export interface PaymentResultView {
   bookingStatus: string;
   /** Money was taken but the seats were lost: a refund is due. */
   refundDue: boolean;
+  /** How much of it has been sent back, in paise. */
+  refundedPaise: number;
 }
 
 type BookingDoc = BookingRow & { _id: Types.ObjectId };
@@ -91,9 +139,11 @@ export class PaymentsCustomerService {
     @InjectConnection() private readonly connection: Connection,
     @InjectModel(PAYMENT_MODEL) private readonly payments: Model<PaymentRow>,
     @InjectModel(BOOKING_MODEL) private readonly bookings: Model<BookingRow>,
+    @InjectModel(PAYMENT_EVENT_MODEL) private readonly events: Model<PaymentEventRow>,
     @Inject(PAYMENT_GATEWAY) private readonly gateway: PaymentGateway,
     private readonly transactions: TransactionRunner,
     private readonly seatLocks: SeatLocksService,
+    private readonly outbox: OutboxService,
   ) {}
 
   private seats() {
@@ -166,6 +216,62 @@ export class PaymentsCustomerService {
     return this.orderView(created.toObject() as PaymentDoc);
   }
 
+  // ----- webhook -----
+
+  /**
+   * An event from the gateway. The signature is checked on the exact bytes, an event seen before
+   * does nothing, and a captured payment is confirmed through the same checks as the app's report,
+   * so whichever arrives first confirms the booking and the other changes nothing.
+   */
+  async handleWebhook(
+    rawBody: Buffer | undefined,
+    signature: string | undefined,
+    eventIdHeader: string | undefined,
+  ): Promise<{ received: true; outcome: string }> {
+    if (!rawBody || !signature || !this.gateway.verifyWebhookSignature(rawBody, signature)) {
+      throw new ApiException('UNAUTHENTICATED', 'The webhook signature is not valid.');
+    }
+    const event = this.gateway.parseWebhookEvent(rawBody);
+    const eventId = eventIdHeader?.trim() || createHash('sha256').update(rawBody).digest('hex');
+    try {
+      await this.events.create({
+        gateway: this.gateway.key,
+        eventId,
+        type: event.type,
+        ...(event.gatewayOrderId ? { gatewayOrderId: event.gatewayOrderId } : {}),
+        ...(event.gatewayPaymentId ? { gatewayPaymentId: event.gatewayPaymentId } : {}),
+        outcome: 'RECEIVED',
+      });
+    } catch (error) {
+      if ((error as { code?: number }).code === 11000) return { received: true, outcome: 'DUPLICATE' };
+      throw error;
+    }
+
+    let outcome = 'IGNORED';
+    if (event.type === 'payment.captured' && event.gatewayOrderId && event.gatewayPaymentId) {
+      const payment = await this.payments.findOne({ gatewayOrderId: event.gatewayOrderId }).lean<PaymentDoc>().exec();
+      if (!payment) {
+        outcome = 'UNKNOWN_ORDER';
+      } else if (
+        (event.amountPaise !== undefined && event.amountPaise !== payment.amountPaise) ||
+        (event.currency !== undefined && event.currency !== payment.currency)
+      ) {
+        // The gateway took a different amount than the booking: never confirm, flag it
+        await this.payments.updateOne(
+          { _id: payment._id, status: 'CREATED' },
+          { $set: { status: 'FAILED', failureReason: 'AMOUNT_MISMATCH', gatewayPaymentId: event.gatewayPaymentId } },
+        );
+        outcome = 'AMOUNT_MISMATCH';
+      } else {
+        const result = await this.handlePaid(payment._id, event.gatewayPaymentId);
+        outcome = result.status === 'SUCCESS' ? 'CONFIRMED' : 'NOT_CONFIRMED';
+      }
+    }
+    // A failed attempt is not the end of the order (the customer may try again), so it changes nothing here
+    await this.events.updateOne({ gateway: this.gateway.key, eventId }, { $set: { outcome } });
+    return { received: true, outcome };
+  }
+
   // ----- paid -----
 
   /** The app says it paid: the signature proves it. */
@@ -212,6 +318,7 @@ export class PaymentsCustomerService {
       status: payment.status,
       bookingStatus: booking?.status ?? 'UNKNOWN',
       refundDue: payment.refundDue !== undefined,
+      refundedPaise: payment.refundedPaise ?? 0,
     };
   }
 
@@ -229,6 +336,7 @@ export class PaymentsCustomerService {
       throw new ApiException('PAYMENT_AMOUNT_MISMATCH', 'The amount paid does not match the booking.');
     }
 
+    const confirmation = await confirmationPayload(this.connection, booking);
     try {
       await this.transactions.run(async (session) => {
         // Only one caller moves the payment out of CREATED
@@ -247,6 +355,10 @@ export class PaymentsCustomerService {
           .collection('coupon_redemptions')
           .updateOne({ bookingId: booking._id, status: 'RESERVED' }, { $set: { status: 'REDEEMED' } }, { session });
         await this.seatLocks.recount(booking.tripId, session);
+        // Told in the same transaction: the messages go out if and only if the booking is confirmed
+        const aggregateId = booking._id.toHexString();
+        await this.outbox.record({ type: 'booking.confirmed', aggregateType: 'booking', aggregateId, payload: confirmation }, session);
+        await this.outbox.record({ type: 'booking.created', aggregateType: 'booking', aggregateId, payload: confirmation }, session);
       });
     } catch (error) {
       if (!(error instanceof SeatsLost)) throw error;
@@ -256,8 +368,48 @@ export class PaymentsCustomerService {
         { $set: { status: 'SUCCESS', gatewayPaymentId, paidAt: new Date(), refundDue: 'LOCK_EXPIRED_AFTER_PAYMENT' } },
       );
       await this.release(booking._id, 'EXPIRED');
+      try {
+        await this.refund(paymentId, payment.amountPaise, 'LOCK_EXPIRED_AFTER_PAYMENT');
+      } catch (refundError) {
+        // The facts are kept (refundDue); a later run sends the money back
+        this.logger.warn(
+          { paymentId: paymentId.toHexString(), message: refundError instanceof Error ? refundError.message : 'unknown' },
+          'A refund could not be sent yet',
+        );
+      }
     }
     return this.result(paymentId);
+  }
+
+  /**
+   * Sends money back for a paid payment, never more than was paid. The gateway call comes first and
+   * is recorded, so asking again for the same reason after it worked changes nothing.
+   */
+  async refund(paymentId: Types.ObjectId, amountPaise: number, reason: string): Promise<{ refundedPaise: number }> {
+    const payment = await this.payments.findById(paymentId).lean<PaymentDoc>().exec();
+    if (!payment || payment.status !== 'SUCCESS' || !payment.gatewayPaymentId) {
+      throw new ApiException('INVALID_STATE_TRANSITION', 'Only a paid payment can be refunded.');
+    }
+    if ((payment.refunds ?? []).some((r) => r.reason === reason)) {
+      return { refundedPaise: payment.refundedPaise ?? 0 };
+    }
+    const already = payment.refundedPaise ?? 0;
+    if (amountPaise <= 0 || already + amountPaise > payment.amountPaise) {
+      throw new ApiException('VALIDATION_FAILED', 'The refund is more than what was paid.');
+    }
+    const sent = await this.gateway.createRefund({
+      gatewayPaymentId: payment.gatewayPaymentId,
+      amountPaise,
+      receipt: `${payment._id.toHexString()}-${reason}`.slice(0, 40),
+    });
+    await this.payments.updateOne(
+      { _id: paymentId },
+      {
+        $inc: { refundedPaise: amountPaise },
+        $push: { refunds: { gatewayRefundId: sent.gatewayRefundId, amountPaise, reason, status: sent.status, at: new Date() } },
+      },
+    );
+    return { refundedPaise: already + amountPaise };
   }
 
   /** Seats LOCKED by this booking's hold become BOOKED. A hold that ran out may be taken again if the seats are still free. */

@@ -35,7 +35,13 @@ export function configureHttpApplication(app: NestExpressApplication): void {
     exposedHeaders: ['X-Request-Id'],
   });
   // api-architecture.md §1: request body limit 1 MB (uploads use pre-signed URLs)
-  app.useBodyParser('json', { limit: '1mb' });
+  app.useBodyParser('json', {
+    limit: '1mb',
+    // Kept for webhook signatures: the signature is over the exact bytes the gateway sent
+    verify: (request: { rawBody?: Buffer }, _response: unknown, buffer: Buffer) => {
+      request.rawBody = buffer;
+    },
+  } as Parameters<typeof app.useBodyParser>[1]);
 
   app.setGlobalPrefix(API_PREFIX, {
     exclude: [{ path: 'health/{*path}', method: RequestMethod.ALL }],

@@ -1,7 +1,11 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { CatalogueSharedModule } from '../catalogue-shared/catalogue_shared_manage';
 import { CouponsModule } from '../coupons/coupons.module';
-import { BookingsCustomerController } from './bookings_customer';
+import { RbacModule } from '../rbac/rbac.module';
+import { BookingsAdminController, BookingsExportController } from './bookings_admin_manage';
+import { BookingsAdminService } from './bookings_admin_manage.service';
+import { BookingsCustomerController, TripPolicyController } from './bookings_customer';
 import { BOOKING_MODEL, BookingsCustomerService, bookingSchema } from './bookings_customer.service';
 
 /**
@@ -10,9 +14,9 @@ import { BOOKING_MODEL, BookingsCustomerService, bookingSchema } from './booking
  * operator lists follow in the next steps of Phase 3.
  */
 @Module({
-  imports: [MongooseModule.forFeature([{ name: BOOKING_MODEL, schema: bookingSchema }]), CouponsModule],
-  controllers: [BookingsCustomerController],
-  providers: [BookingsCustomerService],
+  imports: [MongooseModule.forFeature([{ name: BOOKING_MODEL, schema: bookingSchema }]), CouponsModule, RbacModule, CatalogueSharedModule],
+  controllers: [BookingsExportController, BookingsAdminController, BookingsCustomerController, TripPolicyController],
+  providers: [BookingsCustomerService, BookingsAdminService],
   exports: [BookingsCustomerService, MongooseModule],
 })
 export class BookingsModule {}

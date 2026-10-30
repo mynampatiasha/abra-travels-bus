@@ -107,6 +107,11 @@ export const BOOKING_PERMISSIONS = definePermissions('bookings', {
     description: 'Cancel bookings or individual seats.',
     grantableTo: BOOKING_CHANNELS,
   },
+  export: {
+    name: 'Export bookings',
+    description: 'Download the bookings list as CSV or Excel.',
+    grantableTo: PLATFORM_ONLY,
+  },
 });
 
 export const BUS_PERMISSIONS = definePermissions('buses', {
@@ -421,6 +426,19 @@ export const COMMISSION_PERMISSIONS = definePermissions('commissions', {
   },
 });
 
+export const PAYMENT_PERMISSIONS = definePermissions('payments', {
+  read: {
+    name: 'View payments',
+    description: 'View payments, what each one was for and what was sent back.',
+    grantableTo: PLATFORM_ONLY,
+  },
+  export: {
+    name: 'Export payments',
+    description: 'Download the payments list as CSV or Excel.',
+    grantableTo: PLATFORM_ONLY,
+  },
+});
+
 export const OFFER_PERMISSIONS = definePermissions('offers', {
   read: {
     name: 'View offers and coupons',
@@ -461,6 +479,7 @@ export const PERMISSION_CATALOG = {
   ...BANNER_PERMISSIONS,
   ...COMMISSION_PERMISSIONS,
   ...OFFER_PERMISSIONS,
+  ...PAYMENT_PERMISSIONS,
   ...PAYOUT_PERMISSIONS,
 } as const;
 

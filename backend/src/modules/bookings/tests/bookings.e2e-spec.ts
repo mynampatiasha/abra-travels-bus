@@ -49,10 +49,10 @@ describe('Booking held seats e2e (abra_supply_test)', () => {
       bus: { berthType: 'SEATER' },
       boardingPoints: [],
       droppingPoints: [],
-      seatCounts: { total: 10, available: 10, locked: 0, booked: 0, blocked: 0 },
+      seatCounts: { total: 14, available: 14, locked: 0, booked: 0, blocked: 0 },
     });
     await seats().insertMany(
-      Array.from({ length: 10 }, (_, index) => ({
+      Array.from({ length: 14 }, (_, index) => ({
         tripId,
         operatorId,
         seatNumber: String(index + 1),
@@ -69,6 +69,7 @@ describe('Booking held seats e2e (abra_supply_test)', () => {
     await trips().deleteMany({ _id: tripId });
     await context.connection.collection('seat_lock_groups').deleteMany({ tripId });
     await context.connection.collection('bookings').deleteMany({ tripId });
+    await context.connection.collection('refund_slabs').deleteMany({ testSuite: 'bookings' });
     await context.close();
   }, 60_000);
 
@@ -147,6 +148,73 @@ describe('Booking held seats e2e (abra_supply_test)', () => {
     await context.connection.collection('seat_lock_groups').updateOne({ lockId: h.lockId }, { $set: { expiresAt: past } });
     const res = await book(anna, { lockId: h.lockId, passengers: [passenger('9')], contact }).expect(409);
     expect(errorCodeOf(res)).toBe('SEAT_LOCK_EXPIRED');
+  });
+
+
+  describe('the policy and my bookings', () => {
+    const slabs = () => context.connection.collection('refund_slabs');
+
+    it('shows the refund windows from the admin slabs, biggest first', async () => {
+      await slabs().deleteMany({});
+      await slabs().insertMany([
+        { hoursBefore: 24, refundPct: 90, deletedAt: null, testSuite: 'bookings' },
+        { hoursBefore: 12, refundPct: 50, deletedAt: null, testSuite: 'bookings' },
+        { hoursBefore: 0, refundPct: 0, deletedAt: null, testSuite: 'bookings' },
+        { hoursBefore: 48, refundPct: 100, deletedAt: new Date(), testSuite: 'bookings' },
+      ]);
+      const res = await client(context).get(`${API}/trips/${tripId.toHexString()}/policy`).expect(200);
+      expect(dataOf<unknown[]>(res)).toEqual([
+        { fromHoursBefore: null, toHoursBefore: 24, refundPercent: 90 },
+        { fromHoursBefore: 24, toHoursBefore: 12, refundPercent: 50 },
+        { fromHoursBefore: 12, toHoursBefore: 0, refundPercent: 0 },
+      ]);
+    });
+
+    it('keeps the policy the customer booked under, and a state for each seat', async () => {
+      const h = await hold(anna, ['11']);
+      const booking = dataOf<BookingView>(
+        await book(anna, { lockId: h.lockId, passengers: [passenger('11')], contact }).expect(201),
+      );
+      await slabs().updateMany({ hoursBefore: 24 }, { $set: { refundPct: 10 } });
+      const row = await context.connection.collection('bookings').findOne({ _id: new Types.ObjectId(booking.bookingId) });
+      expect(row?.cancellationPolicy).toEqual([
+        { hoursBefore: 24, refundPct: 90 },
+        { hoursBefore: 12, refundPct: 50 },
+        { hoursBefore: 0, refundPct: 0 },
+      ]);
+      expect((row?.passengers as Array<{ status: string }>)[0]?.status).toBe('ACTIVE');
+      expect(row?.departureAt).toBeInstanceOf(Date);
+    });
+
+    it('lists upcoming, completed and cancelled trips apart, and only my own', async () => {
+      const bookings = context.connection.collection('bookings');
+      const h1 = await hold(ben, ['12']);
+      const upcoming = dataOf<BookingView>(await book(ben, { lockId: h1.lockId, passengers: [passenger('12')], contact }).expect(201));
+      const h2 = await hold(ben, ['13']);
+      const done = dataOf<BookingView>(await book(ben, { lockId: h2.lockId, passengers: [passenger('13')], contact }).expect(201));
+      const h3 = await hold(ben, ['14']);
+      const cancelled = dataOf<BookingView>(await book(ben, { lockId: h3.lockId, passengers: [passenger('14')], contact }).expect(201));
+      const id = (b: BookingView) => new Types.ObjectId(b.bookingId);
+      await bookings.updateOne({ _id: id(upcoming) }, { $set: { status: 'CONFIRMED' } });
+      await bookings.updateOne({ _id: id(done) }, { $set: { status: 'CONFIRMED', departureAt: new Date(Date.now() - 86_400_000) } });
+      await bookings.updateOne({ _id: id(cancelled) }, { $set: { status: 'CANCELLED' } });
+
+      const get = async (bucket?: string, caller: Caller = ben) =>
+        dataOf<{ items: Array<{ bookingId: string; seatIds: string[]; operatorName: string }>; total: number }>(
+          await client(context)
+            .get(`${API}/bookings${bucket ? `?bucket=${bucket}` : ''}`)
+            .set(...auth(caller))
+            .expect(200),
+        );
+      expect((await get()).items.map((i) => i.bookingId)).toEqual([upcoming.bookingId]);
+      expect((await get('completed')).items.map((i) => i.bookingId)).toEqual([done.bookingId]);
+      expect((await get('cancelled')).items.map((i) => i.bookingId)).toEqual([cancelled.bookingId]);
+      expect((await get('upcoming')).items[0]?.seatIds).toEqual(['12']);
+      // Not someone else's, and a booking still waiting for payment is no trip yet
+      expect((await get('upcoming', anna)).items.find((i) => i.bookingId === upcoming.bookingId)).toBeUndefined();
+      await client(context).get(`${API}/bookings?bucket=nonsense`).set(...auth(ben)).expect(400);
+      await client(context).get(`${API}/bookings`).expect(401);
+    });
   });
 
   it('makes booking references that are easy to read out', () => {

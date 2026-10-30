@@ -215,4 +215,24 @@ void main() {
       expect(offer.isValidOn(DateTime(2027, 2, 1)), isFalse);
     });
   });
+
+  group('the cancellation policy from the backend', () {
+    test('reads each refund window', () {
+      final first = cancellationRuleFromJson(<String, Object?>{
+        'fromHoursBefore': null,
+        'toHoursBefore': 24,
+        'refundPercent': 90,
+      });
+      expect(first.fromHoursBefore, isNull);
+      expect(first.toHoursBefore, 24);
+      expect(first.refundPercent, 90);
+      final last = cancellationRuleFromJson(<String, Object?>{
+        'fromHoursBefore': 12,
+        'toHoursBefore': 0,
+        'refundPercent': 0,
+      });
+      expect(last.fromHoursBefore, 12);
+      expect(last.refundPercent, 0);
+    });
+  });
 }

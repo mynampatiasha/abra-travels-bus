@@ -14,6 +14,7 @@ export const AUDIT_ACTIONS = [
   'role.renamed',
   'role.deleted',
   'message.resent',
+  'booking.ticket-resent',
   'settings.integration.changed',
   'assistant.action.confirmed',
   'assistant.action.declined',

@@ -14,8 +14,30 @@ export interface GatewayOrder {
   keyId: string;
 }
 
+/** A payment event from the gateway, in one shape for every gateway. */
+export interface GatewayWebhookEvent {
+  type: 'payment.captured' | 'payment.failed' | 'refund.processed' | 'other';
+  gatewayOrderId?: string;
+  gatewayPaymentId?: string;
+  gatewayRefundId?: string;
+  amountPaise?: number;
+  currency?: string;
+}
+
+export interface GatewayRefund {
+  gatewayRefundId: string;
+  status: 'PENDING' | 'COMPLETED';
+}
+
 export interface PaymentGateway {
   readonly key: 'razorpay' | 'development';
+  /** True when the signature proves these exact bytes came from the gateway. */
+  verifyWebhookSignature(rawBody: Buffer, signature: string): boolean;
+  parseWebhookEvent(rawBody: Buffer): GatewayWebhookEvent;
+  /** Sends money back for a captured payment. */
+  createRefund(input: { gatewayPaymentId: string; amountPaise: number; receipt: string }): Promise<GatewayRefund>;
+  /** Development only: the webhook signature the gateway itself would give. */
+  signWebhookForDevelopment?(rawBody: Buffer): string;
   createOrder(input: { amountPaise: number; currency: string; receipt: string }): Promise<GatewayOrder>;
   /** True when the signature proves this payment belongs to this order. */
   verifyPaymentSignature(gatewayOrderId: string, gatewayPaymentId: string, signature: string): boolean;
@@ -34,6 +56,23 @@ export class DevelopmentPaymentGateway implements PaymentGateway {
     return Promise.resolve({ gatewayOrderId: `dev_order_${randomBytes(9).toString('hex')}`, keyId: 'development' });
   }
 
+  signWebhookForDevelopment(rawBody: Buffer): string {
+    return hmacSha256Hex(`${this.secret}:dev-webhook`, rawBody.toString('utf8'));
+  }
+
+  verifyWebhookSignature(rawBody: Buffer, signature: string): boolean {
+    return safeEqualHex(this.signWebhookForDevelopment(rawBody), signature);
+  }
+
+  parseWebhookEvent(rawBody: Buffer): GatewayWebhookEvent {
+    return parseRazorpayShape(rawBody);
+  }
+
+  createRefund(input: { gatewayPaymentId: string; amountPaise: number; receipt: string }): Promise<GatewayRefund> {
+    void input;
+    return Promise.resolve({ gatewayRefundId: `dev_refund_${randomBytes(9).toString('hex')}`, status: 'COMPLETED' });
+  }
+
   signForDevelopment(gatewayOrderId: string, gatewayPaymentId: string): string {
     return hmacSha256Hex(`${this.secret}:dev-payments`, `${gatewayOrderId}|${gatewayPaymentId}`);
   }
@@ -49,7 +88,41 @@ export class RazorpayPaymentGateway implements PaymentGateway {
   constructor(
     private readonly keyId: string,
     private readonly keySecret: string,
+    private readonly webhookSecret: string = '',
   ) {}
+
+  /** Razorpay: HMAC-SHA256 of the raw body with the webhook secret, in the X-Razorpay-Signature header. */
+  verifyWebhookSignature(rawBody: Buffer, signature: string): boolean {
+    if (this.webhookSecret === '') return false;
+    return safeEqualHex(hmacSha256Hex(this.webhookSecret, rawBody.toString('utf8')), signature);
+  }
+
+  parseWebhookEvent(rawBody: Buffer): GatewayWebhookEvent {
+    return parseRazorpayShape(rawBody);
+  }
+
+  async createRefund(input: { gatewayPaymentId: string; amountPaise: number; receipt: string }): Promise<GatewayRefund> {
+    let response: Response;
+    try {
+      response = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(input.gatewayPaymentId)}/refund`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Basic ${Buffer.from(`${this.keyId}:${this.keySecret}`).toString('base64')}`,
+        },
+        body: JSON.stringify({ amount: input.amountPaise, receipt: input.receipt }),
+        signal: AbortSignal.timeout(15_000),
+      });
+    } catch {
+      throw new ApiException('PAYMENT_PROVIDER_UNAVAILABLE', 'The payment service could not be reached. Please try again.');
+    }
+    if (!response.ok) {
+      throw new ApiException('PAYMENT_PROVIDER_UNAVAILABLE', 'The payment service refused the refund. Please try again.');
+    }
+    const body = (await response.json()) as { id?: string; status?: string };
+    if (!body.id) throw new ApiException('PAYMENT_PROVIDER_UNAVAILABLE', 'The payment service gave no refund.');
+    return { gatewayRefundId: body.id, status: body.status === 'processed' ? 'COMPLETED' : 'PENDING' };
+  }
 
   async createOrder(input: { amountPaise: number; currency: string; receipt: string }): Promise<GatewayOrder> {
     let response: Response;
@@ -78,4 +151,39 @@ export class RazorpayPaymentGateway implements PaymentGateway {
   verifyPaymentSignature(gatewayOrderId: string, gatewayPaymentId: string, signature: string): boolean {
     return safeEqualHex(hmacSha256Hex(this.keySecret, `${gatewayOrderId}|${gatewayPaymentId}`), signature);
   }
+}
+
+/** The shape both Razorpay and the development gateway send. Anything unreadable is "other". */
+function parseRazorpayShape(rawBody: Buffer): GatewayWebhookEvent {
+  try {
+    const body = JSON.parse(rawBody.toString('utf8')) as {
+      event?: string;
+      payload?: {
+        payment?: { entity?: { id?: string; order_id?: string; amount?: number; currency?: string } };
+        refund?: { entity?: { id?: string; payment_id?: string; amount?: number } };
+      };
+    };
+    const payment = body.payload?.payment?.entity;
+    const refund = body.payload?.refund?.entity;
+    if (body.event === 'payment.captured' || body.event === 'payment.failed') {
+      return {
+        type: body.event,
+        ...(payment?.order_id ? { gatewayOrderId: payment.order_id } : {}),
+        ...(payment?.id ? { gatewayPaymentId: payment.id } : {}),
+        ...(typeof payment?.amount === 'number' ? { amountPaise: payment.amount } : {}),
+        ...(payment?.currency ? { currency: payment.currency } : {}),
+      };
+    }
+    if (body.event === 'refund.processed') {
+      return {
+        type: 'refund.processed',
+        ...(refund?.id ? { gatewayRefundId: refund.id } : {}),
+        ...(refund?.payment_id ? { gatewayPaymentId: refund.payment_id } : {}),
+        ...(typeof refund?.amount === 'number' ? { amountPaise: refund.amount } : {}),
+      };
+    }
+  } catch {
+    // not JSON: handled as "other"
+  }
+  return { type: 'other' };
 }

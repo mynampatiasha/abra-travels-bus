@@ -10,7 +10,7 @@ import {
 } from '../../authentication/tests/auth-e2e.harness';
 import { seedAndSignIn } from '../../rbac/tests/rbac-e2e.harness';
 import { type BookingView } from '../../bookings/bookings_customer.service';
-import { DevelopmentPaymentGateway, RazorpayPaymentGateway } from '../payment_gateway';
+import { DevelopmentPaymentGateway, PAYMENT_GATEWAY, RazorpayPaymentGateway } from '../payment_gateway';
 import { PaymentsCustomerService, type PaymentOrderView, type PaymentResultView } from '../payments_customer.service';
 
 const API = '/api/v1';
@@ -70,10 +70,10 @@ describe('Payments e2e (abra_supply_test, development gateway)', () => {
       bus: { berthType: 'SEATER' },
       boardingPoints: [],
       droppingPoints: [],
-      seatCounts: { total: 10, available: 10, locked: 0, booked: 0, blocked: 0 },
+      seatCounts: { total: 16, available: 16, locked: 0, booked: 0, blocked: 0 },
     });
     await seats().insertMany(
-      Array.from({ length: 10 }, (_, index) => ({
+      Array.from({ length: 16 }, (_, index) => ({
         tripId,
         operatorId,
         seatNumber: String(index + 1),
@@ -88,6 +88,8 @@ describe('Payments e2e (abra_supply_test, development gateway)', () => {
   afterAll(async () => {
     const ids = (await context.connection.collection('bookings').find({ tripId }).toArray()).map((b) => b._id);
     await context.connection.collection('payments').deleteMany({ bookingId: { $in: ids } });
+    await context.connection.collection('outbox_events').deleteMany({ aggregateId: { $in: ids.map((id) => id.toHexString()) } });
+    await context.connection.collection('payment_gateway_events').deleteMany({ eventId: { $in: ['evt_1', 'evt_2', 'evt_3', 'evt_4', 'evt_5'] } });
     await context.connection.collection('coupon_redemptions').deleteMany({ bookingId: { $in: ids } });
     await context.connection.collection('coupons').deleteMany({ code: { $regex: `${suffix}$` } });
     await seats().deleteMany({ tripId });
@@ -119,6 +121,21 @@ describe('Payments e2e (abra_supply_test, development gateway)', () => {
     expect(group?.status).toBe('CONSUMED');
     const trip = await context.connection.collection('trips').findOne({ _id: tripId });
     expect((trip?.seatCounts as { booked: number }).booked).toBeGreaterThanOrEqual(1);
+    // The confirmation message and the operator notice are queued with the same commit, once
+    const events = await context.connection
+      .collection('outbox_events')
+      .find({ aggregateId: booking.bookingId, type: { $in: ['booking.confirmed', 'booking.created'] } })
+      .toArray();
+    expect(events.map((e) => e.type).sort()).toEqual(['booking.confirmed', 'booking.created']);
+    expect(events[0]?.payload).toMatchObject({
+      bookingId: booking.bookingId,
+      pnr: booking.pnr,
+      seatsText: '2',
+      amountText: 'Rs 941.50',
+      contactPhone: '9876543210',
+      contactEmail: 'asha@example.com',
+      customerId: expect.any(String),
+    });
     // Reported twice: nothing changes
     const twice = dataOf<PaymentResultView>(await devComplete(anna, o.paymentId, 'success').expect(200));
     expect(twice.status).toBe('SUCCESS');
@@ -204,9 +221,97 @@ describe('Payments e2e (abra_supply_test, development gateway)', () => {
     // Late payment for the first booking
     const res = dataOf<PaymentResultView>(await devComplete(anna, o.paymentId, 'success').expect(200));
     expect(res.refundDue).toBe(true);
+    // The money went back at once, through the gateway
+    expect(res.refundedPaise).toBe(94_150);
     expect(res.bookingStatus).toBe('EXPIRED');
     expect(res.status).toBe('SUCCESS');
     expect(await status('8')).toBe('LOCKED');
+  });
+
+
+  describe('the gateway webhook', () => {
+    const gateway = () => context.app.get<DevelopmentPaymentGateway>(PAYMENT_GATEWAY);
+    const send = (payload: object, options: { eventId?: string; signature?: string } = {}) => {
+      const raw = JSON.stringify(payload);
+      const request = client(context)
+        .post(`${API}/webhooks/payments/razorpay`)
+        .set('Content-Type', 'application/json')
+        .set('X-Razorpay-Signature', options.signature ?? gateway().signWebhookForDevelopment(Buffer.from(raw)));
+      if (options.eventId) request.set('X-Razorpay-Event-Id', options.eventId);
+      return request.send(raw);
+    };
+    const captured = (orderId: string, amount: number, paymentId = 'pay_hook') => ({
+      event: 'payment.captured',
+      payload: { payment: { entity: { id: paymentId, order_id: orderId, amount, currency: 'INR' } } },
+    });
+
+    it('confirms a booking when the customer closed the app after paying', async () => {
+      const booking = await book(anna, '9');
+      const o = await order(anna, booking.bookingId);
+      const res = await send(captured(o.gatewayOrderId, o.amountPaise, 'pay_hook_1'), { eventId: 'evt_1' }).expect(200);
+      expect(dataOf<{ outcome: string }>(res).outcome).toBe('CONFIRMED');
+      expect(await bookingStatus(booking.bookingId)).toBe('CONFIRMED');
+      expect(await status('9')).toBe('BOOKED');
+      const payment = await context.connection.collection('payments').findOne({ _id: new Types.ObjectId(o.paymentId) });
+      expect(payment).toMatchObject({ status: 'SUCCESS', gatewayPaymentId: 'pay_hook_1' });
+    });
+
+    it('does nothing the second time the same event arrives', async () => {
+      const booking = await book(anna, '10');
+      const o = await order(anna, booking.bookingId);
+      const payload = captured(o.gatewayOrderId, o.amountPaise, 'pay_hook_2');
+      expect(dataOf<{ outcome: string }>(await send(payload, { eventId: 'evt_2' }).expect(200)).outcome).toBe('CONFIRMED');
+      expect(dataOf<{ outcome: string }>(await send(payload, { eventId: 'evt_2' }).expect(200)).outcome).toBe('DUPLICATE');
+      expect(await context.connection.collection('payment_gateway_events').countDocuments({ eventId: 'evt_2' })).toBe(1);
+    });
+
+    it('refuses a call whose signature does not match the body', async () => {
+      const booking = await book(ben, '11');
+      const o = await order(ben, booking.bookingId);
+      const raw = captured(o.gatewayOrderId, o.amountPaise);
+      await send(raw, { signature: 'a'.repeat(64) }).expect(401);
+      await client(context).post(`${API}/webhooks/payments/razorpay`).send(raw).expect(401);
+      // A signature made for another body is no good for this one
+      const other = gateway().signWebhookForDevelopment(Buffer.from('{}'));
+      await send(raw, { signature: other }).expect(401);
+      expect(await bookingStatus(booking.bookingId)).toBe('PAYMENT_PENDING');
+    });
+
+    it('does not confirm when the gateway took a different amount', async () => {
+      const booking = await book(ben, '12');
+      const o = await order(ben, booking.bookingId);
+      const res = await send(captured(o.gatewayOrderId, o.amountPaise - 100, 'pay_hook_3'), { eventId: 'evt_3' }).expect(200);
+      expect(dataOf<{ outcome: string }>(res).outcome).toBe('AMOUNT_MISMATCH');
+      expect(await bookingStatus(booking.bookingId)).toBe('PAYMENT_PENDING');
+      const payment = await context.connection.collection('payments').findOne({ _id: new Types.ObjectId(o.paymentId) });
+      expect(payment).toMatchObject({ status: 'FAILED', failureReason: 'AMOUNT_MISMATCH' });
+    });
+
+    it('ignores a failed attempt and an order it does not know', async () => {
+      const booking = await book(ben, '13');
+      const o = await order(ben, booking.bookingId);
+      const failed = { event: 'payment.failed', payload: { payment: { entity: { id: 'pay_x', order_id: o.gatewayOrderId } } } };
+      expect(dataOf<{ outcome: string }>(await send(failed, { eventId: 'evt_4' }).expect(200)).outcome).toBe('IGNORED');
+      expect(await bookingStatus(booking.bookingId)).toBe('PAYMENT_PENDING');
+      expect(dataOf<{ outcome: string }>(await send(captured('order_nope', 1000), { eventId: 'evt_5' }).expect(200)).outcome).toBe('UNKNOWN_ORDER');
+    });
+  });
+
+  it('never refunds more than was paid, and a repeated refund for the same reason changes nothing', async () => {
+    const booking = await book(ben, '14');
+    const o = await order(ben, booking.bookingId);
+    await devComplete(ben, o.paymentId, 'success').expect(200);
+    const id = new Types.ObjectId(o.paymentId);
+    expect(await service.refund(id, 20_000, 'TEST_PART')).toEqual({ refundedPaise: 20_000 });
+    expect(await service.refund(id, 20_000, 'TEST_PART')).toEqual({ refundedPaise: 20_000 });
+    await expect(service.refund(id, 90_000, 'TEST_TOO_MUCH')).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+    const payment = await context.connection.collection('payments').findOne({ _id: id });
+    expect(payment?.refundedPaise).toBe(20_000);
+    expect((payment?.refunds as unknown[]).length).toBe(1);
+    // Only a paid payment can be refunded
+    const second = await book(ben, '15');
+    const o2 = await order(ben, second.bookingId);
+    await expect(service.refund(new Types.ObjectId(o2.paymentId), 100, 'TEST_UNPAID')).rejects.toMatchObject({ code: 'INVALID_STATE_TRANSITION' });
   });
 
   it('checks Razorpay signatures the way Razorpay makes them', () => {

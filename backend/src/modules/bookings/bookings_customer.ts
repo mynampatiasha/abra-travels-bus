@@ -1,12 +1,13 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
 import { AuthenticatedOnly } from '../../common/decorators/authenticated-only.decorator';
 import { CurrentActor } from '../../common/decorators/current-actor.decorator';
+import { PublicEndpoint } from '../../common/decorators/public-endpoint.decorator';
 import { ZodApiBody } from '../../common/openapi/zod-api-body';
 import { createZodDto } from '../../common/pipes/zod-dto.factory';
 import { type AuthenticatedUserActor } from '../../common/request-context/request-actor';
-import { type BookingView, BookingsCustomerService } from './bookings_customer.service';
+import { type BookingListItem, type BookingView, BookingsCustomerService } from './bookings_customer.service';
 
 class CreateBookingDto extends createZodDto(
   z.object({
@@ -37,6 +38,31 @@ class CreateBookingDto extends createZodDto(
   }),
 ) {}
 
+class ListQueryDto extends createZodDto(
+  z.object({
+    bucket: z.enum(['upcoming', 'completed', 'cancelled']).default('upcoming'),
+    page: z.coerce.number().int().min(1).max(10_000).default(1),
+    pageSize: z.coerce.number().int().min(1).max(50).default(20),
+  }),
+) {}
+
+/** The cancellation policy a customer sees before booking. Public: nothing personal in it. */
+@ApiTags('bookings')
+@PublicEndpoint()
+@Controller('trips')
+export class TripPolicyController {
+  constructor(private readonly service: BookingsCustomerService) {}
+
+  @Get(':tripId/policy')
+  @ApiOperation({
+    summary: 'What cancelling costs',
+    description: 'Public. The refund windows from the admin refund slabs: from X hours before departure to Y hours, Z percent back.',
+  })
+  policy(@Param('tripId') _tripId: string) {
+    return this.service.policyWindows();
+  }
+}
+
 /** Booking held seats and reading the booking back. */
 @ApiTags('bookings')
 @AuthenticatedOnly()
@@ -59,6 +85,15 @@ export class BookingsCustomerController {
   @ApiResponse({ status: 422, description: 'PAYMENT_AMOUNT_MISMATCH' })
   create(@CurrentActor() actor: AuthenticatedUserActor, @Body() body: CreateBookingDto): Promise<BookingView> {
     return this.service.create(actor, body);
+  }
+
+  @Get()
+  @ApiOperation({
+    summary: 'My bookings',
+    description: 'Customer. bucket is upcoming (default), completed or cancelled. A booking still waiting for payment is not listed.',
+  })
+  list(@CurrentActor() actor: AuthenticatedUserActor, @Query() query: ListQueryDto) {
+    return this.service.list(actor, query);
   }
 
   @Get(':bookingId')

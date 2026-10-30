@@ -49,17 +49,12 @@ abstract interface class BookingRepository {
   Future<List<CancellationRule>> cancellationPolicy(String tripId);
 }
 
-/// Backend implementation. The seat hold is connected; the booking, coupons
-/// and the cancellation policy are "Not connected yet - built in Phase 3"
-/// and come from [rest] until their endpoints exist.
+/// Backend implementation: the seat hold, the booking, coupons and the
+/// cancellation policy all call their endpoints.
 class ApiBookingRepository implements BookingRepository {
-  ApiBookingRepository(
-    this._client, {
-    BookingRepository rest = const NotConnectedBookingRepository(),
-  }) : _rest = rest;
+  ApiBookingRepository(this._client);
 
   final ApiClient _client;
-  final BookingRepository _rest;
 
   @override
   Future<SeatLock> lockSeats({
@@ -136,9 +131,21 @@ class ApiBookingRepository implements BookingRepository {
   }
 
   @override
-  Future<List<CancellationRule>> cancellationPolicy(String tripId) =>
-      _rest.cancellationPolicy(tripId);
+  Future<List<CancellationRule>> cancellationPolicy(String tripId) async {
+    final response = await _client.get(
+      'trips/${Uri.encodeComponent(tripId)}/policy',
+      authenticated: false,
+    );
+    return response.decodeList(cancellationRuleFromJson);
+  }
 }
+
+/// One refund window as the backend sends it (from the admin refund slabs).
+CancellationRule cancellationRuleFromJson(JsonMap json) => CancellationRule(
+  fromHoursBefore: (json['fromHoursBefore'] as num?)?.toInt(),
+  toHoursBefore: (json['toHoursBefore'] as num?)?.toInt() ?? 0,
+  refundPercent: (json['refundPercent'] as num?)?.toInt() ?? 0,
+);
 
 /// The hold as the backend sends it: its id and when it runs out.
 SeatLock seatLockFromJson(JsonMap json) => SeatLock(

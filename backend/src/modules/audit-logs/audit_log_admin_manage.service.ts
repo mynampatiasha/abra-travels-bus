@@ -28,6 +28,7 @@ export const AUDIT_ACTION_LABELS: Readonly<Record<AuditAction, string>> = {
   'role.renamed': 'Renamed a role',
   'role.deleted': 'Deleted a role',
   'message.resent': 'Sent a message again',
+  'booking.ticket-resent': 'Sent a ticket again',
   'settings.integration.changed': 'Changed an integration',
   'assistant.action.confirmed': 'Confirmed an assistant action',
   'assistant.action.declined': 'Declined an assistant action',

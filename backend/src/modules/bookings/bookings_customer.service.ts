@@ -37,6 +37,14 @@ export interface BookingPassenger {
   age: number;
   gender: 'MALE' | 'FEMALE' | 'OTHER';
   farePaise: number;
+  /** Each seat is cancelled on its own, so a booking can be partly cancelled. */
+  status: 'ACTIVE' | 'CANCELLED';
+}
+
+/** One step of the cancellation policy: cancelling at least this many hours before departure refunds this percent. */
+export interface PolicyStep {
+  hoursBefore: number;
+  refundPct: number;
 }
 
 export interface BookingRow {
@@ -59,6 +67,10 @@ export interface BookingRow {
   amountPaise: number;
   currency: string;
   holdExpiresAt: Date;
+  /** Copied from the trip, so the lists can sort and filter without looking the trip up. */
+  departureAt?: Date;
+  /** The refund slabs as they were when the customer booked: a later change never touches this booking. */
+  cancellationPolicy?: PolicyStep[];
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -70,6 +82,7 @@ const passengerSchema = new Schema<BookingPassenger>(
     age: { type: Number, required: true },
     gender: { type: String, enum: ['MALE', 'FEMALE', 'OTHER'], required: true },
     farePaise: { type: Number, required: true },
+    status: { type: String, enum: ['ACTIVE', 'CANCELLED'], required: true, default: 'ACTIVE' },
   },
   { _id: false },
 );
@@ -96,12 +109,18 @@ export const bookingSchema = new Schema<BookingRow>(
     amountPaise: { type: Number, required: true },
     currency: { type: String, required: true, default: 'INR' },
     holdExpiresAt: { type: Date, required: true },
+    departureAt: { type: Date },
+    cancellationPolicy: {
+      type: [{ _id: false, hoursBefore: { type: Number, required: true }, refundPct: { type: Number, required: true } }],
+      default: [],
+    },
   },
   { collection: 'bookings', timestamps: true, versionKey: false },
 );
 bookingSchema.index({ lockId: 1 }, { unique: true });
 bookingSchema.index({ pnr: 1 }, { unique: true });
 bookingSchema.index({ customerId: 1, createdAt: -1 });
+bookingSchema.index({ customerId: 1, status: 1, departureAt: 1 });
 bookingSchema.index({ tripId: 1, status: 1 });
 
 export interface CreateBookingInput {
@@ -111,6 +130,20 @@ export interface CreateBookingInput {
   gst?: { gstin: string; company: string } | undefined;
   couponCode?: string | undefined;
   expectedAmountPaise?: number | undefined;
+}
+
+export interface BookingListItem {
+  bookingId: string;
+  pnr: string;
+  status: BookingStatus;
+  tripId: string;
+  originName: string;
+  destinationName: string;
+  operatorName: string;
+  departureAt: string;
+  seatIds: string[];
+  amountPaise: number;
+  currency: string;
 }
 
 export interface BookingView {
@@ -223,6 +256,7 @@ export class BookingsCustomerService {
       age: p.age,
       gender: p.gender,
       farePaise: priceOf.get(p.seatId) ?? 0,
+      status: 'ACTIVE' as const,
     }));
     const baseFarePaise = passengers.reduce((sum, p) => sum + p.farePaise, 0);
     // The discount is worked out here from the coupon, never taken from the app
@@ -241,6 +275,10 @@ export class BookingsCustomerService {
     }
 
     const operatorId = seatRows.find((row) => row.operatorId)?.operatorId;
+    const trip = await this.connection
+      .collection<{ departureAt?: Date }>('trips')
+      .findOne({ _id: group.tripId }, { projection: { departureAt: 1 } });
+    const cancellationPolicy = await this.currentPolicy();
     const created = await this.transactions.run(async (session) => {
       const [row] = await this.bookings.create(
         [
@@ -264,6 +302,8 @@ export class BookingsCustomerService {
             amountPaise,
             currency: 'INR',
             holdExpiresAt: group.expiresAt,
+            ...(trip?.departureAt ? { departureAt: trip.departureAt } : {}),
+            cancellationPolicy,
           },
         ],
         { session },
@@ -273,6 +313,85 @@ export class BookingsCustomerService {
       return row.toObject() as BookingRow & { _id: Types.ObjectId };
     });
     return this.view(created);
+  }
+
+  /** The refund slabs that apply today, biggest hours first. Removed slabs do not count. */
+  async currentPolicy(): Promise<PolicyStep[]> {
+    const slabs = await this.connection
+      .collection<{ hoursBefore: number; refundPct: number; deletedAt?: Date | null }>('refund_slabs')
+      .find({ $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] })
+      .toArray();
+    return slabs
+      .map((slab) => ({ hoursBefore: slab.hoursBefore, refundPct: slab.refundPct }))
+      .sort((a, b) => b.hoursBefore - a.hoursBefore);
+  }
+
+  /** The policy as windows for the app: at least X hours before gives Y percent; the last window runs to departure. */
+  async policyWindows(): Promise<Array<{ fromHoursBefore: number | null; toHoursBefore: number; refundPercent: number }>> {
+    const steps = await this.currentPolicy();
+    return steps.map((step, index) => ({
+      fromHoursBefore: index === 0 ? null : (steps[index - 1]?.hoursBefore ?? null),
+      toHoursBefore: step.hoursBefore,
+      refundPercent: step.refundPct,
+    }));
+  }
+
+  /** My bookings, newest trips first. A booking still waiting for payment is not a trip yet. */
+  async list(
+    actor: AuthenticatedUserActor,
+    query: { bucket: 'upcoming' | 'completed' | 'cancelled'; page: number; pageSize: number },
+  ): Promise<{ items: BookingListItem[]; page: number; pageSize: number; total: number }> {
+    const customerId = new Types.ObjectId(actor.userId);
+    const now = new Date();
+    const filter: Record<string, unknown> =
+      query.bucket === 'upcoming'
+        ? { status: { $in: ['CONFIRMED', 'PARTIALLY_CANCELLED'] }, departureAt: { $gt: now } }
+        : query.bucket === 'completed'
+          ? { $or: [{ status: 'COMPLETED' }, { status: { $in: ['CONFIRMED', 'PARTIALLY_CANCELLED'] }, departureAt: { $lte: now } }] }
+          : { status: { $in: ['CANCELLED', 'REFUND_PENDING', 'REFUNDED'] } };
+    const where = { customerId, ...filter };
+    const total = await this.bookings.countDocuments(where);
+    const rows = await this.bookings
+      .find(where)
+      .sort(query.bucket === 'upcoming' ? { departureAt: 1 } : { departureAt: -1 })
+      .skip((query.page - 1) * query.pageSize)
+      .limit(query.pageSize)
+      .lean<Array<BookingRow & { _id: Types.ObjectId }>>()
+      .exec();
+    const tripIds = [...new Set(rows.map((r) => r.tripId.toHexString()))].map((id) => new Types.ObjectId(id));
+    const trips = await this.connection
+      .collection<{ _id: Types.ObjectId; originCityId?: Types.ObjectId; destinationCityId?: Types.ObjectId; operatorId?: Types.ObjectId }>('trips')
+      .find({ _id: { $in: tripIds } })
+      .toArray();
+    const cityIds = trips.flatMap((t) => [t.originCityId, t.destinationCityId]).filter((id): id is Types.ObjectId => !!id);
+    const cities = await this.connection
+      .collection<{ _id: Types.ObjectId; name: string }>('cities')
+      .find({ _id: { $in: cityIds } })
+      .toArray();
+    const operatorIds = trips.map((t) => t.operatorId).filter((id): id is Types.ObjectId => !!id);
+    const operators = await this.connection
+      .collection<{ _id: Types.ObjectId; displayName?: string; companyName?: string }>('operators')
+      .find({ _id: { $in: operatorIds } })
+      .toArray();
+    const cityName = (id?: Types.ObjectId) => cities.find((c) => id && c._id.equals(id))?.name ?? '';
+    const items = rows.map((row): BookingListItem => {
+      const trip = trips.find((t) => t._id.equals(row.tripId));
+      const operator = operators.find((o) => trip?.operatorId && o._id.equals(trip.operatorId));
+      return {
+        bookingId: row._id.toHexString(),
+        pnr: row.pnr,
+        status: row.status,
+        tripId: row.tripId.toHexString(),
+        originName: cityName(trip?.originCityId),
+        destinationName: cityName(trip?.destinationCityId),
+        operatorName: operator?.displayName ?? operator?.companyName ?? '',
+        departureAt: (row.departureAt ?? row.createdAt ?? now).toISOString(),
+        seatIds: row.passengers.filter((p) => p.status !== 'CANCELLED').map((p) => p.seatId),
+        amountPaise: row.amountPaise,
+        currency: row.currency,
+      };
+    });
+    return { items, page: query.page, pageSize: query.pageSize, total };
   }
 
   async read(actor: AuthenticatedUserActor, bookingId: string): Promise<BookingView> {
