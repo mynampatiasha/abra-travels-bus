@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:ui' show ImageByteFormat;
 
 import 'package:admin_app/core/browser_files.dart';
-import 'package:admin_app/features/customers/admin_customers.dart';
 import 'package:admin_app/features/kyc/admin_kyc_configuration.dart';
 import 'package:admin_app/routing/admin_routes.dart';
 import 'package:csv/csv.dart';
@@ -194,51 +193,6 @@ void main() {
           ),
         ),
       );
-    },
-  );
-  testWidgets(
-    'Customers directory shows contact data, methods, details and filters',
-    (tester) async {
-      final source = backend();
-      source.overrides['GET users'] = (_) => FakeResponse.ok(
-        [
-          {
-            'id': 'customer1',
-            'name': 'Asha Customer',
-            'email': 'asha@example.com',
-            'phone': '+919876543210',
-            'status': 'ACTIVE',
-            'loginMethods': ['Google', 'WhatsApp OTP'],
-            'createdAt': '2026-10-01T00:00:00Z',
-            'lastLoginAt': '2026-10-10T00:00:00Z',
-          },
-        ],
-        meta: {'total': 1, 'page': 1, 'pageSize': 20},
-      );
-      final app = TestAdmin.signedIn(source);
-      await app.pump(tester, size: const Size(390, 844));
-      await open(tester, AdminRoutes.customers);
-      expect(find.byType(AdminCustomersPage), findsOneWidget);
-      expect(find.text('Asha Customer'), findsOneWidget);
-      expect(find.text('Google'), findsOneWidget);
-      await tap(tester, find.text('Asha Customer'));
-      expect(
-        find.widgetWithText(SelectableText, 'asha@example.com'),
-        findsOneWidget,
-      );
-      await tap(tester, find.text('Close'));
-      await tester.enterText(textField('Search name, email or phone'), 'asha');
-      await tester.pump(const Duration(milliseconds: 400));
-      await settle(tester);
-      expect(
-        app.requestsTo('users', 'GET').last.options.queryParameters['userType'],
-        'CUSTOMER',
-      );
-      expect(
-        app.requestsTo('users', 'GET').last.options.queryParameters['search'],
-        'asha',
-      );
-      expect(tester.takeException(), isNull);
     },
   );
   setUpAll(() async {

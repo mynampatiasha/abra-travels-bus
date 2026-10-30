@@ -16,6 +16,12 @@ export interface Customer {
   notificationPreferences: NotificationPreferences;
   /** Marketing consent as given at sign-up; `at` records when it was last changed. */
   marketingConsent: { granted: boolean; at: Date };
+  /** Set while staff have blocked the account; the reason is kept for staff only. */
+  blocked?: { reason: string; at: Date; by: Types.ObjectId } | null;
+  /** Staff deleted the account (it can be brought back). */
+  deletedAt?: Date | null;
+  /** The customer deleted their own account: their personal data was removed for good. */
+  anonymisedAt?: Date | null;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -38,6 +44,19 @@ export const customerSchema = new Schema<Customer>(
       granted: { type: Boolean, required: true, default: false },
       at: { type: Date, required: true },
     },
+    blocked: {
+      type: new Schema(
+        {
+          reason: { type: String, required: true, maxlength: 500 },
+          at: { type: Date, required: true },
+          by: { type: Schema.Types.ObjectId, required: true },
+        },
+        { _id: false },
+      ),
+      default: null,
+    },
+    deletedAt: { type: Date, default: null },
+    anonymisedAt: { type: Date, default: null },
   },
   { collection: 'customers', timestamps: true, versionKey: false },
 );

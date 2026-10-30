@@ -340,7 +340,6 @@ void main() {
         ('/live-tracking', 'Live tracking'),
         ('/women-safety', 'Women Safety'),
         ('/settings', 'Settings'),
-        ('/account-delete', 'Delete account'),
       ]) {
         await open(tester, location);
         final screen = find.byType(FeatureUnavailableScreen);

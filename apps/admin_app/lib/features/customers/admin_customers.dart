@@ -2,24 +2,29 @@ import 'dart:async';
 import 'package:csv/csv.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_core/shared_core.dart';
 import 'package:shared_localization/shared_localization.dart';
 import 'package:shared_models/shared_models.dart';
 import 'package:shared_network/shared_network.dart';
+import 'package:shared_permissions/shared_permissions.dart';
 import 'package:shared_theme/shared_theme.dart';
 import 'package:shared_ui/shared_ui.dart';
 import '../../app/providers.dart';
+import '../../core/async_value_view.dart' show failureOf;
 import '../../core/browser_files.dart';
 import '../../core/failure_text.dart';
+import '../commission/commission_admin_manage_screen.dart' show formatRupees;
 import '../kyc/admin_kyc_configuration.dart' show kycExcelBytes;
 
 enum _View { list, table }
 
-enum _Sort { name, email, phone, status, registered, lastSignIn }
+enum _Sort { name, email, phone, status, bookings, spent, registered }
 
 /// Remembered while the app runs, so the page opens in the view last used.
 _View _lastView = _View.list;
 
-/// Customer identity directory. Uses the existing scoped users API.
+/// Customers (`/admin/customers`): the list with search and filters, one customer with bookings and
+/// devices, block and unblock, sign out of all devices, delete.
 class AdminCustomersPage extends ConsumerStatefulWidget {
   const AdminCustomersPage({super.key});
   @override
@@ -68,12 +73,11 @@ class _AdminCustomersPageState extends ConsumerState<AdminCustomersPage> {
   }
 
   Map<String, Object?> _query(int page, int size) => {
-    'userType': 'CUSTOMER',
     'page': page,
     'pageSize': size,
     if (_search.text.trim().isNotEmpty) 'search': _search.text.trim(),
     if (_status.isNotEmpty) 'status': _status,
-    if (_method.isNotEmpty) 'loginMethod': _method,
+    if (_method.isNotEmpty) 'signInMethod': _method,
   };
 
   Future<void> _load() async {
@@ -86,8 +90,8 @@ class _AdminCustomersPageState extends ConsumerState<AdminCustomersPage> {
       final response = await ref
           .read(appDependenciesProvider)
           .apiClient
-          .get('users', query: _query(_page, _pageSize));
-      final customers = response.decodeList((json) => json);
+          .get('admin/customers', query: _query(_page, _pageSize));
+      final customers = response.decodeList((json) => _shape(json));
       if (mounted && generation == _generation) {
         setState(() {
           _customers = customers;
@@ -115,9 +119,8 @@ class _AdminCustomersPageState extends ConsumerState<AdminCustomersPage> {
     Future<int?> count(String status) async {
       try {
         final response = await api.get(
-          'users',
+          'admin/customers',
           query: {
-            'userType': 'CUSTOMER',
             'page': 1,
             'pageSize': 1,
             if (status.isNotEmpty) 'status': status,
@@ -132,20 +135,12 @@ class _AdminCustomersPageState extends ConsumerState<AdminCustomersPage> {
     final results = await Future.wait([
       count(''),
       count('ACTIVE'),
-      count('INVITED'),
       count('SUSPENDED'),
       count('DEACTIVATED'),
     ]);
     if (!mounted || generation != _kpiGeneration) return;
     setState(() {
-      _kpis = [
-        results[0],
-        results[1],
-        results[2],
-        results[3] == null || results[4] == null
-            ? null
-            : results[3]! + results[4]!,
-      ];
+      _kpis = [results[0], results[1], results[2], results[3]];
       _kpiBusy = false;
     });
   }
@@ -176,9 +171,28 @@ class _AdminCustomersPageState extends ConsumerState<AdminCustomersPage> {
         : MaterialLocalizations.of(context).formatMediumDate(parsed);
   }
 
+  static const _methodLabels = {
+    'google': 'Google',
+    'apple': 'Apple',
+    'whatsapp': 'WhatsApp OTP',
+    'password': 'Password',
+  };
+
+  /// A row as the screen reads it: the way the person signs in as words, and the join date.
+  static JsonMap _shape(JsonMap c) => {
+    ...c,
+    'loginMethods': [
+      if (c['signInMethod'] is String)
+        _methodLabels[c['signInMethod']] ?? '${c['signInMethod']}',
+    ],
+    'createdAt': c['joinedAt'],
+  };
+
   List<String> _methodsOf(JsonMap c) => [
     for (final m in c['loginMethods'] as List? ?? const []) '$m',
   ];
+  int _count(Object? value) => value is num ? value.toInt() : 0;
+  String _spent(JsonMap c) => formatRupees(_count(c['spentPaise']));
   String _methods(JsonMap c) => _methodsOf(c).join(', ');
   String _value(Object? value) =>
       value == null || '$value'.isEmpty ? 'Not provided' : '$value';
@@ -216,7 +230,8 @@ class _AdminCustomersPageState extends ConsumerState<AdminCustomersPage> {
       _Sort.phone => '${c['phone'] ?? ''}',
       _Sort.status => '${c['status'] ?? ''}',
       _Sort.registered => '${c['createdAt'] ?? ''}',
-      _Sort.lastSignIn => '${c['lastLoginAt'] ?? ''}',
+      _Sort.bookings => '${_count(c['bookings'])}'.padLeft(9, '0'),
+      _Sort.spent => '${_count(c['spentPaise'])}'.padLeft(12, '0'),
     };
     final sorted = [..._customers]..sort((a, b) => key(a).compareTo(key(b)));
     return _ascending ? sorted : sorted.reversed.toList();
@@ -233,8 +248,8 @@ class _AdminCustomersPageState extends ConsumerState<AdminCustomersPage> {
         final response = await ref
             .read(appDependenciesProvider)
             .apiClient
-            .get('users', query: {...query, 'page': page});
-        final rows = response.decodeList((json) => json);
+            .get('admin/customers', query: {...query, 'page': page});
+        final rows = response.decodeList((json) => _shape(json));
         all.addAll(rows);
         total = response.page?.total ?? all.length;
         if (rows.isEmpty) break;
@@ -246,17 +261,19 @@ class _AdminCustomersPageState extends ConsumerState<AdminCustomersPage> {
           'Email',
           'Phone',
           'Status',
-          'Login methods',
-          'Registered',
-          'Last sign-in',
+          'Signs in with',
+          'Bookings',
+          'Spent (Rs)',
+          'Joined',
         ],
         for (final c in all)
           [
             for (final key in ['name', 'email', 'phone', 'status'])
               '${c[key] ?? ''}',
             _methods(c),
+            '${_count(c['bookings'])}',
+            '${_count(c['spentPaise']) / 100}',
             '${c['createdAt'] ?? ''}',
-            '${c['lastLoginAt'] ?? ''}',
           ],
       ];
       if (!mounted) return;
@@ -296,110 +313,23 @@ class _AdminCustomersPageState extends ConsumerState<AdminCustomersPage> {
 
   // ---------------------------------------------------------------- details
 
-  Widget _detailsBody(BuildContext context, JsonMap c) {
-    final theme = Theme.of(context);
-    final entries = <String, Widget>{
-      'Email': SelectableText(_value(c['email'])),
-      'Phone': SelectableText(_value(c['phone'])),
-      'Account status': Align(
-        alignment: AlignmentDirectional.centerStart,
-        child: AbraStatusBadge(
-          label: _statusLabel(c['status']),
-          tone: _tone(c['status']),
-        ),
-      ),
-      'Login methods': SelectableText(
-        _methods(c).isEmpty ? 'Not recorded' : _methods(c),
-      ),
-      'Registered': SelectableText(_date(c['createdAt'])),
-      'Last sign-in': SelectableText(_date(c['lastLoginAt'])),
-    };
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            _Avatar(initials: _initials(c['name'])),
-            const SizedBox(width: AbraSpacing.md),
-            Expanded(
-              child: Text(_value(c['name']), style: theme.textTheme.titleLarge),
-            ),
-            IconButton(
-              tooltip: 'Close',
-              onPressed: () => Navigator.pop(context),
-              icon: const Icon(Icons.close_rounded),
-            ),
-          ],
-        ),
-        const SizedBox(height: AbraSpacing.lg),
-        for (final e in entries.entries)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AbraSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  e.key,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: AbraColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: AbraSpacing.xs),
-                e.value,
-              ],
-            ),
-          ),
-        DecoratedBox(
-          decoration: const BoxDecoration(
-            color: AbraColors.lightBlue,
-            borderRadius: AbraRadius.medium,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(AbraSpacing.md),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(
-                  Icons.info_outline_rounded,
-                  size: AbraSizes.iconSmall + 4,
-                  color: AbraColors.deepBlue,
-                ),
-                const SizedBox(width: AbraSpacing.sm),
-                Expanded(
-                  child: Text(
-                    'Login methods show the ways registered for this account. They are not a history of every login.',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: AbraColors.deepBlue,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: AbraSpacing.lg),
-        Align(
-          alignment: AlignmentDirectional.centerEnd,
-          child: FilledButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ),
-      ],
-    );
-  }
-
   void _details(JsonMap c) {
+    final access = ref.read(accessProvider);
+    Widget body(BuildContext context) => _CustomerDetail(
+      id: '${c['id']}',
+      canUpdate: access.can(PermissionKeys.customersUpdate),
+      canDelete: access.can(PermissionKeys.customersAccountDelete),
+      onChanged: _refresh,
+    );
     if (AbraBreakpoint.of(context).isTabletOrWider) {
       showDialog<void>(
         context: context,
         builder: (context) => Dialog(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
+            constraints: const BoxConstraints(maxWidth: 560),
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(AbraSpacing.xl),
-              child: _detailsBody(context, c),
+              child: body(context),
             ),
           ),
         ),
@@ -417,7 +347,7 @@ class _AdminCustomersPageState extends ConsumerState<AdminCustomersPage> {
               AbraSpacing.lg,
               AbraSpacing.lg + MediaQuery.viewInsetsOf(context).bottom,
             ),
-            child: _detailsBody(context, c),
+            child: body(context),
           ),
         ),
       );
@@ -453,8 +383,8 @@ class _AdminCustomersPageState extends ConsumerState<AdminCustomersPage> {
     const labels = [
       'Total customers',
       'Active',
-      'Invited',
-      'Suspended / deactivated',
+      'Suspended',
+      'Deactivated',
     ];
     return _Grid(
       columns: columns,
@@ -503,7 +433,6 @@ class _AdminCustomersPageState extends ConsumerState<AdminCustomersPage> {
     items: const {
       '': 'All statuses',
       'ACTIVE': 'Active',
-      'INVITED': 'Invited',
       'SUSPENDED': 'Suspended',
       'DEACTIVATED': 'Deactivated',
     },
@@ -511,10 +440,10 @@ class _AdminCustomersPageState extends ConsumerState<AdminCustomersPage> {
   );
 
   Widget _methodField() => _dropdown(
-    label: 'Login method',
+    label: 'Signs in with',
     value: _method,
     items: const {
-      '': 'All login methods',
+      '': 'All sign-in methods',
       'google': 'Google',
       'apple': 'Apple',
       'whatsapp': 'WhatsApp OTP',
@@ -686,7 +615,7 @@ class _AdminCustomersPageState extends ConsumerState<AdminCustomersPage> {
           ),
           const SizedBox(height: AbraSpacing.md),
           Text(
-            'Registered ${_date(c['createdAt'])} · Last sign-in ${_date(c['lastLoginAt'])}',
+            '${_count(c['bookings'])} bookings · ${_spent(c)} spent · Joined ${_date(c['createdAt'])}',
             style: theme.textTheme.bodySmall?.copyWith(
               color: AbraColors.textSecondary,
             ),
@@ -718,8 +647,9 @@ class _AdminCustomersPageState extends ConsumerState<AdminCustomersPage> {
             _Sort.email => 1,
             _Sort.phone => 2,
             _Sort.status => 3,
-            _Sort.registered => 5,
-            _Sort.lastSignIn => 6,
+            _Sort.bookings => 5,
+            _Sort.spent => 6,
+            _Sort.registered => 7,
           };
     return AbraCard(
       padding: EdgeInsets.zero,
@@ -753,9 +683,10 @@ class _AdminCustomersPageState extends ConsumerState<AdminCustomersPage> {
                   column('Email', _Sort.email),
                   column('Phone', _Sort.phone),
                   column('Status', _Sort.status),
-                  const DataColumn(label: Text('Login methods')),
-                  column('Registered', _Sort.registered),
-                  column('Last sign-in', _Sort.lastSignIn),
+                  const DataColumn(label: Text('Signs in with')),
+                  column('Bookings', _Sort.bookings),
+                  column('Spent', _Sort.spent),
+                  column('Joined', _Sort.registered),
                 ],
                 rows: [
                   for (final c in _shown)
@@ -796,8 +727,9 @@ class _AdminCustomersPageState extends ConsumerState<AdminCustomersPage> {
                             ],
                           ),
                         ),
+                        DataCell(Text('${_count(c['bookings'])}')),
+                        DataCell(Text(_spent(c))),
                         DataCell(Text(_date(c['createdAt']))),
-                        DataCell(Text(_date(c['lastLoginAt']))),
                       ],
                     ),
                 ],
@@ -1066,4 +998,389 @@ class _IconText extends StatelessWidget {
       Expanded(child: Text(text)),
     ],
   );
+}
+
+/// One customer: profile, bookings, the devices signed in, and the actions staff may take. The
+/// server decides what is allowed; the buttons are only hidden for people without the permission.
+class _CustomerDetail extends ConsumerStatefulWidget {
+  const _CustomerDetail({
+    required this.id,
+    required this.canUpdate,
+    required this.canDelete,
+    required this.onChanged,
+  });
+
+  final String id;
+  final bool canUpdate;
+  final bool canDelete;
+  final VoidCallback onChanged;
+
+  @override
+  ConsumerState<_CustomerDetail> createState() => _CustomerDetailState();
+}
+
+class _CustomerDetailState extends ConsumerState<_CustomerDetail> {
+  JsonMap? _detail;
+  String? _error;
+  String? _notice;
+  bool _busy = false;
+
+  ApiClient get _api => ref.read(appDependenciesProvider).apiClient;
+
+  @override
+  void initState() {
+    super.initState();
+    Future<void>.microtask(_load);
+  }
+
+  /// A sentence the person can act on: the server's own words when it gave one.
+  String _say(Object error) {
+    final failure = failureOf(error);
+    if (failure is ApiFailure && failure.message.isNotEmpty && failure.statusCode < 500) {
+      return failure.message;
+    }
+    return failureText(AbraLocalizations.of(context), error);
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final response = await _api.get('admin/customers/${widget.id}');
+      final data = response.data;
+      if (mounted) setState(() => _detail = data is Map ? asJsonMap(data) : null);
+    } on Object catch (e) {
+      if (mounted) setState(() => _error = _say(e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// Runs one action; shows the server's sentence when it is refused.
+  Future<void> _act(
+    Future<Object?> Function() call, {
+    required String done,
+    bool closes = false,
+  }) async {
+    setState(() {
+      _busy = true;
+      _error = null;
+      _notice = null;
+    });
+    try {
+      await call();
+      widget.onChanged();
+      if (!mounted) return;
+      if (closes) {
+        Navigator.pop(context);
+        return;
+      }
+      setState(() => _notice = done);
+      await _load();
+    } on Object catch (e) {
+      if (mounted) setState(() => _error = _say(e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _block() async {
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (context) => const _BlockDialog(),
+    );
+    if (reason == null || !mounted) return;
+    await _act(
+      () => _api.post('admin/customers/${widget.id}/block', body: {'reason': reason}),
+      done: 'Account blocked. The customer is signed out everywhere.',
+    );
+  }
+
+  Future<void> _confirmThen(
+    String title,
+    String message,
+    String label,
+    Future<void> Function() action,
+  ) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(label),
+          ),
+        ],
+      ),
+    );
+    if (ok == true && mounted) await action();
+  }
+
+  String _date(Object? value) {
+    final parsed = DateTime.tryParse('$value')?.toLocal();
+    return parsed == null
+        ? 'Not recorded'
+        : MaterialLocalizations.of(context).formatMediumDate(parsed);
+  }
+
+  String _text(Object? value) => value == null || '$value'.isEmpty ? 'Not provided' : '$value';
+
+  int _int(Object? value) => value is num ? value.toInt() : 0;
+
+  Widget _row(String label, Widget value) => Padding(
+    padding: const EdgeInsets.only(bottom: AbraSpacing.md),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            color: AbraColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: AbraSpacing.xs),
+        value,
+      ],
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final c = _detail;
+    final status = '${c?['status'] ?? ''}';
+    final blocked = c?['blocked'];
+    final bookings = [
+      for (final b in c?['recentBookings'] as List? ?? const [])
+        if (b is Map) asJsonMap(b),
+    ];
+    final devices = [
+      for (final d in c?['devices'] as List? ?? const [])
+        if (d is Map) asJsonMap(d),
+    ];
+    final methodLabel = _AdminCustomersPageState._methodLabels['${c?['signInMethod']}'] ??
+        _text(c?['signInMethod']);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                c == null ? 'Customer' : _text(c['name']),
+                style: theme.textTheme.titleLarge,
+              ),
+            ),
+            IconButton(
+              tooltip: 'Close',
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.close_rounded),
+            ),
+          ],
+        ),
+        const SizedBox(height: AbraSpacing.md),
+        if (_busy && c == null) const Center(child: CircularProgressIndicator()),
+        if (_error != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AbraSpacing.md),
+            child: Text(_error!, style: const TextStyle(color: AbraColors.danger)),
+          ),
+        if (_notice != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AbraSpacing.md),
+            child: Text(_notice!, style: TextStyle(color: Colors.green.shade800)),
+          ),
+        if (c == null && _error != null)
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: OutlinedButton(onPressed: _load, child: const Text('Try again')),
+          ),
+        if (c != null) ...[
+          _row('Email', SelectableText(_text(c['email']))),
+          _row('Phone', SelectableText(_text(c['phone']))),
+          _row('Signs in with', Text(methodLabel)),
+          _row(
+            'Account status',
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: AbraStatusBadge(
+                label: status.isEmpty
+                    ? 'Unknown'
+                    : status[0] + status.substring(1).toLowerCase(),
+                tone: switch (status) {
+                  'ACTIVE' => AbraStatusTone.success,
+                  'SUSPENDED' => AbraStatusTone.danger,
+                  _ => AbraStatusTone.neutral,
+                },
+              ),
+            ),
+          ),
+          if (blocked is Map)
+            Container(
+              margin: const EdgeInsets.only(bottom: AbraSpacing.md),
+              padding: const EdgeInsets.all(AbraSpacing.md),
+              decoration: const BoxDecoration(
+                color: AbraColors.dangerContainer,
+                borderRadius: AbraRadius.medium,
+              ),
+              child: Text(
+                'Blocked on ${_date(blocked['at'])}: ${blocked['reason']}',
+                style: const TextStyle(color: AbraColors.danger),
+              ),
+            ),
+          _row('Joined', Text(_date(c['joinedAt']))),
+          _row(
+            'Bookings',
+            Text('${_int(c['bookings'])} bookings, ${formatRupees(_int(c['spentPaise']))} spent'),
+          ),
+          _row(
+            'Latest bookings',
+            bookings.isEmpty
+                ? const Text('No bookings yet')
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final b in bookings)
+                        Text(
+                          '${b['pnr']}  |  ${'${b['status']}'.replaceAll('_', ' ').toLowerCase()}  |  ${formatRupees(_int(b['amountPaise']))}',
+                        ),
+                    ],
+                  ),
+          ),
+          _row(
+            'Signed in on',
+            devices.isEmpty
+                ? const Text('No device is signed in')
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final d in devices)
+                        Text(
+                          '${_text(d['deviceName'] ?? d['clientType'])}, last used ${_date(d['lastUsedAt'])}',
+                        ),
+                    ],
+                  ),
+          ),
+          const SizedBox(height: AbraSpacing.sm),
+          Wrap(
+            spacing: AbraSpacing.sm,
+            runSpacing: AbraSpacing.sm,
+            children: [
+              if (widget.canUpdate && status == 'ACTIVE')
+                OutlinedButton(
+                  onPressed: _busy ? null : _block,
+                  child: const Text('Block account'),
+                ),
+              if (widget.canUpdate && status == 'SUSPENDED')
+                OutlinedButton(
+                  onPressed: _busy
+                      ? null
+                      : () => _act(
+                          () => _api.post('admin/customers/${widget.id}/unblock'),
+                          done: 'Account unblocked.',
+                        ),
+                  child: const Text('Unblock'),
+                ),
+              if (widget.canUpdate)
+                OutlinedButton(
+                  onPressed: _busy
+                      ? null
+                      : () => _confirmThen(
+                          'Sign out of all devices?',
+                          'The customer is signed out everywhere and can sign in again.',
+                          'Sign out all devices',
+                          () => _act(
+                            () => _api.post('admin/customers/${widget.id}/sessions/revoke'),
+                            done: 'Signed out of all devices.',
+                          ),
+                        ),
+                  child: const Text('Sign out all devices'),
+                ),
+              if (widget.canDelete)
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(foregroundColor: AbraColors.danger),
+                  onPressed: _busy
+                      ? null
+                      : () => _confirmThen(
+                          'Delete this customer?',
+                          'The account leaves every list and cannot sign in. You can bring it back later.',
+                          'Delete',
+                          () => _act(
+                            () => _api.delete('admin/customers/${widget.id}'),
+                            done: 'Customer deleted.',
+                            closes: true,
+                          ),
+                        ),
+                  child: const Text('Delete'),
+                ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _BlockDialog extends StatefulWidget {
+  const _BlockDialog();
+
+  @override
+  State<_BlockDialog> createState() => _BlockDialogState();
+}
+
+class _BlockDialogState extends State<_BlockDialog> {
+  final _reason = TextEditingController();
+  String? _problem;
+
+  @override
+  void dispose() {
+    _reason.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Block account'),
+      content: SizedBox(
+        width: 420,
+        child: TextField(
+          controller: _reason,
+          maxLines: 3,
+          decoration: InputDecoration(
+            labelText: 'Reason',
+            helperText: 'Staff see this reason. The customer does not.',
+            errorText: _problem,
+            border: const OutlineInputBorder(),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () {
+            final text = _reason.text.trim();
+            if (text.isEmpty) {
+              setState(() => _problem = 'Write why this account is blocked');
+              return;
+            }
+            Navigator.pop(context, text);
+          },
+          child: const Text('Block'),
+        ),
+      ],
+    );
+  }
 }

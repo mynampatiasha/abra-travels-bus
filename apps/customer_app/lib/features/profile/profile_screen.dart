@@ -48,6 +48,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (mounted) setState(() => _isSigningOut = false);
   }
 
+  Future<void> _signOutEverywhere() async {
+    final confirmed = await showAbraConfirmDialog(
+      context,
+      title: 'Sign out of all devices?',
+      message: 'You will be signed out here and on every other phone or browser.',
+      confirmLabel: 'Sign out everywhere',
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _isSigningOut = true);
+    await ref.read(appDependenciesProvider).notifications?.stop();
+    try {
+      await ref.read(sessionManagerProvider).signOutEverywhere();
+    } on Object {
+      // The other devices could not be reached; this phone still signs out
+      await ref.read(sessionManagerProvider).signOut();
+    }
+    if (mounted) setState(() => _isSigningOut = false);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AbraLocalizations.of(context);
@@ -104,6 +123,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     title: const Text('Messages sent to me'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.push(AppRoutes.messagesArchive),
+                  ),
+                  ListTile(
+                    minTileHeight: AbraSizes.minTouchTarget,
+                    leading: const Icon(Icons.devices_outlined, color: AbraColors.blue),
+                    title: const Text('Sign out of all devices'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: _signOutEverywhere,
                   ),
                 ],
               ),
