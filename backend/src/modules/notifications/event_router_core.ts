@@ -47,7 +47,7 @@ const isTwoHourReminder = (payload: Record<string, unknown>) => payload.reminder
 
 // Customer messages go by WhatsApp and email; the app notice and push cover a WhatsApp failure.
 // SMS is not used for now. To turn it back on (sent only when WhatsApp did not reach the
-// person), put 'SMS' back in both lists and restore the emergency-contact rule under sos.raised.
+// person), put 'SMS' back in both lists.
 const ALL_CHANNELS = ['WHATSAPP', /* 'SMS', */ 'EMAIL'] as const;
 const PHONE_CHANNELS = ['WHATSAPP' /* , 'SMS' */] as const;
 /** The booking's contact, who may not be the account holder. */
@@ -500,15 +500,15 @@ export const CORE_EVENT_RULES: readonly EventRule[] = [
         data: ['sosId', 'tripId'],
       },
     ],
-    // SMS is not used for now; the emergency-contact SMS comes back with it
-    // messages: [
-    //   {
-    //     template: 'sos_emergency_contact',
-    //     channels: ['SMS'],
-    //     contact: { nameField: 'emergencyContactName', phoneField: 'emergencyContactPhone' },
-    //     when: (p) => !raisedByDriver(p),
-    //   },
-    // ],
+    // The customer's saved emergency contact is told on WhatsApp (and SMS once it is back on)
+    messages: [
+      {
+        template: 'sos_emergency_contact',
+        channels: PHONE_CHANNELS,
+        contact: { nameField: 'emergencyContactName', phoneField: 'emergencyContactPhone' },
+        when: (p) => !raisedByDriver(p),
+      },
+    ],
   },
   {
     event: 'sos.updated',

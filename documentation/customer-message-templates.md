@@ -33,7 +33,7 @@ Status: **Built** = working today. **Rule exists** = the event router has the ru
 | 12 | `trip_completed_feedback` | Utility | ✅ | | | ✅ | App only today; WhatsApp new |
 | 13 | `support_replied` | Utility | ✅ | | ✅ | ✅ | App only today; WhatsApp, email new |
 | 14 | `sos_acknowledged` | Utility | ✅ | ✅ | | ✅ | App only today; WhatsApp, SMS new |
-| 15 | `sos_emergency_contact` | — (SMS only) | | ✅ | | | New |
+| 15 | `sos_emergency_contact` | Utility | ✅ | ✅ | | | New |
 | 16 | `trip_share` | Utility | ✅ | ✅ | | | New (optional) |
 
 Mandatory messages (2–5, 8–11, 14, 15) must reach the customer on at least one channel.
@@ -43,7 +43,7 @@ Mandatory messages (2–5, 8–11, 14, 15) must reach the customer on at least o
 - **Words:** `backend/src/modules/notification-templates/customer_message_templates.ts` holds every template. Change the words there and here together. `metaTemplateBody` and `dltTemplateBody` print the exact text to submit to Meta and DLT.
 - **Who gets what:** `backend/src/modules/notifications/event_router_core.ts`. Each event names its template, its channels and the payload fields of the contact.
 - **Channels:** WhatsApp and email go to every address the booking's contact has, and the app notice and push cover a WhatsApp failure.
-- **SMS is not used for now.** It is commented out in `event_router_core.ts` (the `ALL_CHANNELS` and `PHONE_CHANNELS` lists and the emergency-contact rule under `sos.raised`), so no SMS is sent and template 15 is not sent at all. The SMS texts above are kept for later. To turn SMS back on, put `'SMS'` back in both lists and restore that rule: SMS then goes only when WhatsApp did not reach the person.
+- **SMS is not used for now.** It is commented out in `event_router_core.ts` (the `ALL_CHANNELS` and `PHONE_CHANNELS` lists), so no SMS is sent; the emergency contact is told on WhatsApp. The SMS texts above are kept for later. To turn SMS back on, put `'SMS'` back in both lists: SMS then goes only when WhatsApp did not reach the person.
 - **Meta approval:** until a template is approved, its WhatsApp message goes through the general notification template (title + message). Once Meta approves a template under its key (for example `booking_confirmed`), add the key to **Approved templates** in the WhatsApp settings (`approvedTemplateKeys`), and from then on it is sent as itself, with its own `{{1}}, {{2}}` and button.
 - **DLT:** every SMS is handed to the SMS provider with its template key, which the provider maps to the registered DLT template id.
 - **Events the booking, trip and safety features must send** (with the payload fields named in the tables above): `booking.confirmed`, `payment.failed`, `booking.cancelled`, `refund.updated`, `booking.reminder` (`reminder: '24H' | '2H'`), `booking.boarding-started`, `booking.trip-delayed`, `booking.trip-cancelled`, `booking.bus-changed`, `booking.trip-arrived`, `ticket.agent-replied`, `sos.raised`, `sos.updated`, `trip.shared`.
@@ -501,9 +501,31 @@ Abra Travels: We received your SOS. Our safety team is calling you now. In dange
 
 ### 15. `sos_emergency_contact`
 
-**Event:** `sos.raised` (to the customer's saved emergency contact) · **SMS only** · **Status:** New
+**Event:** `sos.raised` raised by a customer (never by a driver), to the customer's saved emergency contact · **Status:** New
 
-**SMS**
+The contact has no Abra account, so the message is calm, plain and has no emojis.
+
+**WhatsApp**
+```
+Urgent: {{1}} has raised an SOS alert on their Abra Travels bus.
+Bus: {{2}}
+Route: {{3}}
+Live location: {{4}}
+
+Our safety team is responding now. If you cannot reach them, call 112.
+– Abra Travels Safety Team
+```
+
+| Var | Payload field |
+|---|---|
+| {{1}} | customerName |
+| {{2}} | busRegistration |
+| {{3}} | route |
+| {{4}} | trackingUrl |
+
+Contact fields: emergencyContactName, emergencyContactPhone
+
+**SMS** (switched off for now)
 ```
 ALERT: {#var#} raised an SOS on bus {#var#} ({#var#}). Live location: {#var#}. Abra safety team is on it. -ABRA
 ```

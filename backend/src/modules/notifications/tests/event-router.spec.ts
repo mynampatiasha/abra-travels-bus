@@ -337,7 +337,7 @@ describe('event router: trip-day and reminder messages', () => {
     expect(sent()[0]![0]).toMatchObject({ kind: 'BUS_CHANGED' });
   });
 
-  it('sends no message to the emergency contact while SMS is switched off', async () => {
+  it("tells the customer's emergency contact on WhatsApp, never for a driver's SOS", async () => {
     const { router, sent } = setup();
     const sos = (raisedBy: string) =>
       event('sos.raised', {
@@ -352,7 +352,37 @@ describe('event router: trip-day and reminder messages', () => {
         trackingUrl: 'https://abra.test/live/s1',
       });
     await router.handle(sos('DRIVER'));
-    await router.handle(sos('CUSTOMER'));
     expect(sent()).toHaveLength(0);
+    await router.handle(sos('CUSTOMER'));
+    expect(sent().map(([input]) => [input.channel, input.address, input.kind])).toEqual([
+      ['WHATSAPP', '+919800000009', 'SOS_ALERT'],
+    ]);
+    const [message] = sent()[0]!;
+    expect(message.recipientName).toBe('Meena');
+    expect(message.userId).toBeUndefined();
+    expect(message.body).toContain('Urgent: Asha has raised an SOS alert on their Abra Travels bus.');
+    expect(message.body).toContain('Live location: https://abra.test/live/s1');
+    expect(message.template).toMatchObject({
+      key: 'sos_emergency_contact',
+      parameters: ['Asha', 'TS09AB1234', 'A to B', 'https://abra.test/live/s1'],
+    });
+  });
+
+  it('still tells staff, the owner and the driver about an SOS when the contact gets a message', async () => {
+    const { router, delivered } = setup();
+    await router.handle(
+      event('sos.raised', {
+        sosId: 's1',
+        raisedBy: 'CUSTOMER',
+        raisedByName: 'Asha',
+        operatorId: operatorId.toHexString(),
+        driverId: driver._id.toHexString(),
+        emergencyContactName: 'Meena',
+        emergencyContactPhone: '+919800000009',
+      }),
+    );
+    expect(delivered().map(([recipient]) => String(recipient.userId)).sort()).toEqual(
+      [staffMember, owner, driver].map((user) => String(user._id)).sort(),
+    );
   });
 });

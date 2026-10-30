@@ -268,6 +268,16 @@ export const CUSTOMER_MESSAGE_TEMPLATES = [
     kind: 'SOS_ALERT',
     category: 'UTILITY',
     subject: 'SOS alert from {customerName}',
+    // Sent to the customer's saved emergency contact, who has no Abra account: calm, no emojis
+    text: [
+      'Urgent: {customerName} has raised an SOS alert on their Abra Travels bus.',
+      'Bus: {busRegistration}',
+      'Route: {route}',
+      'Live location: {trackingUrl}',
+      '',
+      'Our safety team is responding now. If you cannot reach them, call 112.',
+      '– Abra Travels Safety Team',
+    ].join('\n'),
     sms: 'ALERT: {customerName} raised an SOS on bus {busRegistration} ({route}). Live location: {trackingUrl}. Abra safety team is on it. -ABRA',
   },
   {
