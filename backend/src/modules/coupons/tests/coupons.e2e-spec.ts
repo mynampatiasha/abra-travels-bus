@@ -193,6 +193,84 @@ describe('Coupons e2e (abra_supply_test)', () => {
     expect(new Date(mine?.validTill ?? '').getTime()).toBeGreaterThan(Date.now());
   });
 
+
+  describe('changing, deleting, exporting and following a coupon', () => {
+    const patch = (id: string, body: Record<string, unknown>, caller: Caller = admin) =>
+      client(context).patch(`${API}/admin/coupons/${id}`).set(...auth(caller)).send(body);
+    const audit = (id: string, action: string) =>
+      context.connection.collection('audit_logs').find({ entityId: new Types.ObjectId(id), action }).toArray();
+
+    it('writes an audit entry for every change', async () => {
+      const created = dataOf<CouponView>(await make({ code: code('AUDIT') }).expect(201));
+      expect(await audit(created.id, 'coupon.created')).toHaveLength(1);
+      await patch(created.id, { title: 'New title' }).expect(200);
+      expect(await audit(created.id, 'coupon.updated')).toHaveLength(1);
+      await client(context).patch(`${API}/admin/coupons/${created.id}/status`).set(...auth(admin)).send({ status: 'PAUSED' }).expect(200);
+      expect(await audit(created.id, 'coupon.status-changed')).toHaveLength(1);
+      await client(context).delete(`${API}/admin/coupons/${created.id}`).set(...auth(admin)).expect(200);
+      expect(await audit(created.id, 'coupon.deleted')).toHaveLength(1);
+    });
+
+    it('changes the title, limits and dates, but not the code or the kind', async () => {
+      const created = dataOf<CouponView>(await make({ code: code('EDIT'), usageLimit: 5, value: 10 }).expect(201));
+      const changed = dataOf<CouponView>(
+        await patch(created.id, { title: 'Longer title', perCustomerLimit: 3, usageLimit: 8, newUsersOnly: true, value: 20, endsAt: day(60) }).expect(200),
+      );
+      expect(changed).toMatchObject({ code: created.code, discountType: 'PERCENT', title: 'Longer title', perCustomerLimit: 3, usageLimit: 8, newUsersOnly: true, value: 20 });
+      await patch(created.id, { value: 150 }).expect(400);
+      await patch(created.id, { endsAt: day(-30) }).expect(400);
+      await patch(created.id, { code: 'OTHER' }).expect(400); // the code is not something a change can carry
+      const row = await context.connection.collection('coupons').findOne({ _id: new Types.ObjectId(created.id) });
+      expect(row?.code).toBe(created.code);
+      await patch(new Types.ObjectId().toHexString(), { title: 'No such coupon' }).expect(404);
+      await patch(created.id, { title: 'Nope' }, anna).expect(403);
+    });
+
+    it('keeps the amount fixed once a booking used the coupon, and will not delete it', async () => {
+      const c = code('USED');
+      const created = dataOf<CouponView>(await make({ code: c, discountType: 'FLAT', value: 5_000 }).expect(201));
+      const h = await hold(ben, ['6']);
+      await book(ben, h.lockId, '6', c).expect(201);
+      const refusedAmount = await patch(created.id, { value: 9_000 }).expect(409);
+      expect(errorCodeOf(refusedAmount)).toBe('RESOURCE_IN_USE');
+      await patch(created.id, { value: 5_000, title: 'Same amount, new words' }).expect(200);
+      // The limit may equal the uses so far, never go below them
+      await patch(created.id, { usageLimit: 1 }).expect(200);
+      const refusedDelete = await client(context).delete(`${API}/admin/coupons/${created.id}`).set(...auth(admin)).expect(409);
+      expect(errorCodeOf(refusedDelete)).toBe('RESOURCE_IN_USE');
+      await client(context).delete(`${API}/admin/coupons/${created.id}`).set(...auth(anna)).expect(403);
+    });
+
+    it('shows who used a coupon, with each booking and what it took off', async () => {
+      const c = code('WHO');
+      const created = dataOf<CouponView>(await make({ code: c, discountType: 'FLAT', value: 7_000 }).expect(201));
+      const h = await hold(anna, ['7']);
+      const booking = dataOf<BookingView>(await book(anna, h.lockId, '7', c).expect(201));
+      const usage = dataOf<{ usedCount: number; reserved: number; redeemed: number; items: Array<{ pnr: string; discountPaise: number; status: string }> }>(
+        await client(context).get(`${API}/admin/coupons/${created.id}/usage`).set(...auth(admin)).expect(200),
+      );
+      expect(usage).toMatchObject({ usedCount: 1, reserved: 1, redeemed: 0 });
+      expect(usage.items[0]).toMatchObject({ pnr: booking.pnr, discountPaise: 7_000, status: 'RESERVED' });
+      await client(context).get(`${API}/admin/coupons/${created.id}/usage`).set(...auth(anna)).expect(403);
+      await client(context).get(`${API}/admin/coupons/${new Types.ObjectId().toHexString()}/usage`).set(...auth(admin)).expect(404);
+    });
+
+    it('deletes a coupon nobody used, and exports the list with the same filters', async () => {
+      const c = code('GONE');
+      const created = dataOf<CouponView>(await make({ code: c, title: 'Export me' }).expect(201));
+      const csv = await client(context).get(`${API}/admin/coupons/export?search=Export me`).set(...auth(admin)).buffer(true).expect(200);
+      expect(csv.headers['content-type']).toContain('text/csv');
+      expect(csv.text).toContain('Code');
+      expect(csv.text).toContain(c);
+      const none = await client(context).get(`${API}/admin/coupons/export?status=PAUSED&search=Export me`).set(...auth(admin)).buffer(true).expect(200);
+      expect(none.text).not.toContain(c);
+      await client(context).get(`${API}/admin/coupons/export`).set(...auth(anna)).expect(403);
+      await client(context).delete(`${API}/admin/coupons/${created.id}`).set(...auth(admin)).expect(200);
+      const left = await context.connection.collection('coupons').findOne({ code: c });
+      expect(left).toBeNull();
+    });
+  });
+
   it('lists the codes on offer for a customer', async () => {
     const res = await client(context).get(`${API}/coupons?tripId=${tripId.toHexString()}`).set(...auth(anna)).expect(200);
     expect(dataOf<CouponView[]>(res).length).toBeGreaterThan(0);

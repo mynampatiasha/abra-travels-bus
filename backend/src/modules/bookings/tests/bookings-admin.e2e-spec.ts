@@ -22,6 +22,9 @@ describe('Admin bookings and payments e2e (abra_supply_test)', () => {
   let tripId: Types.ObjectId;
   let admin: Caller;
   let anna: Caller;
+  let owner: Caller;
+  let rival: Caller;
+  let driver: Caller;
   const operatorId = new Types.ObjectId();
   const hyd = new Types.ObjectId();
   const blr = new Types.ObjectId();
@@ -59,13 +62,18 @@ describe('Admin bookings and payments e2e (abra_supply_test)', () => {
     context = await createAuthTestApp({ MONGODB_URI: 'mongodb://localhost:27017/abra_supply_test?directConnection=true' });
     admin = await seedAndSignIn(context, { roleKeys: ['SUPER_ADMIN'] });
     anna = await seedAndSignIn(context, { roleKeys: ['CUSTOMER'] });
+    owner = await seedAndSignIn(context, { roleKeys: ['OPERATOR_ADMIN'], userType: 'OPERATOR_STAFF', operatorId });
+    rival = await seedAndSignIn(context, { roleKeys: ['OPERATOR_ADMIN'], userType: 'OPERATOR_STAFF', operatorId: new Types.ObjectId() });
+    driver = await seedAndSignIn(context, { roleKeys: ['DRIVER'], userType: 'DRIVER', operatorId });
     tripId = new Types.ObjectId();
     const now = new Date();
     await context.connection.collection('cities').insertMany([
       { _id: hyd, name: 'Hyderabad', slug: `hyd-a-${tag}`, countryCode: 'IN', isActive: true, createdAt: now, updatedAt: now },
       { _id: blr, name: 'Bengaluru', slug: `blr-a-${tag}`, countryCode: 'IN', isActive: true, createdAt: now, updatedAt: now },
     ]);
-    await context.connection.collection('operators').insertOne({ _id: operatorId, companyName: 'Admin Test Travels', displayName: 'Admin Test Travels', status: 'ACTIVE' });
+    await context.connection
+      .collection('operators')
+      .updateOne({ _id: operatorId }, { $set: { companyName: 'Admin Test Travels', displayName: 'Admin Test Travels', status: 'ACTIVE' } }, { upsert: true });
     await context.connection.collection('trips').insertOne({
       _id: tripId,
       operatorId,
@@ -168,6 +176,36 @@ describe('Admin bookings and payments e2e (abra_supply_test)', () => {
     const refused = await client(context).post(`${API}/admin/bookings/${unpaid.booking.bookingId}/resend-ticket`).set(...auth(admin)).expect(409);
     expect(errorCodeOf(refused)).toBe('INVALID_STATE_TRANSITION');
     await client(context).post(`${API}/admin/bookings/${paid.booking.bookingId}/resend-ticket`).set(...auth(anna)).expect(403);
+  });
+
+
+  it('shows an operator only its own bookings in the client portal', async () => {
+    const mine = await book('6', `Rekha ${tag}`, true);
+    const get = (caller: Caller, path = '') => client(context).get(`${API}/client/bookings${path}`).set(...auth(caller));
+
+    const res = await get(owner, `?search=Rekha ${tag}`).expect(200);
+    const rows = dataOf<AdminBookingRow[]>(res);
+    expect(rows.map((r) => r.pnr)).toEqual([mine.booking.pnr]);
+    expect((res.body as { meta: { total: number } }).meta.total).toBe(1);
+    // Another operator sees none of it, and cannot open it
+    expect(dataOf<AdminBookingRow[]>(await get(rival, `?search=${tag}`).expect(200))).toEqual([]);
+    await get(rival, `/${mine.booking.bookingId}`).expect(404);
+    const detail = dataOf<AdminBookingDetail>(await get(owner, `/${mine.booking.bookingId}`).expect(200));
+    expect(detail).toMatchObject({ pnr: mine.booking.pnr, amountPaise: 94_150 });
+    // The numbers on top: this company's paid bookings only
+    const summary = dataOf<{ total: number; confirmed: number; cancelled: number; confirmedAmountPaise: number }>(await get(owner, '/summary').expect(200));
+    expect(summary.confirmed).toBeGreaterThanOrEqual(1);
+    expect(summary.total).toBe(summary.confirmed + summary.cancelled);
+    expect(summary.confirmedAmountPaise).toBeGreaterThanOrEqual(94_150);
+    expect(dataOf<{ total: number }>(await get(rival, '/summary').expect(200)).total).toBe(0);
+    await get(anna, '/summary').expect(403);
+    // Not for customers, drivers or guests
+    await get(anna).expect(403);
+    await get(driver).expect(403);
+    await client(context).get(`${API}/client/bookings`).expect(401);
+    // The operator cannot pick another company through the filter
+    const other = dataOf<AdminBookingRow[]>(await get(owner, `?operatorId=${new Types.ObjectId().toHexString()}&search=${tag}`).expect(200));
+    expect(other.length).toBeGreaterThan(0);
   });
 
   it('exports the bookings with the same filters, as CSV', async () => {

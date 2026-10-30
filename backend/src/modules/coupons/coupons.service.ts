@@ -2,6 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { type ClientSession, type Connection, type Model, Schema, Types } from 'mongoose';
 import { ApiException } from '../../common/errors/api-exception';
+import { type ClientRequestInfo } from '../../common/http/client-request-info';
+import { PaginatedResult } from '../../common/interceptors/response-envelope.interceptor';
+import { type AuthenticatedUserActor } from '../../common/request-context/request-actor';
+import { AuditedChangeRunner } from '../rbac/services/audited-change.service';
 
 /*
  * Coupons (documentation/database-architecture.md `coupons`, `coupon_redemptions`). Admin makes
@@ -100,6 +104,30 @@ export interface PublicOfferView {
   terms: string[];
 }
 
+export interface CouponUpdate {
+  title?: string | undefined;
+  description?: string | undefined;
+  value?: number | undefined;
+  maxDiscountPaise?: number | undefined;
+  minBookingPaise?: number | undefined;
+  usageLimit?: number | undefined;
+  perCustomerLimit?: number | undefined;
+  fundedBy?: 'ABRA' | 'OPERATOR' | undefined;
+  newUsersOnly?: boolean | undefined;
+  startsAt?: Date | undefined;
+  endsAt?: Date | undefined;
+}
+
+export interface CouponUsage {
+  code: string;
+  usedCount: number;
+  reserved: number;
+  redeemed: number;
+  released: number;
+  discountGivenPaise: number;
+  items: Array<{ bookingId: string; pnr: string; customerName: string; customerPhone: string; discountPaise: number; status: string; at: string | null }>;
+}
+
 export interface CouponInput {
   code: string;
   title: string;
@@ -129,6 +157,7 @@ export class CouponsService {
   constructor(
     @InjectConnection() private readonly connection: Connection,
     @InjectModel(COUPON_MODEL) private readonly coupons: Model<CouponRow>,
+    private readonly changes: AuditedChangeRunner,
   ) {}
 
   private view(row: CouponRow & { _id: Types.ObjectId }): CouponView {
@@ -163,44 +192,224 @@ export class CouponsService {
     return rows.map((row) => this.view(row));
   }
 
-  async create(input: CouponInput): Promise<CouponView> {
+  /** The coupons for the export and for a paged list: the same filters as the page. */
+  async rows(filters: {
+    search?: string | undefined;
+    status?: CouponStatus | undefined;
+    funder?: 'ABRA' | 'OPERATOR' | undefined;
+    page: number;
+    pageSize: number;
+  }): Promise<PaginatedResult<CouponView>> {
+    const where: Record<string, unknown> = {};
+    if (filters.status) where.status = filters.status;
+    if (filters.funder) where.fundedBy = filters.funder;
+    const search = filters.search?.trim();
+    if (search) {
+      const like = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      where.$or = [{ code: like }, { title: like }, { description: like }];
+    }
+    const [rows, total] = await Promise.all([
+      this.coupons
+        .find(where)
+        .sort({ createdAt: -1 })
+        .skip((filters.page - 1) * filters.pageSize)
+        .limit(filters.pageSize)
+        .lean<Array<CouponRow & { _id: Types.ObjectId }>>()
+        .exec(),
+      this.coupons.countDocuments(where),
+    ]);
+    return new PaginatedResult(rows.map((row) => this.view(row)), filters.page, filters.pageSize, total);
+  }
+
+  async create(actor: AuthenticatedUserActor, client: ClientRequestInfo, input: CouponInput): Promise<CouponView> {
     this.checkInput(input);
     const code = input.code.trim().toUpperCase();
     if (await this.coupons.exists({ code })) {
       throw new ApiException('ALREADY_REGISTERED', `The code ${code} is already used.`);
     }
-    const created = await this.coupons.create({
-      code,
-      title: input.title,
-      ...(input.description ? { description: input.description } : {}),
-      discountType: input.discountType,
-      value: input.value,
-      ...(input.maxDiscountPaise ? { maxDiscountPaise: input.maxDiscountPaise } : {}),
-      minBookingPaise: input.minBookingPaise,
-      usageLimit: input.usageLimit,
-      perCustomerLimit: input.perCustomerLimit,
-      usedCount: 0,
-      fundedBy: input.fundedBy,
-      restrictions: {
-        operatorIds: (input.operatorIds ?? []).filter((id) => Types.ObjectId.isValid(id)).map((id) => new Types.ObjectId(id)),
-        routeIds: [],
-        newUsersOnly: input.newUsersOnly,
+    const saved = await this.changes.run<CouponRow & { _id: Types.ObjectId }>({
+      actor,
+      client,
+      action: 'coupon.created',
+      entityType: 'coupon',
+      before: {},
+      apply: async (session) => {
+        const [created] = await this.coupons.create(
+          [
+            {
+              code,
+              title: input.title,
+              ...(input.description ? { description: input.description } : {}),
+              discountType: input.discountType,
+              value: input.value,
+              ...(input.maxDiscountPaise ? { maxDiscountPaise: input.maxDiscountPaise } : {}),
+              minBookingPaise: input.minBookingPaise,
+              usageLimit: input.usageLimit,
+              perCustomerLimit: input.perCustomerLimit,
+              usedCount: 0,
+              fundedBy: input.fundedBy,
+              restrictions: {
+                operatorIds: (input.operatorIds ?? []).filter((id) => Types.ObjectId.isValid(id)).map((id) => new Types.ObjectId(id)),
+                routeIds: [],
+                newUsersOnly: input.newUsersOnly,
+              },
+              startsAt: input.startsAt,
+              endsAt: input.endsAt,
+              status: 'ACTIVE',
+            },
+          ],
+          { session },
+        );
+        if (!created) throw new Error('The coupon could not be saved');
+        return created.toObject() as CouponRow & { _id: Types.ObjectId };
       },
-      startsAt: input.startsAt,
-      endsAt: input.endsAt,
-      status: 'ACTIVE',
+      describe: (row) => ({ code: row.code, discountType: row.discountType, value: row.value, usageLimit: row.usageLimit }),
     });
-    return this.view(created.toObject() as CouponRow & { _id: Types.ObjectId });
+    return this.view(saved);
   }
 
-  async setStatus(id: string, status: CouponStatus): Promise<CouponView> {
-    if (!Types.ObjectId.isValid(id)) throw new ApiException('RESOURCE_NOT_FOUND', 'Coupon not found.');
-    const row = await this.coupons
-      .findOneAndUpdate({ _id: new Types.ObjectId(id) }, { $set: { status } }, { new: true })
-      .lean<CouponRow & { _id: Types.ObjectId }>()
-      .exec();
+  /** Changes what a coupon allows. The code and the kind of discount never change; the amount only before the first use. */
+  async update(
+    actor: AuthenticatedUserActor,
+    client: ClientRequestInfo,
+    id: string,
+    input: CouponUpdate,
+  ): Promise<CouponView> {
+    const before = await this.require(id);
+    if (input.value !== undefined && input.value !== before.value && before.usedCount > 0) {
+      throw new ApiException('RESOURCE_IN_USE', 'This coupon has been used, so its amount cannot change. Make a new coupon instead.');
+    }
+    if (input.value !== undefined) {
+      if (before.discountType === 'PERCENT' && (input.value < 1 || input.value > 100)) {
+        throw new ApiException('VALIDATION_FAILED', 'A percentage is from 1 to 100.');
+      }
+      if (before.discountType === 'FLAT' && input.value < 1) {
+        throw new ApiException('VALIDATION_FAILED', 'A flat discount is at least 1 paisa.');
+      }
+    }
+    const startsAt = input.startsAt ?? before.startsAt;
+    const endsAt = input.endsAt ?? before.endsAt;
+    if (endsAt <= startsAt) throw new ApiException('VALIDATION_FAILED', 'The end must be after the start.');
+    if (input.usageLimit !== undefined && input.usageLimit > 0 && input.usageLimit < before.usedCount) {
+      throw new ApiException('VALIDATION_FAILED', `Already used ${before.usedCount} times, so the limit cannot be lower.`);
+    }
+    const set: Record<string, unknown> = {};
+    if (input.title !== undefined) set.title = input.title;
+    if (input.description !== undefined) set.description = input.description;
+    if (input.value !== undefined) set.value = input.value;
+    if (input.maxDiscountPaise !== undefined) set.maxDiscountPaise = input.maxDiscountPaise;
+    if (input.minBookingPaise !== undefined) set.minBookingPaise = input.minBookingPaise;
+    if (input.usageLimit !== undefined) set.usageLimit = input.usageLimit;
+    if (input.perCustomerLimit !== undefined) set.perCustomerLimit = input.perCustomerLimit;
+    if (input.fundedBy !== undefined) set.fundedBy = input.fundedBy;
+    if (input.newUsersOnly !== undefined) set['restrictions.newUsersOnly'] = input.newUsersOnly;
+    if (input.startsAt !== undefined) set.startsAt = input.startsAt;
+    if (input.endsAt !== undefined) set.endsAt = input.endsAt;
+    const saved = await this.changes.run<CouponRow & { _id: Types.ObjectId }>({
+      actor,
+      client,
+      action: 'coupon.updated',
+      entityType: 'coupon',
+      before: { title: before.title, value: before.value, usageLimit: before.usageLimit, perCustomerLimit: before.perCustomerLimit, endsAt: before.endsAt },
+      apply: async (session) => {
+        const row = await this.coupons
+          .findOneAndUpdate({ _id: before._id }, { $set: set }, { session, returnDocument: 'after' })
+          .lean<CouponRow & { _id: Types.ObjectId }>()
+          .exec();
+        if (!row) throw new ApiException('RESOURCE_NOT_FOUND', 'Coupon not found.');
+        return row;
+      },
+      describe: (row) => ({ title: row.title, value: row.value, usageLimit: row.usageLimit, perCustomerLimit: row.perCustomerLimit, endsAt: row.endsAt }),
+    });
+    return this.view(saved);
+  }
+
+  async setStatus(
+    actor: AuthenticatedUserActor,
+    client: ClientRequestInfo,
+    id: string,
+    status: CouponStatus,
+  ): Promise<CouponView> {
+    const before = await this.require(id);
+    const saved = await this.changes.run<CouponRow & { _id: Types.ObjectId }>({
+      actor,
+      client,
+      action: 'coupon.status-changed',
+      entityType: 'coupon',
+      before: { code: before.code, status: before.status },
+      apply: async (session) => {
+        const row = await this.coupons
+          .findOneAndUpdate({ _id: before._id }, { $set: { status } }, { session, returnDocument: 'after' })
+          .lean<CouponRow & { _id: Types.ObjectId }>()
+          .exec();
+        if (!row) throw new ApiException('RESOURCE_NOT_FOUND', 'Coupon not found.');
+        return row;
+      },
+      describe: (row) => ({ code: row.code, status: row.status }),
+    });
+    return this.view(saved);
+  }
+
+  /** Deletes a coupon nobody has used. A used one is paused instead, so the bookings that used it stay explained. */
+  async remove(actor: AuthenticatedUserActor, client: ClientRequestInfo, id: string): Promise<{ deleted: true }> {
+    const before = await this.require(id);
+    const used = before.usedCount > 0 || (await this.redemptions().countDocuments({ couponId: before._id })) > 0;
+    if (used) {
+      throw new ApiException('RESOURCE_IN_USE', 'This coupon has been used by bookings, so it cannot be deleted. Pause it instead.');
+    }
+    await this.changes.run<CouponRow & { _id: Types.ObjectId }>({
+      actor,
+      client,
+      action: 'coupon.deleted',
+      entityType: 'coupon',
+      before: { code: before.code, title: before.title },
+      apply: async (session) => {
+        await this.coupons.deleteOne({ _id: before._id }, { session });
+        return before;
+      },
+      describe: () => ({ deleted: true }),
+    });
+    return { deleted: true };
+  }
+
+  /** Who used a coupon: each booking, its customer, what it took off, and where that use stands. */
+  async usage(id: string): Promise<CouponUsage> {
+    const coupon = await this.require(id);
+    const redemptions = await this.redemptions().find({ couponId: coupon._id }).sort({ createdAt: -1 }).limit(500).toArray();
+    const bookings = await this.connection
+      .collection<{ _id: Types.ObjectId; pnr: string; discountPaise: number; passengers: Array<{ name: string }>; contact: { mobile: string } }>('bookings')
+      .find({ _id: { $in: redemptions.map((r) => r.bookingId as Types.ObjectId) } })
+      .toArray();
+    const items = redemptions.map((r) => {
+      const booking = bookings.find((b) => b._id.equals(r.bookingId as Types.ObjectId));
+      return {
+        bookingId: String(r.bookingId),
+        pnr: booking?.pnr ?? '',
+        customerName: booking?.passengers[0]?.name ?? '',
+        customerPhone: booking?.contact.mobile ?? '',
+        discountPaise: booking?.discountPaise ?? 0,
+        status: String(r.status),
+        at: (r.createdAt as Date | undefined)?.toISOString() ?? null,
+      };
+    });
+    const count = (status: string) => items.filter((i) => i.status === status).length;
+    return {
+      code: coupon.code,
+      usedCount: coupon.usedCount,
+      reserved: count('RESERVED'),
+      redeemed: count('REDEEMED'),
+      released: count('RELEASED'),
+      discountGivenPaise: items.filter((i) => i.status === 'REDEEMED').reduce((sum, i) => sum + i.discountPaise, 0),
+      items,
+    };
+  }
+
+  private async require(id: string): Promise<CouponRow & { _id: Types.ObjectId }> {
+    const row = Types.ObjectId.isValid(id)
+      ? await this.coupons.findById(id).lean<CouponRow & { _id: Types.ObjectId }>().exec()
+      : null;
     if (!row) throw new ApiException('RESOURCE_NOT_FOUND', 'Coupon not found.');
-    return this.view(row);
+    return row;
   }
 
   private checkInput(input: CouponInput): void {

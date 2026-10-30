@@ -4,6 +4,7 @@ import { CatalogueSharedModule } from '../catalogue-shared/catalogue_shared_mana
 import { CouponsModule } from '../coupons/coupons.module';
 import { RbacModule } from '../rbac/rbac.module';
 import { BookingsAdminController, BookingsExportController } from './bookings_admin_manage';
+import { BookingsClientController } from './bookings_client_manage';
 import { BookingsAdminService } from './bookings_admin_manage.service';
 import { BookingsCustomerController, TripPolicyController } from './bookings_customer';
 import { BOOKING_MODEL, BookingsCustomerService, bookingSchema } from './bookings_customer.service';
@@ -15,7 +16,13 @@ import { BOOKING_MODEL, BookingsCustomerService, bookingSchema } from './booking
  */
 @Module({
   imports: [MongooseModule.forFeature([{ name: BOOKING_MODEL, schema: bookingSchema }]), CouponsModule, RbacModule, CatalogueSharedModule],
-  controllers: [BookingsExportController, BookingsAdminController, BookingsCustomerController, TripPolicyController],
+  controllers: [
+    BookingsExportController,
+    BookingsAdminController,
+    BookingsClientController,
+    BookingsCustomerController,
+    TripPolicyController,
+  ],
   providers: [BookingsCustomerService, BookingsAdminService],
   exports: [BookingsCustomerService, MongooseModule],
 })

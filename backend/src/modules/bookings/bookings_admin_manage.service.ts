@@ -36,6 +36,14 @@ export interface AdminBookingRow {
   createdAt: string;
 }
 
+export interface OperatorBookingSummary {
+  total: number;
+  confirmed: number;
+  cancelled: number;
+  /** What customers paid for the bookings that stand, in paise. Abra's commission is taken off later, in settlements. */
+  confirmedAmountPaise: number;
+}
+
 export interface AdminBookingDetail extends AdminBookingRow {
   tripId: string;
   baseFarePaise: number;
@@ -133,9 +141,52 @@ export class BookingsAdminService {
     return this.rows(filters);
   }
 
+  /** The operator's own bookings (client portal): the same rows, never another operator's. */
+  async listForOperator(actor: AuthenticatedUserActor, filters: BookingListFilters): Promise<PaginatedResult<AdminBookingRow>> {
+    return this.rows(filters, this.operatorOf(actor));
+  }
+
+  async getForOperator(actor: AuthenticatedUserActor, id: string): Promise<AdminBookingDetail> {
+    const operatorId = this.operatorOf(actor);
+    const row = await this.find(id);
+    // Someone else's booking is "not found", not "forbidden": its existence is not the operator's business
+    if (!row.operatorId || !row.operatorId.equals(operatorId)) {
+      throw new ApiException('RESOURCE_NOT_FOUND', 'That booking was not found.');
+    }
+    return this.detailOf(row);
+  }
+
+  /** The numbers on top of the operator's page. A booking still waiting for payment is not counted. */
+  async summaryForOperator(actor: AuthenticatedUserActor): Promise<OperatorBookingSummary> {
+    const operatorId = this.operatorOf(actor);
+    const groups = await this.bookings.aggregate<{ _id: BookingStatus; count: number; amountPaise: number }>([
+      { $match: { operatorId, status: { $nin: ['PAYMENT_PENDING', 'FAILED', 'EXPIRED', 'INITIATED', 'SEAT_LOCKED'] } } },
+      { $group: { _id: '$status', count: { $sum: 1 }, amountPaise: { $sum: '$amountPaise' } } },
+    ]);
+    const countOf = (statuses: BookingStatus[]) => groups.filter((g) => statuses.includes(g._id)).reduce((sum, g) => sum + g.count, 0);
+    const paidOf = (statuses: BookingStatus[]) => groups.filter((g) => statuses.includes(g._id)).reduce((sum, g) => sum + g.amountPaise, 0);
+    const live: BookingStatus[] = ['CONFIRMED', 'PARTIALLY_CANCELLED', 'COMPLETED'];
+    const cancelled: BookingStatus[] = ['CANCELLED', 'REFUND_PENDING', 'REFUNDED'];
+    return {
+      total: countOf([...live, ...cancelled]),
+      confirmed: countOf(live),
+      cancelled: countOf(cancelled),
+      confirmedAmountPaise: paidOf(live),
+    };
+  }
+
+  private operatorOf(actor: AuthenticatedUserActor): Types.ObjectId {
+    // Drivers and conductors also hold bookings.read (for passenger lists), but not the contact details
+    if (actor.userType !== 'OPERATOR_STAFF' || !actor.operatorId) {
+      throw new ApiException('PERMISSION_DENIED', 'Only an operator account can see these bookings.');
+    }
+    return new Types.ObjectId(actor.operatorId);
+  }
+
   /** The list itself, also used by the export (which needs its own permission, bookings.export). */
-  async rows(filters: BookingListFilters): Promise<PaginatedResult<AdminBookingRow>> {
+  async rows(filters: BookingListFilters, onlyOperator?: Types.ObjectId): Promise<PaginatedResult<AdminBookingRow>> {
     const where: Record<string, unknown> = {};
+    if (onlyOperator) where.operatorId = onlyOperator;
     if (filters.status) where.status = filters.status;
     if (filters.from || filters.to) {
       where.createdAt = {
@@ -143,7 +194,7 @@ export class BookingsAdminService {
         ...(filters.to ? { $lt: new Date(new Date(`${filters.to}T00:00:00.000Z`).getTime() + 86_400_000) } : {}),
       };
     }
-    if (filters.operatorId && Types.ObjectId.isValid(filters.operatorId)) {
+    if (!onlyOperator && filters.operatorId && Types.ObjectId.isValid(filters.operatorId)) {
       where.operatorId = new Types.ObjectId(filters.operatorId);
     }
     const search = filters.search?.trim();
@@ -177,7 +228,10 @@ export class BookingsAdminService {
 
   async get(actor: AuthenticatedUserActor, id: string): Promise<AdminBookingDetail> {
     assertStaff(actor);
-    const row = await this.find(id);
+    return this.detailOf(await this.find(id));
+  }
+
+  private async detailOf(row: Stored): Promise<AdminBookingDetail> {
     const ctx = await this.lookups([row]);
     const trip = ctx.trips.find((t) => t._id.equals(row.tripId));
     return {

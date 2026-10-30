@@ -10,7 +10,7 @@ import {
 } from '../../authentication/tests/auth-e2e.harness';
 import { seedAndSignIn } from '../../rbac/tests/rbac-e2e.harness';
 import { type BookingView } from '../../bookings/bookings_customer.service';
-import { DevelopmentPaymentGateway, PAYMENT_GATEWAY, RazorpayPaymentGateway } from '../payment_gateway';
+import { DevelopmentPaymentGateway, PaymentGatewayProvider, RazorpayPaymentGateway } from '../payment_gateway';
 import { PaymentsCustomerService, type PaymentOrderView, type PaymentResultView } from '../payments_customer.service';
 
 const API = '/api/v1';
@@ -230,7 +230,11 @@ describe('Payments e2e (abra_supply_test, development gateway)', () => {
 
 
   describe('the gateway webhook', () => {
-    const gateway = () => context.app.get<DevelopmentPaymentGateway>(PAYMENT_GATEWAY);
+    let development: DevelopmentPaymentGateway;
+    beforeAll(async () => {
+      development = (await context.app.get(PaymentGatewayProvider).current()) as DevelopmentPaymentGateway;
+    });
+    const gateway = () => development;
     const send = (payload: object, options: { eventId?: string; signature?: string } = {}) => {
       const raw = JSON.stringify(payload);
       const request = client(context)

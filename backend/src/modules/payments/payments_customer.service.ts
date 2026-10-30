@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { type ClientSession, type Connection, type Model, Schema, Types } from 'mongoose';
 import { ApiException } from '../../common/errors/api-exception';
@@ -9,7 +9,7 @@ import { confirmationPayload } from '../bookings/booking_confirmation';
 import { BOOKING_MODEL, type BookingRow } from '../bookings/bookings_customer.service';
 import { SeatLocksService } from '../inventory/seat_locks_customer.service';
 import { createHash } from 'node:crypto';
-import { PAYMENT_GATEWAY, type PaymentGateway } from './payment_gateway';
+import { PaymentGatewayProvider } from './payment_gateway';
 
 /*
  * Paying for a booking (documentation/payment-flow.md). handlePaid is the only place that marks a
@@ -140,7 +140,7 @@ export class PaymentsCustomerService {
     @InjectModel(PAYMENT_MODEL) private readonly payments: Model<PaymentRow>,
     @InjectModel(BOOKING_MODEL) private readonly bookings: Model<BookingRow>,
     @InjectModel(PAYMENT_EVENT_MODEL) private readonly events: Model<PaymentEventRow>,
-    @Inject(PAYMENT_GATEWAY) private readonly gateway: PaymentGateway,
+    private readonly gateways: PaymentGatewayProvider,
     private readonly transactions: TransactionRunner,
     private readonly seatLocks: SeatLocksService,
     private readonly outbox: OutboxService,
@@ -198,7 +198,8 @@ export class PaymentsCustomerService {
     const open = await this.payments.findOne({ bookingId: booking._id, status: 'CREATED' }).lean<PaymentDoc>().exec();
     if (open) return this.orderView(open);
 
-    const order = await this.gateway.createOrder({
+    const gateway = await this.gateways.current();
+    const order = await gateway.createOrder({
       amountPaise: booking.amountPaise,
       currency: booking.currency,
       receipt: booking.pnr,
@@ -206,7 +207,7 @@ export class PaymentsCustomerService {
     const created = await this.payments.create({
       bookingId: booking._id,
       customerId,
-      gateway: this.gateway.key,
+      gateway: gateway.key,
       gatewayOrderId: order.gatewayOrderId,
       keyId: order.keyId,
       amountPaise: booking.amountPaise,
@@ -228,14 +229,15 @@ export class PaymentsCustomerService {
     signature: string | undefined,
     eventIdHeader: string | undefined,
   ): Promise<{ received: true; outcome: string }> {
-    if (!rawBody || !signature || !this.gateway.verifyWebhookSignature(rawBody, signature)) {
+    const gateway = await this.gateways.current();
+    if (!rawBody || !signature || !gateway.verifyWebhookSignature(rawBody, signature)) {
       throw new ApiException('UNAUTHENTICATED', 'The webhook signature is not valid.');
     }
-    const event = this.gateway.parseWebhookEvent(rawBody);
+    const event = gateway.parseWebhookEvent(rawBody);
     const eventId = eventIdHeader?.trim() || createHash('sha256').update(rawBody).digest('hex');
     try {
       await this.events.create({
-        gateway: this.gateway.key,
+        gateway: gateway.key,
         eventId,
         type: event.type,
         ...(event.gatewayOrderId ? { gatewayOrderId: event.gatewayOrderId } : {}),
@@ -268,7 +270,7 @@ export class PaymentsCustomerService {
       }
     }
     // A failed attempt is not the end of the order (the customer may try again), so it changes nothing here
-    await this.events.updateOne({ gateway: this.gateway.key, eventId }, { $set: { outcome } });
+    await this.events.updateOne({ gateway: gateway.key, eventId }, { $set: { outcome } });
     return { received: true, outcome };
   }
 
@@ -281,7 +283,8 @@ export class PaymentsCustomerService {
     input: { gatewayPaymentId: string; signature: string },
   ): Promise<PaymentResultView> {
     const payment = await this.ownPayment(actor, paymentId);
-    if (!this.gateway.verifyPaymentSignature(payment.gatewayOrderId, input.gatewayPaymentId, input.signature)) {
+    const gateway = await this.gateways.current();
+    if (!gateway.verifyPaymentSignature(payment.gatewayOrderId, input.gatewayPaymentId, input.signature)) {
       throw new ApiException('VALIDATION_FAILED', 'The payment could not be verified.');
     }
     return this.handlePaid(payment._id, input.gatewayPaymentId);
@@ -293,13 +296,14 @@ export class PaymentsCustomerService {
     paymentId: string,
     outcome: 'success' | 'failure',
   ): Promise<PaymentResultView> {
-    if (this.gateway.key !== 'development' || !this.gateway.signForDevelopment) {
+    const gateway = await this.gateways.current();
+    if (gateway.key !== 'development' || !gateway.signForDevelopment) {
       throw new ApiException('RESOURCE_NOT_FOUND', 'Not found.');
     }
     const payment = await this.ownPayment(actor, paymentId);
     if (outcome === 'failure') return this.handleFailed(payment._id, 'DECLINED');
     const gatewayPaymentId = `dev_pay_${payment._id.toHexString()}`;
-    const signature = this.gateway.signForDevelopment(payment.gatewayOrderId, gatewayPaymentId);
+    const signature = gateway.signForDevelopment(payment.gatewayOrderId, gatewayPaymentId);
     return this.clientCallback(actor, paymentId, { gatewayPaymentId, signature });
   }
 
@@ -397,7 +401,7 @@ export class PaymentsCustomerService {
     if (amountPaise <= 0 || already + amountPaise > payment.amountPaise) {
       throw new ApiException('VALIDATION_FAILED', 'The refund is more than what was paid.');
     }
-    const sent = await this.gateway.createRefund({
+    const sent = await (await this.gateways.current()).createRefund({
       gatewayPaymentId: payment.gatewayPaymentId,
       amountPaise,
       receipt: `${payment._id.toHexString()}-${reason}`.slice(0, 40),

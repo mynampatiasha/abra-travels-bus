@@ -90,7 +90,9 @@ export const INTEGRATIONS: Readonly<Record<IntegrationKey, IntegrationDefinition
   razorpay: {
     key: 'razorpay',
     title: 'Razorpay',
-    description: 'Online payments, refunds and the automatic split with Razorpay Route.',
+    description:
+      'Online payments, refunds and the automatic split with Razorpay Route. In the Razorpay dashboard, ' +
+      'point the webhook to https://<your server>/api/v1/webhooks/payments/razorpay and use the same webhook secret here.',
     fields: [
       {
         name: 'keyId',

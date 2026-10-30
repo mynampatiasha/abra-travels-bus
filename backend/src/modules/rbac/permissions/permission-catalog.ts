@@ -450,6 +450,17 @@ export const OFFER_PERMISSIONS = definePermissions('offers', {
     description: 'Create coupons, change them, and pause or resume them.',
     grantableTo: PLATFORM_ONLY,
   },
+  delete: {
+    name: 'Delete coupons',
+    description: 'Delete a coupon that nobody has used.',
+    grantableTo: PLATFORM_ONLY,
+    sensitive: true,
+  },
+  export: {
+    name: 'Export coupons',
+    description: 'Download the coupons list as CSV or Excel.',
+    grantableTo: PLATFORM_ONLY,
+  },
 });
 
 /** Every permission of the platform. A new module's group is added to this object. */

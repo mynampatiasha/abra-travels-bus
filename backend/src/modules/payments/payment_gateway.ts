@@ -1,6 +1,9 @@
 import { randomBytes } from 'node:crypto';
+import { Injectable } from '@nestjs/common';
 import { hmacSha256Hex, safeEqualHex } from '../../common/crypto/secure-hash';
 import { ApiException } from '../../common/errors/api-exception';
+import { AppConfigService } from '../../config/app-config.service';
+import { IntegrationSettingsStore } from '../system-settings/integrations_admin_manage.service';
 
 /*
  * The payment gateway behind one interface (documentation/payment-flow.md section 1). Razorpay is
@@ -45,7 +48,6 @@ export interface PaymentGateway {
   signForDevelopment?(gatewayOrderId: string, gatewayPaymentId: string): string;
 }
 
-export const PAYMENT_GATEWAY = Symbol('PAYMENT_GATEWAY');
 
 export class DevelopmentPaymentGateway implements PaymentGateway {
   readonly key = 'development' as const;
@@ -186,4 +188,42 @@ function parseRazorpayShape(rawBody: Buffer): GatewayWebhookEvent {
     // not JSON: handled as "other"
   }
   return { type: 'other' };
+}
+
+/**
+ * The gateway to use right now. PAYMENT_GATEWAY says which kind (razorpay, or the labelled
+ * development gateway). For Razorpay the keys are the ones saved in Settings, Integrations in the
+ * admin app, and only when none is saved there the ones in the environment. So changing a key in
+ * the admin app takes effect within seconds, with no restart.
+ */
+@Injectable()
+export class PaymentGatewayProvider {
+  private razorpay: { fingerprint: string; gateway: RazorpayPaymentGateway } | undefined;
+  private readonly development: DevelopmentPaymentGateway;
+
+  constructor(
+    private readonly config: AppConfigService,
+    private readonly settings: IntegrationSettingsStore,
+  ) {
+    this.development = new DevelopmentPaymentGateway(this.config.get('OTP_HASH_SECRET'));
+  }
+
+  async current(): Promise<PaymentGateway> {
+    if (this.config.get('PAYMENT_GATEWAY') !== 'razorpay') return this.development;
+    const { enabled, values } = await this.settings.effective('razorpay');
+    const keyId = values.keyId ?? '';
+    const keySecret = values.keySecret ?? '';
+    if (!enabled || keyId === '' || keySecret === '') {
+      throw new ApiException(
+        'PAYMENT_PROVIDER_UNAVAILABLE',
+        'Online payments are not set up yet. Please try again later.',
+      );
+    }
+    const webhookSecret = values.webhookSecret ?? '';
+    const fingerprint = `${keyId}|${keySecret}|${webhookSecret}`;
+    if (this.razorpay?.fingerprint !== fingerprint) {
+      this.razorpay = { fingerprint, gateway: new RazorpayPaymentGateway(keyId, keySecret, webhookSecret) };
+    }
+    return this.razorpay.gateway;
+  }
 }

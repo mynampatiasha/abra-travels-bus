@@ -20,6 +20,13 @@ abstract final class PermissionKeys {
   static const bookingsCreate = 'bookings.create';
   static const bookingsUpdate = 'bookings.update';
   static const bookingsCancel = 'bookings.cancel';
+  static const bookingsExport = 'bookings.export';
+  static const paymentsRead = 'payments.read';
+  static const paymentsExport = 'payments.export';
+  static const offersRead = 'offers.read';
+  static const offersManage = 'offers.manage';
+  static const offersDelete = 'offers.delete';
+  static const offersExport = 'offers.export';
   static const busesRead = 'buses.read';
   static const busesCreate = 'buses.create';
   static const busesUpdate = 'buses.update';
@@ -97,6 +104,13 @@ abstract final class PermissionKeys {
     bookingsCreate,
     bookingsUpdate,
     bookingsCancel,
+    bookingsExport,
+    paymentsRead,
+    paymentsExport,
+    offersRead,
+    offersManage,
+    offersDelete,
+    offersExport,
     busesRead,
     busesCreate,
     busesUpdate,

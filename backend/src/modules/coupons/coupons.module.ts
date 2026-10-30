@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { CatalogueSharedModule } from '../catalogue-shared/catalogue_shared_manage';
 import { RbacModule } from '../rbac/rbac.module';
-import { CouponsAdminController, CouponsCustomerController, OffersPublicController } from './coupons';
+import { CouponsAdminController, CouponsCustomerController, CouponsExportController, OffersPublicController } from './coupons';
 import { COUPON_MODEL, CouponsService, couponSchema } from './coupons.service';
 
 /**
@@ -10,8 +11,8 @@ import { COUPON_MODEL, CouponsService, couponSchema } from './coupons.service';
  * and the website come later.
  */
 @Module({
-  imports: [MongooseModule.forFeature([{ name: COUPON_MODEL, schema: couponSchema }]), RbacModule],
-  controllers: [CouponsCustomerController, CouponsAdminController, OffersPublicController],
+  imports: [MongooseModule.forFeature([{ name: COUPON_MODEL, schema: couponSchema }]), RbacModule, CatalogueSharedModule],
+  controllers: [CouponsExportController, CouponsCustomerController, CouponsAdminController, OffersPublicController],
   providers: [CouponsService],
   exports: [CouponsService],
 })
