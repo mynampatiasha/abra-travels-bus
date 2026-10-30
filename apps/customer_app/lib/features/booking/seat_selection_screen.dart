@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,9 +25,11 @@ import '../discovery/controllers/trip_search_controller.dart';
 import '../discovery/controllers/trip_selection_controller.dart';
 import '../discovery/models/discovery_models.dart';
 import '../discovery/widgets/discovery_text.dart';
+import 'controllers/seat_hold_controller.dart';
 import 'controllers/seat_selection_controller.dart';
 import 'controllers/seat_selection_rules.dart';
 import 'models/seat_models.dart';
+import 'repositories/booking_repository.dart';
 import 'widgets/seat_grid.dart';
 import 'widgets/seat_legend.dart';
 import 'widgets/trip_summary_card.dart';
@@ -44,9 +48,40 @@ class SeatSelectionScreen extends ConsumerStatefulWidget {
 }
 
 class _SeatSelectionScreenState extends ConsumerState<SeatSelectionScreen> {
+  /// How often the map is read again, so seats other customers take show up while this one is open.
+  static const _refreshEvery = Duration(seconds: 10);
+
   SeatDeck _deck = SeatDeck.lower;
+  Timer? _refresh;
 
   String get _tripId => widget.tripId;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh = Timer.periodic(_refreshEvery, (_) {
+      if (mounted) ref.invalidate(seatMapProvider(_tripId));
+    });
+    // Back from the booking steps: the seats held there are let go of, then the map is read again
+    WidgetsBinding.instance.addPostFrameCallback((_) => _letGoOfHeldSeats());
+  }
+
+  @override
+  void dispose() {
+    _refresh?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _letGoOfHeldSeats() async {
+    if (!mounted) return;
+    final let = await releaseHeldSeats(
+      hold: ref.read(seatHoldProvider(_tripId)),
+      now: DateTime.now(),
+      release: ref.read(bookingRepositoryProvider).releaseSeats,
+      clear: ref.read(seatHoldProvider(_tripId).notifier).clear,
+    );
+    if (let && mounted) ref.invalidate(seatMapProvider(_tripId));
+  }
 
   void _onSeatTap(Seat seat) {
     final outcome = toggleSeat(ref, _tripId, seat);

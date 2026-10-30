@@ -180,3 +180,37 @@ String? couponFormProblem({
   if (!endsAt.isAfter(startsAt)) return 'The end must be after the start.';
   return null;
 }
+
+/// Who used a coupon (`GET /admin/coupons/:id/usage`).
+final adminCouponUsageProvider = FutureProvider.autoDispose.family<JsonMap, String>((ref, id) async {
+  final client = ref.watch(appDependenciesProvider).apiClient;
+  return (await client.get('admin/coupons/${Uri.encodeComponent(id)}/usage')).decodeObject((json) => json);
+});
+
+/// The body of `PATCH /admin/coupons/:id`: only what the form changed, money in paise.
+Map<String, Object?> couponChangeBody({
+  required CouponRecord before,
+  required String title,
+  required String description,
+  required double? value,
+  required int usageLimit,
+  required int perCustomerLimit,
+  required String fundedBy,
+  required bool newUsersOnly,
+  required double? minBookingRupees,
+  required DateTime endsAt,
+}) {
+  final newValue = value == null ? null : (before.discountType == 'PERCENT' ? value.round() : (value * 100).round());
+  final minPaise = minBookingRupees == null ? null : (minBookingRupees * 100).round();
+  return <String, Object?>{
+    if (title.trim() != before.title) 'title': title.trim(),
+    if (description.trim() != before.description && description.trim().isNotEmpty) 'description': description.trim(),
+    if (newValue != null && newValue != before.value) 'value': newValue,
+    if (usageLimit != before.usageLimit) 'usageLimit': usageLimit,
+    if (perCustomerLimit != before.perCustomerLimit) 'perCustomerLimit': perCustomerLimit,
+    if (fundedBy != before.fundedBy) 'fundedBy': fundedBy,
+    if (newUsersOnly != before.newUsersOnly) 'newUsersOnly': newUsersOnly,
+    if (minPaise != null && minPaise != before.minBookingPaise) 'minBookingPaise': minPaise,
+    if (endsAt.toUtc() != before.endsAt.toUtc()) 'endsAt': endsAt.toUtc().toIso8601String(),
+  };
+}

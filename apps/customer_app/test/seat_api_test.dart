@@ -1,3 +1,4 @@
+import 'package:customer_app/features/booking/controllers/seat_hold_controller.dart';
 import 'package:customer_app/features/booking/models/booking_models.dart';
 import 'package:customer_app/features/booking/models/payment_models.dart';
 import 'package:customer_app/features/booking/models/seat_models.dart';
@@ -233,6 +234,62 @@ void main() {
       });
       expect(last.fromHoursBefore, 12);
       expect(last.refundPercent, 0);
+    });
+  });
+
+  group('letting go of the seats held for the booking', () {
+    final now = DateTime.utc(2026, 10, 30, 10);
+
+    test('a live hold is let go of at once, and forgotten', () async {
+      final released = <String>[];
+      var cleared = 0;
+      final did = await releaseHeldSeats(
+        hold: SeatHold(lockId: 'lock-1', expiresAt: now.add(const Duration(minutes: 5))),
+        now: now,
+        release: (id) async => released.add(id),
+        clear: () => cleared++,
+      );
+      expect(did, isTrue);
+      expect(released, <String>['lock-1']);
+      expect(cleared, 1);
+    });
+
+    test('there is nothing to do without a hold', () async {
+      var called = false;
+      final did = await releaseHeldSeats(
+        hold: null,
+        now: now,
+        release: (id) async => called = true,
+        clear: () => called = true,
+      );
+      expect(did, isFalse);
+      expect(called, isFalse);
+    });
+
+    test('a hold that already ran out is only forgotten, with no call to the server', () async {
+      final released = <String>[];
+      var cleared = 0;
+      final did = await releaseHeldSeats(
+        hold: SeatHold(lockId: 'old', expiresAt: now.subtract(const Duration(seconds: 1))),
+        now: now,
+        release: (id) async => released.add(id),
+        clear: () => cleared++,
+      );
+      expect(did, isFalse);
+      expect(released, isEmpty);
+      expect(cleared, 1);
+    });
+
+    test('a failed call is not an error: the hold runs out by itself', () async {
+      var cleared = 0;
+      final did = await releaseHeldSeats(
+        hold: SeatHold(lockId: 'lock-2', expiresAt: now.add(const Duration(minutes: 5))),
+        now: now,
+        release: (id) async => throw StateError('offline'),
+        clear: () => cleared++,
+      );
+      expect(did, isTrue);
+      expect(cleared, 1);
     });
   });
 }

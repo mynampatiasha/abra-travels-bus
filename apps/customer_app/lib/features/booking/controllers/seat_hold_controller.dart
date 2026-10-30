@@ -50,6 +50,9 @@ class SeatHoldController extends Notifier<SeatHold?> {
   void start(SeatLock lock) =>
       state = SeatHold(lockId: lock.lockId, expiresAt: lock.expiresAt);
 
+  /// Forgets the hold (it was let go of, so the seats are free again).
+  void clear() => state = null;
+
   void release() {
     final hold = state;
     if (hold == null) return;
@@ -66,4 +69,27 @@ String formatHold(int seconds) {
   final minutes = (seconds ~/ 60).toString().padLeft(2, '0');
   final rest = (seconds % 60).toString().padLeft(2, '0');
   return '$minutes:$rest';
+}
+
+/// When the customer is back choosing seats, a hold they still have on this trip is let go of: the
+/// seats are theirs again to change, not held out of reach (the server shows a held seat as taken,
+/// even to the person holding it). Nothing to do when there is no live hold. A failed call is
+/// not an error: the hold simply runs out by itself.
+Future<bool> releaseHeldSeats({
+  required SeatHold? hold,
+  required DateTime now,
+  required Future<void> Function(String lockId) release,
+  required void Function() clear,
+}) async {
+  if (hold == null || !hold.isActive(now)) {
+    if (hold != null) clear();
+    return false;
+  }
+  clear();
+  try {
+    await release(hold.lockId);
+  } on Object {
+    // The hold runs out within ten minutes anyway
+  }
+  return true;
 }
