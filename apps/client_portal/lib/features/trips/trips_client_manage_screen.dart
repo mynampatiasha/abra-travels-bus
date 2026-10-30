@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_localization/shared_localization.dart';
 import 'package:shared_theme/shared_theme.dart';
 import '../../app/providers.dart';
 import '../../core/browser_files.dart';
+import '../../core/failure_text.dart';
 import '../../core/widgets/portal_kpi_card.dart';
 import '../../core/widgets/portal_section_title.dart';
 import '../../core/widgets/portal_status_chip.dart';
@@ -633,6 +635,7 @@ class _ClientTripsScreenState extends ConsumerState<ClientTripsScreen> {
 
   Future<void> _publishTrip(BuildContext context, ClientTripItem trip) async {
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = AbraLocalizations.of(context);
     try {
       final client = ref.read(appDependenciesProvider).apiClient;
       await client.post('client/trips/${trip.id}/publish');
@@ -642,7 +645,7 @@ class _ClientTripsScreenState extends ConsumerState<ClientTripsScreen> {
       );
     } catch (e) {
       messenger.showSnackBar(
-        SnackBar(content: Text('Failed to publish: $e'), backgroundColor: AbraColors.danger),
+        SnackBar(content: Text(failureText(l10n, e)), backgroundColor: AbraColors.danger),
       );
     }
   }
@@ -998,6 +1001,7 @@ class _ClientTripsScreenState extends ConsumerState<ClientTripsScreen> {
                 onPressed: () async {
                   final fareVal = (double.tryParse(fareCtrl.text.trim()) ?? 0) * 100;
                   final nav = Navigator.of(ctx);
+                  final l10n = AbraLocalizations.of(ctx);
                   try {
                     await client.post('client/trips', body: {
                       'routeId': selectedRouteId,
@@ -1016,7 +1020,10 @@ class _ClientTripsScreenState extends ConsumerState<ClientTripsScreen> {
                     );
                   } catch (err) {
                     messenger.showSnackBar(
-                      SnackBar(content: Text('Failed to create trip: $err'), backgroundColor: AbraColors.danger),
+                      SnackBar(
+                        content: Text(failureText(l10n, err)),
+                        backgroundColor: AbraColors.danger,
+                      ),
                     );
                   }
                 },

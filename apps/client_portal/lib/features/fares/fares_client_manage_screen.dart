@@ -627,7 +627,10 @@ class _ClientFaresScreenState extends ConsumerState<ClientFaresScreen> {
                   } catch (err) {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Failed to save fare: $err'), backgroundColor: AbraColors.danger),
+                        SnackBar(
+                          content: Text(failureText(AbraLocalizations.of(context), err)),
+                          backgroundColor: AbraColors.danger,
+                        ),
                       );
                     }
                   }
