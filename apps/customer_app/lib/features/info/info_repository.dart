@@ -110,16 +110,19 @@ final infoRepositoryProvider = Provider<InfoRepository>(
 final infoPageProvider = FutureProvider.autoDispose
     .family<InfoPageContent, InfoPageKind>(
       (ref, kind) => ref.watch(infoRepositoryProvider).page(kind),
+      retry: (_, _) => null,
     );
 
 /// The published FAQs.
 final faqsProvider = FutureProvider.autoDispose<List<FaqItem>>(
   (ref) => ref.watch(infoRepositoryProvider).faqs(),
+  retry: (_, _) => null,
 );
 
 /// Support contact details.
 final contactDetailsProvider = FutureProvider.autoDispose<ContactDetails>(
   (ref) => ref.watch(infoRepositoryProvider).contact(),
+  retry: (_, _) => null,
 );
 
 /// The public content endpoints (no sign-in, so guests read them too).

@@ -115,11 +115,13 @@ final profileRepositoryProvider = Provider<ProfileRepository>(
 /// The notification settings as the server holds them.
 final notificationSettingsProvider = FutureProvider.autoDispose<NotificationSettings>(
   (ref) => ref.watch(profileRepositoryProvider).notificationSettings(),
+  retry: (_, _) => null,
 );
 
 /// The profile as the server holds it. Loaded again when the screen opens.
 final customerProfileProvider = FutureProvider.autoDispose<CustomerProfile>(
   (ref) => ref.watch(profileRepositoryProvider).get(),
+  retry: (_, _) => null,
 );
 
 /// `/customer/profile` and `/customer/account`. Reads throw `AppException`;
