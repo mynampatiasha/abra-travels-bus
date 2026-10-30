@@ -27,7 +27,7 @@ describe('customer message templates: the list', () => {
     }
   });
 
-  it('is used by the router for every customer template but the login code', () => {
+  it('is used by the router for every customer template but the login code and SMS-only ones', () => {
     const used = new Set(
       CORE_EVENT_RULES.flatMap((rule) =>
         (rule.messages ?? []).flatMap((message) => ('template' in message ? [message.template] : [])),
@@ -36,8 +36,8 @@ describe('customer message templates: the list', () => {
     const unused = CUSTOMER_MESSAGE_TEMPLATES.map((template) => template.key).filter(
       (key) => !used.has(key),
     );
-    // The login code is sent by otp-delivery, not by an event
-    expect(unused).toEqual(['login_otp']);
+    // The login code is sent by otp-delivery; the emergency-contact SMS waits for SMS to return
+    expect(unused).toEqual(['login_otp', 'sos_emergency_contact']);
   });
 });
 

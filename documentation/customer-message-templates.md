@@ -3,6 +3,7 @@
 Every message Abra Travels sends to a customer about login, bookings, payments, trips, support and safety.
 
 - **WhatsApp** variables use Meta's format `{{1}}`, `{{2}}`. Each WhatsApp template must be approved by Meta before use.
+- **SMS is switched off for now** (see "In the code"); the SMS texts are kept for later.
 - **SMS** variables use the DLT format `{#var#}`. Each SMS template must be registered on DLT (India) with the sender ID `ABRA`.
 - **Email** subjects use the backend payload names in braces, for example `{pnr}`.
 - Write English first; every template is then translated into the 8 app languages (`multilingual.md`). A missing language falls back to English.
@@ -41,7 +42,8 @@ Mandatory messages (2–5, 8–11, 14, 15) must reach the customer on at least o
 
 - **Words:** `backend/src/modules/notification-templates/customer_message_templates.ts` holds every template. Change the words there and here together. `metaTemplateBody` and `dltTemplateBody` print the exact text to submit to Meta and DLT.
 - **Who gets what:** `backend/src/modules/notifications/event_router_core.ts`. Each event names its template, its channels and the payload fields of the contact.
-- **Channels:** WhatsApp and email go to every address the booking's contact has. SMS is the fallback: it goes only when WhatsApp did not reach the person (no number, WhatsApp off or not set up, or refused). A refused WhatsApp message is not retried when the SMS went out.
+- **Channels:** WhatsApp and email go to every address the booking's contact has, and the app notice and push cover a WhatsApp failure.
+- **SMS is not used for now.** It is commented out in `event_router_core.ts` (the `ALL_CHANNELS` and `PHONE_CHANNELS` lists and the emergency-contact rule under `sos.raised`), so no SMS is sent and template 15 is not sent at all. The SMS texts above are kept for later. To turn SMS back on, put `'SMS'` back in both lists and restore that rule: SMS then goes only when WhatsApp did not reach the person.
 - **Meta approval:** until a template is approved, its WhatsApp message goes through the general notification template (title + message). Once Meta approves a template under its key (for example `booking_confirmed`), add the key to **Approved templates** in the WhatsApp settings (`approvedTemplateKeys`), and from then on it is sent as itself, with its own `{{1}}, {{2}}` and button.
 - **DLT:** every SMS is handed to the SMS provider with its template key, which the provider maps to the registered DLT template id.
 - **Events the booking, trip and safety features must send** (with the payload fields named in the tables above): `booking.confirmed`, `payment.failed`, `booking.cancelled`, `refund.updated`, `booking.reminder` (`reminder: '24H' | '2H'`), `booking.boarding-started`, `booking.trip-delayed`, `booking.trip-cancelled`, `booking.bus-changed`, `booking.trip-arrived`, `ticket.agent-replied`, `sos.raised`, `sos.updated`, `trip.shared`.

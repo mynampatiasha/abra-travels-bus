@@ -45,9 +45,11 @@ const text = (value: unknown): string => (typeof value === 'string' ? value : ''
 const raisedByDriver = (payload: Record<string, unknown>) => payload.raisedBy === 'DRIVER';
 const isTwoHourReminder = (payload: Record<string, unknown>) => payload.reminder === '2H';
 
-// Customer messages: SMS is sent only when WhatsApp did not reach the person
-const ALL_CHANNELS = ['WHATSAPP', 'SMS', 'EMAIL'] as const;
-const PHONE_CHANNELS = ['WHATSAPP', 'SMS'] as const;
+// Customer messages go by WhatsApp and email; the app notice and push cover a WhatsApp failure.
+// SMS is not used for now. To turn it back on (sent only when WhatsApp did not reach the
+// person), put 'SMS' back in both lists and restore the emergency-contact rule under sos.raised.
+const ALL_CHANNELS = ['WHATSAPP', /* 'SMS', */ 'EMAIL'] as const;
+const PHONE_CHANNELS = ['WHATSAPP' /* , 'SMS' */] as const;
 /** The booking's contact, who may not be the account holder. */
 const BOOKING_CONTACT: MessageRule['contact'] = {
   userField: 'customerId',
@@ -498,14 +500,15 @@ export const CORE_EVENT_RULES: readonly EventRule[] = [
         data: ['sosId', 'tripId'],
       },
     ],
-    messages: [
-      {
-        template: 'sos_emergency_contact',
-        channels: ['SMS'],
-        contact: { nameField: 'emergencyContactName', phoneField: 'emergencyContactPhone' },
-        when: (p) => !raisedByDriver(p),
-      },
-    ],
+    // SMS is not used for now; the emergency-contact SMS comes back with it
+    // messages: [
+    //   {
+    //     template: 'sos_emergency_contact',
+    //     channels: ['SMS'],
+    //     contact: { nameField: 'emergencyContactName', phoneField: 'emergencyContactPhone' },
+    //     when: (p) => !raisedByDriver(p),
+    //   },
+    // ],
   },
   {
     event: 'sos.updated',

@@ -267,10 +267,7 @@ describe('event router: messages', () => {
 
   it('counts a failed message as a failure to retry', async () => {
     const { router, messages } = setup();
-    // WhatsApp refused, and the SMS that should replace it too
-    messages.send
-      .mockResolvedValueOnce({ status: 'FAILED' })
-      .mockResolvedValueOnce({ status: 'FAILED' });
+    messages.send.mockResolvedValueOnce({ status: 'FAILED' });
     await expect(router.handle(confirmed())).rejects.toThrow(/will retry/);
   });
 
@@ -289,30 +286,11 @@ describe('event router: messages', () => {
     });
   });
 
-  it('sends an SMS instead when WhatsApp is not set up, and still sends the email', async () => {
+  it('sends no SMS (switched off for now), even when WhatsApp is not set up', async () => {
     const { router, messages, sent } = setup();
     messages.send.mockResolvedValueOnce({ status: 'SKIPPED' });
-    await router.handle(confirmed({ ticketUrl: 'https://abra.test/t/1' }));
-    expect(sent().map(([input]) => input.channel)).toEqual(['WHATSAPP', 'SMS', 'EMAIL']);
-    const [sms] = sent()[1]!;
-    expect(sms.address).toBe('+919800000002');
-    expect(sms.body).toBe(
-      'Abra Travels: Booking confirmed. PNR ABR123, A to B, 12 Jan, 10:30 pm, Seats L1, L2. ' +
-        'Ticket: https://abra.test/t/1 -ABRA',
-    );
-  });
-
-  it('does not retry a refused WhatsApp message when the SMS reached the customer', async () => {
-    const { router, messages, sent } = setup();
-    messages.send.mockResolvedValueOnce({ status: 'FAILED' });
-    await expect(router.handle(confirmed())).resolves.toBeUndefined();
-    expect(sent().map(([input]) => input.channel)).toEqual(['WHATSAPP', 'SMS', 'EMAIL']);
-  });
-
-  it('sends no SMS when WhatsApp worked', async () => {
-    const { router, sent } = setup();
     await router.handle(confirmed());
-    expect(sent().map(([input]) => input.channel)).not.toContain('SMS');
+    expect(sent().map(([input]) => input.channel)).toEqual(['WHATSAPP', 'EMAIL']);
   });
 });
 
@@ -359,7 +337,7 @@ describe('event router: trip-day and reminder messages', () => {
     expect(sent()[0]![0]).toMatchObject({ kind: 'BUS_CHANGED' });
   });
 
-  it("texts the customer's emergency contact when they raise an SOS, never for a driver's", async () => {
+  it('sends no message to the emergency contact while SMS is switched off', async () => {
     const { router, sent } = setup();
     const sos = (raisedBy: string) =>
       event('sos.raised', {
@@ -374,11 +352,7 @@ describe('event router: trip-day and reminder messages', () => {
         trackingUrl: 'https://abra.test/live/s1',
       });
     await router.handle(sos('DRIVER'));
-    expect(sent()).toHaveLength(0);
     await router.handle(sos('CUSTOMER'));
-    expect(sent().map(([input]) => [input.channel, input.address])).toEqual([
-      ['SMS', '+919800000009'],
-    ]);
-    expect(sent()[0]![0].body).toContain('ALERT: Asha raised an SOS on bus TS09AB1234 (A to B)');
+    expect(sent()).toHaveLength(0);
   });
 });
