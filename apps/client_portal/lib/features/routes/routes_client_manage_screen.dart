@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_localization/shared_localization.dart';
 import 'package:shared_theme/shared_theme.dart';
 import '../../app/providers.dart';
 import '../../core/browser_files.dart';
+import '../../core/failure_text.dart';
 import '../../core/widgets/portal_section_title.dart';
 import '../../core/widgets/portal_status_chip.dart';
 import '../../routing/portal_routes.dart';
@@ -982,7 +984,10 @@ class _ClientRoutesScreenState extends ConsumerState<ClientRoutesScreen> {
                   } catch (err) {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Failed to save route: $err'), backgroundColor: AbraColors.danger),
+                        SnackBar(
+                          content: Text(failureText(AbraLocalizations.of(context), err)),
+                          backgroundColor: AbraColors.danger,
+                        ),
                       );
                     }
                   }

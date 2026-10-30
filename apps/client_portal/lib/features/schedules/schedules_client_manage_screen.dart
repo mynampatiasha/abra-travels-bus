@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_localization/shared_localization.dart';
 import 'package:shared_theme/shared_theme.dart';
 import '../../app/providers.dart';
 import '../../core/browser_files.dart';
+import '../../core/failure_text.dart';
 import '../../core/widgets/portal_section_title.dart';
 import '../../core/widgets/portal_status_chip.dart';
 import '../routes/routes_client_manage_screen.dart';
@@ -364,7 +366,7 @@ class _ClientSchedulesScreenState extends ConsumerState<ClientSchedulesScreen> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to generate trips: $err'),
+            content: Text(failureText(AbraLocalizations.of(context), err)),
             backgroundColor: AbraColors.danger,
           ),
         );
@@ -534,7 +536,10 @@ class _ClientSchedulesScreenState extends ConsumerState<ClientSchedulesScreen> {
                 } catch (err) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Failed to save schedule: $err'), backgroundColor: AbraColors.danger),
+                      SnackBar(
+                        content: Text(failureText(AbraLocalizations.of(context), err)),
+                        backgroundColor: AbraColors.danger,
+                      ),
                     );
                   }
                 }
