@@ -267,7 +267,118 @@ describe('event router: messages', () => {
 
   it('counts a failed message as a failure to retry', async () => {
     const { router, messages } = setup();
-    messages.send.mockResolvedValueOnce({ status: 'FAILED' });
+    // WhatsApp refused, and the SMS that should replace it too
+    messages.send
+      .mockResolvedValueOnce({ status: 'FAILED' })
+      .mockResolvedValueOnce({ status: 'FAILED' });
     await expect(router.handle(confirmed())).rejects.toThrow(/will retry/);
+  });
+
+  it('takes the words from the template: friendly text, Meta parameters and the button', async () => {
+    const { router, sent } = setup();
+    const booking = confirmed();
+    await router.handle(booking);
+    const [whatsApp] = sent()[0]!;
+    expect(whatsApp.body).toContain('Hi Asha 👋, great news! Your bus ticket is confirmed ✅');
+    expect(whatsApp.body).toContain('📍 Boarding: Ameerpet');
+    expect(whatsApp.body).toContain('– Team Abra Travels');
+    expect(whatsApp.template).toEqual({
+      key: 'booking_confirmed',
+      parameters: ['Asha', 'ABR123', 'A to B', '12 Jan, 10:30 pm', 'L1, L2', 'Ameerpet', 'Rs 1,250'],
+      buttonParameter: booking.payload.bookingId,
+    });
+  });
+
+  it('sends an SMS instead when WhatsApp is not set up, and still sends the email', async () => {
+    const { router, messages, sent } = setup();
+    messages.send.mockResolvedValueOnce({ status: 'SKIPPED' });
+    await router.handle(confirmed({ ticketUrl: 'https://abra.test/t/1' }));
+    expect(sent().map(([input]) => input.channel)).toEqual(['WHATSAPP', 'SMS', 'EMAIL']);
+    const [sms] = sent()[1]!;
+    expect(sms.address).toBe('+919800000002');
+    expect(sms.body).toBe(
+      'Abra Travels: Booking confirmed. PNR ABR123, A to B, 12 Jan, 10:30 pm, Seats L1, L2. ' +
+        'Ticket: https://abra.test/t/1 -ABRA',
+    );
+  });
+
+  it('does not retry a refused WhatsApp message when the SMS reached the customer', async () => {
+    const { router, messages, sent } = setup();
+    messages.send.mockResolvedValueOnce({ status: 'FAILED' });
+    await expect(router.handle(confirmed())).resolves.toBeUndefined();
+    expect(sent().map(([input]) => input.channel)).toEqual(['WHATSAPP', 'SMS', 'EMAIL']);
+  });
+
+  it('sends no SMS when WhatsApp worked', async () => {
+    const { router, sent } = setup();
+    await router.handle(confirmed());
+    expect(sent().map(([input]) => input.channel)).not.toContain('SMS');
+  });
+});
+
+describe('event router: trip-day and reminder messages', () => {
+  const booking = (type: string, extra: Record<string, unknown> = {}) =>
+    event(type, {
+      bookingId: id().toHexString(),
+      tripId: 'trip1',
+      customerId: customerA._id.toHexString(),
+      contactName: 'Asha',
+      contactPhone: '+919800000002',
+      contactEmail: 'asha@mail.test',
+      pnr: 'ABR123',
+      route: 'A to B',
+      ...extra,
+    });
+
+  it('picks the 24-hour or the 2-hour reminder, by WhatsApp only', async () => {
+    const { router, sent } = setup();
+    await router.handle(booking('booking.reminder', { reminder: '24H', departureTime: '10:30 pm' }));
+    await router.handle(booking('booking.reminder', { reminder: '2H', driverName: 'Ravi' }));
+    expect(sent().map(([input]) => [input.channel, input.template?.key])).toEqual([
+      ['WHATSAPP', 'travel_reminder_24h'],
+      ['WHATSAPP', 'travel_reminder_2h'],
+    ]);
+    expect(sent()[1]![0].body).toContain('👤 Driver: Ravi (-)');
+  });
+
+  it('tells each booking of a cancelled trip by WhatsApp and email, with an apology', async () => {
+    const { router, sent } = setup();
+    await router.handle(booking('booking.trip-cancelled', { amountText: 'Rs 900' }));
+    expect(sent().map(([input]) => input.channel)).toEqual(['WHATSAPP', 'EMAIL']);
+    expect(sent()[0]![0]).toMatchObject({
+      kind: 'TRIP_CANCELLED',
+      subject: 'Trip cancelled: ABR123',
+    });
+    expect(sent()[0]![0].body).toContain("we're very sorry");
+  });
+
+  it('tells the customer in the app and by message when the bus changes', async () => {
+    const { router, sent, delivered } = setup();
+    await router.handle(booking('booking.bus-changed', { busRegistration: 'TS09AB1234' }));
+    expect(delivered()[0]![1].title).toBe('Your bus has changed');
+    expect(sent()[0]![0]).toMatchObject({ kind: 'BUS_CHANGED' });
+  });
+
+  it("texts the customer's emergency contact when they raise an SOS, never for a driver's", async () => {
+    const { router, sent } = setup();
+    const sos = (raisedBy: string) =>
+      event('sos.raised', {
+        sosId: 's1',
+        raisedBy,
+        raisedByName: 'Asha',
+        customerName: 'Asha',
+        emergencyContactName: 'Meena',
+        emergencyContactPhone: '+919800000009',
+        busRegistration: 'TS09AB1234',
+        route: 'A to B',
+        trackingUrl: 'https://abra.test/live/s1',
+      });
+    await router.handle(sos('DRIVER'));
+    expect(sent()).toHaveLength(0);
+    await router.handle(sos('CUSTOMER'));
+    expect(sent().map(([input]) => [input.channel, input.address])).toEqual([
+      ['SMS', '+919800000009'],
+    ]);
+    expect(sent()[0]![0].body).toContain('ALERT: Asha raised an SOS on bus TS09AB1234 (A to B)');
   });
 });

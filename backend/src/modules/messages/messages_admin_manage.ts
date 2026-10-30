@@ -10,6 +10,7 @@ import { dateRangeShape, objectIdString, pagingShape } from '../../common/pipes/
 import { createZodDto } from '../../common/pipes/zod-dto.factory';
 import { type AuthenticatedUserActor } from '../../common/request-context/request-actor';
 import { EmailModule } from '../../integrations/email/email.module';
+import { SmsModule } from '../../integrations/sms/sms.module';
 import { WhatsAppModule } from '../../integrations/whatsapp/whatsapp.module';
 import { AuthenticationModule } from '../authentication/authentication.module';
 import { RequirePermission } from '../rbac/decorators/require-permission.decorator';
@@ -57,7 +58,7 @@ export class MessagesAdminManageController {
   @ApiOperation({
     summary: 'Messages sent',
     description:
-      'Requires messages.read. Every WhatsApp message and email, newest first. Filters: channel, ' +
+      'Requires messages.read. Every WhatsApp message, SMS and email, newest first. Filters: channel, ' +
       'kind, status, booking, day range and a search over name, address and subject. Paginated.',
   })
   list(@Query() query: MessageListQueryDto): Promise<PaginatedResult<MessageView>> {
@@ -102,6 +103,7 @@ export class MessagesAdminManageController {
   imports: [
     MongooseModule.forFeature([{ name: MESSAGE_MODEL, schema: messageSchema }]),
     EmailModule,
+    SmsModule,
     WhatsAppModule,
     RbacModule,
     AuthenticationModule,

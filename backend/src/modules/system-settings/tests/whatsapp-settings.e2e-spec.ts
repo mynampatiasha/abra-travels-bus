@@ -104,6 +104,7 @@ describe('System settings e2e: WhatsApp', () => {
       otpFallbackToSms: true,
       notificationTemplateName: null,
       notificationTemplateLanguage: null,
+      approvedTemplateKeys: [],
       graphApiVersion: null,
       updatedAt: null,
       updatedByUserId: null,
@@ -157,6 +158,16 @@ describe('System settings e2e: WhatsApp', () => {
       expect(view.accessToken).toEqual({ configured: true, source: 'ADMIN', lastFour: 'WXYZ' });
     });
 
+    it('stores the customer templates Meta approved, once each', async () => {
+      const view = dataOf<WhatsAppSettingsView>(
+        await change(superAdmin, {
+          approvedTemplateKeys: ['booking_confirmed', 'bus_delayed', 'booking_confirmed'],
+          reason: 'Meta approved two templates',
+        }).expect(200),
+      );
+      expect(view.approvedTemplateKeys).toEqual(['booking_confirmed', 'bus_delayed']);
+    });
+
     it('null removes the stored token', async () => {
       await change(superAdmin, credentials).expect(200);
       const view = dataOf<WhatsAppSettingsView>(
@@ -206,6 +217,7 @@ describe('System settings e2e: WhatsApp', () => {
       ['a language that is not a code', { otpTemplateLanguage: 'English', reason: 'bad code' }],
       ['a token with spaces', { accessToken: 'not a token at all, just words', reason: 'bad' }],
       ['an id that is not numeric', { phoneNumberId: 'abc', reason: 'bad id' }],
+      ['a template that does not exist', { approvedTemplateKeys: ['made_up'], reason: 'bad key' }],
     ])('rejects %s', async (_name, body) => {
       const response = await change(superAdmin, body).expect(400);
       expect(errorCodeOf(response)).toBe('VALIDATION_FAILED');

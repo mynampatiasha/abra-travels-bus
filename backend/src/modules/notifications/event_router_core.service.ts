@@ -9,7 +9,13 @@ import {
   MessageSenderService,
   type MessageChannel,
   type MessageKind,
+  type MessageView,
 } from '../messages/messages_admin_manage.service';
+import {
+  type CustomerTemplateKey,
+  type FilledCustomerMessage,
+  fillCustomerMessage,
+} from '../notification-templates/customer_message_templates';
 import { LivePublisher } from '../realtime/live_updates_channel.service';
 import { ALL_PERMISSIONS_WILDCARD } from '../rbac/permissions/permission-registry';
 import { RoleRepository } from '../rbac/repositories/role.repository';
@@ -19,8 +25,8 @@ import { NotificationDispatcher, type Recipient } from './services/notification-
 /*
  * The event router: the one place that turns a business event (`trip.cancelled`, `refund.updated`)
  * into what people see: a notification in the app (and push, email, WhatsApp as fallbacks), a live
- * update for screens that are open, and a WhatsApp or email message with a copy in the messages
- * log. A feature never notifies anybody itself: it records its event in the outbox, and a rule
+ * update for screens that are open, and a WhatsApp message, SMS or email with a copy in the
+ * messages log. A feature never notifies anybody itself: it records its event in the outbox, and a rule
  * here (or one the feature registers) says who is told what (plan Appendix B).
  *
  * Rules are data. Runs in the worker, after the change is safely stored, so a notification
@@ -72,11 +78,21 @@ export interface LiveRule {
   when?: (payload: Record<string, unknown>) => boolean;
 }
 
-export interface MessageRule {
+/**
+ * The words of a message: a customer message template (customer_message_templates.ts), or, for
+ * a message that is not one (a reminder to a driver), the words written out.
+ */
+export type MessageWords =
+  | { template: CustomerTemplateKey }
+  | { kind: MessageKind; subject: EventText; body: EventText };
+
+export type MessageRule = MessageWords & {
+  /**
+   * WhatsApp and email go to every address the payload has. SMS is the fallback: it goes only
+   * when the rule has no WhatsApp, or WhatsApp did not reach the person (no number, not set up,
+   * refused).
+   */
   channels: readonly MessageChannel[];
-  kind: MessageKind;
-  subject: EventText;
-  body: EventText;
   /** The payload fields that say who gets it: the booking's contact, not only the account. */
   contact: {
     userField?: string;
@@ -86,7 +102,7 @@ export interface MessageRule {
     bookingField?: string;
   };
   when?: (payload: Record<string, unknown>) => boolean;
-}
+};
 
 export interface EventRule {
   /** Event type, `<aggregate>.<past-tense-verb>`. */
@@ -121,6 +137,22 @@ export function noticeData(payload: Record<string, unknown>, goTo: string): Reco
     if (Object.keys(data).length >= 9) break;
   }
   return data;
+}
+
+/** The filled words of a message rule; a written-out rule has no template key. */
+function wordsOf(
+  rule: MessageRule,
+  payload: Record<string, unknown>,
+): Omit<FilledCustomerMessage, 'key'> & { key?: string } {
+  if ('template' in rule) return fillCustomerMessage(rule.template, payload);
+  const body = renderText(rule.body, payload);
+  return {
+    kind: rule.kind,
+    subject: renderText(rule.subject, payload),
+    text: body,
+    whatsAppParameters: [],
+    sms: body,
+  };
 }
 
 // ===== 3. THE ROUTER =====
@@ -235,33 +267,58 @@ export class EventRouter implements DomainEventHandler, OnModuleInit {
 
   // ----- messages -----
 
-  /** Sends one message rule; returns how many sends failed. A channel that is off counts as done. */
+  /**
+   * Sends one message rule; returns how many sends failed. A channel that is off counts as done,
+   * and a WhatsApp failure does not count when the SMS that replaced it went out.
+   */
   private async sendMessages(rule: MessageRule, event: DomainEventMessage): Promise<number> {
     const payload = event.payload;
     const contact = rule.contact;
     const name = textOf(payload[contact.nameField]) || 'Customer';
     const userId = contact.userField ? textOf(payload[contact.userField]) : '';
     const bookingId = contact.bookingField ? textOf(payload[contact.bookingField]) : '';
-    let failed = 0;
-    for (const channel of rule.channels) {
-      const address = textOf(
-        payload[(channel === 'WHATSAPP' ? contact.phoneField : contact.emailField) ?? ''],
-      );
-      if (!address) continue;
-      const sent = await this.messages.send({
+    // The greeting uses the contact's name even when the payload has none
+    const filled = wordsOf(rule, { ...payload, contactName: name });
+    const phone = textOf(payload[contact.phoneField ?? '']);
+    const email = textOf(payload[contact.emailField ?? '']);
+
+    const send = (channel: MessageChannel, address: string): Promise<MessageView> =>
+      this.messages.send({
         channel,
-        kind: rule.kind,
+        kind: filled.kind,
         ...(userId && Types.ObjectId.isValid(userId) ? { userId: new Types.ObjectId(userId) } : {}),
         recipientName: name,
         address,
-        subject: renderText(rule.subject, payload),
-        body: renderText(rule.body, payload),
+        subject: filled.subject,
+        body: channel === 'SMS' ? filled.sms : filled.text,
+        ...(filled.key
+          ? {
+              template: {
+                key: filled.key,
+                parameters: filled.whatsAppParameters,
+                buttonParameter: filled.whatsAppButtonParameter,
+              },
+            }
+          : {}),
         ...(bookingId && Types.ObjectId.isValid(bookingId)
           ? { bookingId: new Types.ObjectId(bookingId) }
           : {}),
         eventId: event.eventId,
       });
-      if (sent.status === 'FAILED') failed += 1;
+
+    let failed = 0;
+    let whatsApp: MessageView | undefined;
+    if (rule.channels.includes('WHATSAPP') && phone && filled.text) {
+      whatsApp = await send('WHATSAPP', phone);
+    }
+    if (rule.channels.includes('SMS') && phone && filled.sms && whatsApp?.status !== 'SENT') {
+      const sms = await send('SMS', phone);
+      if (sms.status === 'FAILED') failed += 1;
+      else if (whatsApp?.status === 'FAILED' && sms.status === 'SENT') whatsApp = undefined;
+    }
+    if (whatsApp?.status === 'FAILED') failed += 1;
+    if (rule.channels.includes('EMAIL') && email && filled.text) {
+      if ((await send('EMAIL', email)).status === 'FAILED') failed += 1;
     }
     return failed;
   }

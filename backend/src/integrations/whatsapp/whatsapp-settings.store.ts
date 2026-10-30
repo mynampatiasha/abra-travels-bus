@@ -27,6 +27,7 @@ export interface EffectiveWhatsAppSettings {
   otpTemplateLanguage: string | undefined;
   notificationTemplateName: string | undefined;
   notificationTemplateLanguage: string | undefined;
+  approvedTemplateKeys: string[];
 }
 
 /** Fields an administrator can change. `undefined` leaves a field alone, `null` clears it. */
@@ -42,6 +43,7 @@ export interface WhatsAppSettingsChange {
   otpFallbackToSms?: boolean | undefined;
   notificationTemplateName?: string | null | undefined;
   notificationTemplateLanguage?: string | null | undefined;
+  approvedTemplateKeys?: string[] | undefined;
 }
 
 const CACHE_MS = 15_000;
@@ -140,5 +142,6 @@ export function resolveWhatsAppSettings(
       stored?.otpTemplateLanguage ?? config.get('WHATSAPP_OTP_TEMPLATE_LANGUAGE'),
     notificationTemplateName: stored?.notificationTemplateName ?? undefined,
     notificationTemplateLanguage: stored?.notificationTemplateLanguage ?? undefined,
+    approvedTemplateKeys: stored?.approvedTemplateKeys ?? [],
   };
 }

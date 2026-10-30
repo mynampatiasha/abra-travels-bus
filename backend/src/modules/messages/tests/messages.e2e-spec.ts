@@ -104,7 +104,7 @@ describe('Messages e2e', () => {
 
     it('refuses an unknown filter value', async () => {
       await api()
-        .get('/api/v1/admin/messages?channel=SMS')
+        .get('/api/v1/admin/messages?channel=FAX')
         .set(...bearer(superAdmin.tokens))
         .expect(400);
     });

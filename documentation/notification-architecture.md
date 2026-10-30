@@ -19,7 +19,8 @@ State change (in transaction) ─▶ outbox_events ─▶ outbox-relay.worker �
 - Idempotent: unique `(eventId, channel, recipientKey)` on `notifications`, so relay retries do not double-send.
 - Retries: exponential back-off, 5 attempts per channel. If WhatsApp fails permanently for a mandatory message, fall back to SMS, then email.
 - Channel selection: transactional messages (booking confirmed, ticket, cancellation, refund, trip delay/cancel, safety) are mandatory on at least one channel; marketing respects `notificationPreferences` and consent.
-- Templates: `notification_templates` keyed by `key + channel + language + version`, with variables, provider template id and approval status (WhatsApp templates must be approved by Meta). Missing language → fall back to English and log `translation.missing`.
+- Customer message words: `backend/src/modules/notification-templates/customer_message_templates.ts`, one template per message (see [customer-message-templates.md](customer-message-templates.md)). SMS is sent only when WhatsApp did not reach the person; a template Meta approved is sent as itself once its key is in the WhatsApp settings' `approvedTemplateKeys`, otherwise through the general notification template.
+- Templates (later, per language): `notification_templates` keyed by `key + channel + language + version`, with variables, provider template id and approval status (WhatsApp templates must be approved by Meta). Missing language → fall back to English and log `translation.missing`.
 - Delivery receipts from providers update `notifications.status` via provider webhooks.
 - Admin → Notifications screen shows queue depth, failure rates per provider and per template, and allows resend with `notifications.manage`.
 

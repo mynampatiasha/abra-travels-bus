@@ -30,6 +30,11 @@ export interface WhatsAppSettings {
   /** Approved template for platform notifications: body {{1}} is the title, {{2}} the message. */
   notificationTemplateName?: string | null;
   notificationTemplateLanguage?: string | null;
+  /**
+   * Customer message templates (customer_message_templates.ts) that Meta has approved under their
+   * own key. These are sent as themselves; every other message goes through the general template.
+   */
+  approvedTemplateKeys?: string[];
   updatedByUserId?: Types.ObjectId;
   createdAt?: Date;
   updatedAt?: Date;
@@ -51,6 +56,7 @@ export const whatsAppSettingsSchema = new Schema<WhatsAppSettings>(
     otpFallbackToSms: { type: Boolean },
     notificationTemplateName: { type: String, maxlength: 512, default: null },
     notificationTemplateLanguage: { type: String, maxlength: 8, default: null },
+    approvedTemplateKeys: { type: [String], default: undefined },
     updatedByUserId: { type: Schema.Types.ObjectId },
   },
   { collection: 'whatsapp_settings', timestamps: true, versionKey: false },
