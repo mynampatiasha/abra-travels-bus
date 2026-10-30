@@ -140,4 +140,131 @@ void main() {
       expect(find.textContaining('Request sent to Abra'), findsOneWidget);
     });
   });
+
+  group('bus documents dialog', () {
+    Map<String, Object?> doc({String name = 'Insurance 2026-27', String status = 'EXPIRING', int daysLeft = 12}) => <String, Object?>{
+      'id': 'd-1',
+      'busId': 'b-1',
+      'docType': 'INSURANCE',
+      'docName': name,
+      'validTill': '2026-11-20',
+      'daysLeft': daysLeft,
+      'status': status,
+      'remindDaysBefore': <Object?>[30, 15, 7, 1],
+      'files': <Object?>[
+        <String, Object?>{'id': 'f-1', 'originalName': 'policy.pdf', 'mimeType': 'application/pdf', 'sizeBytes': 2048},
+      ],
+    };
+
+    FakeBackend withDocuments(List<Map<String, Object?>> docs) {
+      final backend = withBuses(<Map<String, Object?>>[bus()]);
+      backend.overrides['GET client/buses/b-1/documents'] = (req) => FakeResponse.ok(docs);
+      backend.overrides['GET client/bus-document-types'] = (req) => FakeResponse.ok(<Object?>[
+        <String, Object?>{'key': 'RC', 'label': 'Registration certificate (RC)', 'required': true},
+        <String, Object?>{'key': 'INSURANCE', 'label': 'Insurance', 'required': true},
+        <String, Object?>{'key': 'OTHER', 'label': 'Other', 'required': false},
+      ]);
+      backend.overrides['GET client/crew'] = (req) => FakeResponse.ok(<Object?>[
+        <String, Object?>{'id': 'c-1', 'name': 'Ravi Kumar', 'role': 'DRIVER'},
+      ]);
+      backend.overrides['PATCH client/buses/b-1/documents/d-1'] = (req) => FakeResponse.ok(doc());
+      backend.overrides['DELETE client/buses/b-1/documents/d-1'] = (req) =>
+          FakeResponse.ok(<String, Object?>{'success': true});
+      backend.overrides['PATCH client/buses/b-1'] = (req) => FakeResponse.ok(bus());
+      return backend;
+    }
+
+    Future<TestPortal> openDocuments(WidgetTester tester, FakeBackend backend) async {
+      tester.view.physicalSize = const Size(1600, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      final app = await openBuses(tester, backend);
+      await tester.ensureVisible(find.byTooltip('Documents').first);
+      await tester.pump();
+      await tester.tap(find.byTooltip('Documents').first);
+      await settle(tester);
+      return app;
+    }
+
+    testWidgets('lists the documents with their expiry date and reminder days', (tester) async {
+      await openDocuments(tester, withDocuments(<Map<String, Object?>>[doc()]));
+      expect(find.text('Documents - KA01AB1234'), findsOneWidget);
+      expect(find.text('Insurance 2026-27'), findsOneWidget);
+      expect(find.text('Expires in 12 days (2026-11-20)'), findsOneWidget);
+      expect(find.text('Reminders: 30, 15, 7, 1 days before'), findsOneWidget);
+      expect(find.text('policy.pdf (2 KB)'), findsOneWidget);
+      // The kinds of document come from the server; required ones are starred
+      expect(find.text('Add a document'), findsOneWidget);
+    });
+
+    testWidgets('says plainly when there are no documents yet', (tester) async {
+      await openDocuments(tester, withDocuments(<Map<String, Object?>>[]));
+      expect(find.textContaining('No documents yet'), findsOneWidget);
+    });
+
+    testWidgets('an expired document is shown as expired', (tester) async {
+      await openDocuments(tester, withDocuments(<Map<String, Object?>>[doc(status: 'EXPIRED', daysLeft: -3)]));
+      expect(find.text('Expired on 2026-11-20'), findsOneWidget);
+    });
+
+    testWidgets('the expiry date is needed before a document is uploaded', (tester) async {
+      final app = await openDocuments(tester, withDocuments(<Map<String, Object?>>[]));
+      await tester.tap(find.text('Upload'));
+      await settle(tester);
+      expect(find.text('Choose the expiry date (Valid till).'), findsOneWidget);
+      expect(app.requestsTo('client/buses/b-1/documents', 'POST'), isEmpty);
+    });
+
+    testWidgets('a document can be renamed', (tester) async {
+      final app = await openDocuments(tester, withDocuments(<Map<String, Object?>>[doc()]));
+      await tester.ensureVisible(find.text('Rename'));
+      await tester.tap(find.text('Rename'));
+      await settle(tester);
+      await tester.enterText(find.widgetWithText(TextField, 'Document name'), 'Insurance (New India)');
+      await tester.tap(find.text('Save'));
+      await settle(tester);
+      final sent = app.requestsTo('client/buses/b-1/documents/d-1', 'PATCH').single.body! as Map;
+      expect(sent, <String, Object?>{'docName': 'Insurance (New India)'});
+    });
+
+    testWidgets('the reminder days can be changed, and must be numbers', (tester) async {
+      final app = await openDocuments(tester, withDocuments(<Map<String, Object?>>[doc()]));
+      await tester.ensureVisible(find.text('Reminder days'));
+      await tester.tap(find.text('Reminder days'));
+      await settle(tester);
+      await tester.enterText(find.widgetWithText(TextField, 'Days before expiry (e.g. 30, 15, 7, 1)'), 'soon');
+      await tester.tap(find.text('Save'));
+      await settle(tester);
+      expect(find.text('Use numbers separated by commas.'), findsOneWidget);
+      expect(app.requestsTo('client/buses/b-1/documents/d-1', 'PATCH'), isEmpty);
+
+      await tester.enterText(find.widgetWithText(TextField, 'Days before expiry (e.g. 30, 15, 7, 1)'), '45, 20, 3');
+      await tester.tap(find.text('Save'));
+      await settle(tester);
+      final sent = app.requestsTo('client/buses/b-1/documents/d-1', 'PATCH').single.body! as Map;
+      expect(sent, <String, Object?>{'remindDaysBefore': <Object?>[45, 20, 3]});
+    });
+
+    testWidgets('deleting a document asks first', (tester) async {
+      final app = await openDocuments(tester, withDocuments(<Map<String, Object?>>[doc()]));
+      await tester.ensureVisible(find.text('Delete document'));
+      await tester.tap(find.text('Delete document'));
+      await settle(tester);
+      expect(find.text('Delete Insurance 2026-27?'), findsOneWidget);
+      expect(app.requestsTo('client/buses/b-1/documents/d-1', 'DELETE'), isEmpty);
+      await tester.tap(find.text('Delete').last);
+      await settle(tester);
+      expect(app.requestsTo('client/buses/b-1/documents/d-1', 'DELETE'), hasLength(1));
+    });
+
+    testWidgets('the usual driver of the bus is chosen from the crew list', (tester) async {
+      final app = await openDocuments(tester, withDocuments(<Map<String, Object?>>[]));
+      await tester.tap(find.text('Usual driver'));
+      await settle(tester);
+      await tester.tap(find.text('Ravi Kumar').last);
+      await settle(tester);
+      final sent = app.requestsTo('client/buses/b-1', 'PATCH').single.body! as Map;
+      expect(sent, <String, Object?>{'defaultDriverId': 'c-1'});
+    });
+  });
 }

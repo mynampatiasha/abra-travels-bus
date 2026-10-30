@@ -1,7 +1,10 @@
-/* eslint-disable max-lines -- One integration journey covers all client login methods and the same KYC. */
+﻿/* eslint-disable max-lines -- One integration journey covers all client login methods and the same KYC. */
 import { jest } from '@jest/globals';
+import { Types } from 'mongoose';
 import { type SpiedFunction } from 'jest-mock';
+import { sha256Hex } from '../../../common/crypto/secure-hash';
 import { ApiException } from '../../../common/errors/api-exception';
+import { RateLimiterService } from '../../../common/rate-limit/rate-limiter.service';
 import { FirebaseGoogleVerifier } from '../../authentication/google_sign_in';
 import {
   dataOf,
@@ -503,4 +506,78 @@ describe('Google client KYC journey', () => {
     await world.call(again,'get','/catalogue/buses').expect(200);
   });
 
+  it('the email of a Google account and its password reach the same owner, with no second KYC', async () => {
+    const result = await world
+      .call(undefined, 'post', '/auth/login', {
+        identifier: email,
+        password: 'Verified-client-password-654',
+        device: { clientType: 'MOBILE' },
+      })
+      .expect(200);
+    const again = { tokens: dataOf<Tokens>(result) };
+    expect(again.tokens.user.id).toBe(owner.tokens.user.id);
+    expect(await world.context.users.countDocuments({ email })).toBe(1);
+    expect(await world.context.connection.collection('onboarding_submissions').countDocuments({ operatorId: new Types.ObjectId(operatorId) })).toBe(1);
+    await world.call(again, 'get', '/catalogue/buses').expect(200);
+  });
+
+  it('changing the linked phone moves phone sign-in to the new number, on the same account', async () => {
+    const before = await world.context.users.findById(owner.tokens.user.id).lean();
+    const oldPhone = before!.phone!;
+    const newPhone = uniquePhone();
+    // One number can be sent a code once every 30 seconds; a test does not wait, so it lifts the pause
+    const limiter = world.context.app.get(RateLimiterService);
+    const sendCode = async (phone: string) => {
+      await limiter.clear(limiter.key('otp', 'cooldown', 'SIGN_IN', sha256Hex(phone).slice(0, 32)));
+      return world.call(undefined, 'post', '/auth/otp/send', { phone }).expect(200);
+    };
+    const phoneSignIn = (phone: string) =>
+      world.call(undefined, 'post', '/auth/client/otp/verify', {
+        phone,
+        code: lastOtp(world.context, phone),
+        acceptTerms: true,
+        device: { clientType: 'MOBILE' },
+      });
+
+    await sendCode(newPhone);
+    await world
+      .call(owner, 'post', '/client/kyc/login-methods/phone', { phone: newPhone, code: lastOtp(world.context, newPhone) })
+      .expect(200);
+    const methods = dataOf<{ phone: string }>(await world.call(owner, 'get', '/client/kyc/login-methods').expect(200));
+    expect(methods.phone).toBe(newPhone);
+
+    // The new number signs in to the same owner and company, with no second KYC
+    await sendCode(newPhone);
+    const viaNew = { tokens: dataOf<Tokens>(await phoneSignIn(newPhone).expect(200)) };
+    expect(viaNew.tokens.user.id).toBe(owner.tokens.user.id);
+    await world.call(viaNew, 'get', '/catalogue/buses').expect(200);
+    expect(await world.context.connection.collection('onboarding_submissions').countDocuments({ operatorId: new Types.ObjectId(operatorId) })).toBe(1);
+
+    // The password still works with the new number
+    const viaPassword = await world
+      .call(undefined, 'post', '/auth/login', {
+        identifier: newPhone,
+        password: 'Verified-client-password-654',
+        device: { clientType: 'MOBILE' },
+      })
+      .expect(200);
+    expect(dataOf<Tokens>(viaPassword).user.id).toBe(owner.tokens.user.id);
+
+    // The old number no longer belongs to this account: signing in with it starts a new, unapproved one
+    await sendCode(oldPhone);
+    const viaOld = { tokens: dataOf<Tokens>(await phoneSignIn(oldPhone).expect(200)) };
+    expect(viaOld.tokens.user.id).not.toBe(owner.tokens.user.id);
+    await world.call(viaOld, 'get', '/catalogue/buses').expect(403);
+  });
+
+  it('a phone number that belongs to another account cannot be linked', async () => {
+    const taken = (await world.context.users.findOne({ phone: { $exists: true }, _id: { $ne: owner.tokens.user.id } }).lean())!
+      .phone!;
+    await world.call(undefined, 'post', '/auth/otp/send', { phone: taken }).expect(200);
+    const refused = await world.call(owner, 'post', '/client/kyc/login-methods/phone', {
+      phone: taken,
+      code: lastOtp(world.context, taken),
+    });
+    expect(refused.status).toBe(409);
+  });
 });

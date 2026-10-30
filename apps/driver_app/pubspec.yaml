@@ -27,8 +27,10 @@ dependencies:
   shared_storage:
   shared_theme:
   shared_ui:
+  web: ^1.1.1
 
 dev_dependencies:
+  dio: ^5.7.0
   flutter_test:
     sdk: flutter
 

@@ -79,6 +79,11 @@ export interface ClientBusView {
   make?: string;
   /** Ready-made name for lists, e.g. "Volvo AC Sleeper"; without a make, the bus type name. */
   displayName: string;
+  /** The driver and conductor who normally run this bus (new trips start with them). */
+  defaultDriverId?: string;
+  defaultDriverName?: string;
+  defaultConductorId?: string;
+  defaultConductorName?: string;
   amenities: string[];
   seatCapacity: number;
   seatLayoutType: string;
@@ -281,6 +286,8 @@ export class BusesClientManageService {
     const operatorId = this.requireOperatorId(actor);
     const busTypeId = await this.activeBusType(input.busTypeId);
     await this.amenities.assertUsable(input.amenities);
+    const defaultDriverId = await this.defaultCrew(operatorId, input.defaultDriverId, 'DRIVER');
+    const defaultConductorId = await this.defaultCrew(operatorId, input.defaultConductorId, 'CONDUCTOR');
 
     const seatCapacity = input.seatCapacity ?? 40;
     const seatLayoutType = input.seatLayoutType ?? '2+2 Seater';
@@ -303,6 +310,8 @@ export class BusesClientManageService {
                 name: input.name,
                 busTypeId,
                 ...(input.make ? { make: input.make } : {}),
+                ...(defaultDriverId ? { defaultDriverId } : {}),
+                ...(defaultConductorId ? { defaultConductorId } : {}),
                 amenities: input.amenities,
                 seatCapacity,
                 seatLayoutType,
@@ -362,8 +371,19 @@ export class BusesClientManageService {
     this.assertOwnsBus(actor, before);
 
     const set: Partial<Bus> = {};
+    const unset: Record<string, ''> = {};
     if (input.name !== undefined) set.name = input.name;
     if (input.make !== undefined) set.make = input.make;
+    for (const [field, role] of [
+      ['defaultDriverId', 'DRIVER'],
+      ['defaultConductorId', 'CONDUCTOR'],
+    ] as const) {
+      const wanted = input[field];
+      if (wanted === undefined) continue;
+      const crewId = await this.defaultCrew(before.operatorId, wanted, role);
+      if (crewId) set[field] = crewId;
+      else unset[field] = '';
+    }
     if (input.amenities !== undefined) {
       await this.amenities.assertUsable(input.amenities, before.amenities);
       set.amenities = input.amenities;
@@ -374,7 +394,7 @@ export class BusesClientManageService {
       set.insuranceExpiryDate = new Date(input.insuranceExpiryDate);
     }
 
-    if (Object.keys(set).length === 0) {
+    if (Object.keys(set).length === 0 && Object.keys(unset).length === 0) {
       throw new ApiException('VALIDATION_FAILED', 'Nothing to change.');
     }
 
@@ -385,7 +405,14 @@ export class BusesClientManageService {
       entityType: 'bus',
       before: { name: before.name },
       apply: async (session) => {
-        await this.buses.updateOne({ _id: before._id }, { $set: set }, { session });
+        await this.buses.updateOne(
+          { _id: before._id },
+          {
+            ...(Object.keys(set).length > 0 ? { $set: set } : {}),
+            ...(Object.keys(unset).length > 0 ? { $unset: unset } : {}),
+          },
+          { session },
+        );
         return { _id: before._id };
       },
       describe: () => ({ id: before._id.toHexString(), reg: before.registrationNumber }),
@@ -592,6 +619,19 @@ export class BusesClientManageService {
       .lean<Array<{ _id: Types.ObjectId; name: string }>>()
       .exec();
     const typeMap = new Map<string, string>(types.map((t) => [t._id.toHexString(), t.name]));
+    const crewIds = [
+      ...new Set(
+        buses.flatMap((b) => [b.defaultDriverId, b.defaultConductorId]).filter((id): id is Types.ObjectId => !!id),
+      ),
+    ];
+    const crew =
+      crewIds.length > 0
+        ? await this.connection
+            .collection<{ _id: Types.ObjectId; name: string }>('operator_crew')
+            .find({ _id: { $in: crewIds } })
+            .toArray()
+        : [];
+    const crewNames = new Map<string, string>(crew.map((person) => [person._id.toHexString(), person.name]));
 
     return buses.map((b) => {
       const busTypeName = typeMap.get(b.busTypeId.toHexString()) ?? 'Standard Bus';
@@ -603,6 +643,18 @@ export class BusesClientManageService {
       busTypeName,
       ...(b.make ? { make: b.make } : {}),
       displayName: b.make ? `${b.make} ${busTypeName}` : busTypeName,
+      ...(b.defaultDriverId
+        ? {
+            defaultDriverId: b.defaultDriverId.toHexString(),
+            defaultDriverName: crewNames.get(b.defaultDriverId.toHexString()) ?? '',
+          }
+        : {}),
+      ...(b.defaultConductorId
+        ? {
+            defaultConductorId: b.defaultConductorId.toHexString(),
+            defaultConductorName: crewNames.get(b.defaultConductorId.toHexString()) ?? '',
+          }
+        : {}),
       amenities: [...b.amenities],
       seatCapacity: b.seatCapacity ?? 40,
       seatLayoutType: b.seatLayoutType ?? '2+2 Seater',
@@ -627,6 +679,30 @@ export class BusesClientManageService {
     if (!bus.operatorId.equals(opId)) {
       throw new ApiException('RESOURCE_NOT_FOUND', 'Bus not found.');
     }
+  }
+
+  /**
+   * The driver or conductor chosen as the bus's usual crew: must be an active person of this
+   * operator with that role. Null (or nothing) means no default.
+   */
+  private async defaultCrew(
+    operatorId: Types.ObjectId,
+    crewId: string | null | undefined,
+    role: 'DRIVER' | 'CONDUCTOR',
+  ): Promise<Types.ObjectId | null> {
+    if (!crewId) return null;
+    const person = await this.connection
+      .collection<{ _id: Types.ObjectId; name: string; role: string; status: string }>('operator_crew')
+      .findOne({ _id: new Types.ObjectId(crewId), operatorId, isDeleted: { $ne: true } });
+    const label = role === 'DRIVER' ? 'driver' : 'conductor';
+    if (!person) throw new ApiException('VALIDATION_FAILED', `Choose a ${label} from your crew list.`);
+    if (person.role !== role) {
+      throw new ApiException('VALIDATION_FAILED', `${person.name} is not a ${label}. Choose a ${label}.`);
+    }
+    if (person.status !== 'ACTIVE') {
+      throw new ApiException('VALIDATION_FAILED', `${person.name} is not active. Choose an active ${label}.`);
+    }
+    return person._id;
   }
 
   private async activeBusType(id: string): Promise<Types.ObjectId> {

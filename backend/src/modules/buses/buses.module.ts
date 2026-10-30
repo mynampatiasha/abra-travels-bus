@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AmenitiesModule } from '../amenities/amenities_admin_manage';
 import { BusTypesModule } from '../bus-types/bus-types.module';
+import { BusDocumentsModule } from './bus_documents_client_manage';
 import { CatalogueSharedModule } from '../catalogue-shared/catalogue_shared_manage';
 import { OperatorsModule } from '../operators/operators.module';
 import { RbacModule } from '../rbac/rbac.module';
@@ -37,6 +38,7 @@ import { BusesService } from './services/buses.service';
     ]),
     RbacModule,
     BusTypesModule,
+    BusDocumentsModule,
     AmenitiesModule,
     OperatorsModule,
     CatalogueSharedModule,

@@ -10,6 +10,7 @@ import 'package:shared_ui/shared_ui.dart';
 import '../../app/providers.dart';
 import '../../core/async_value_view.dart';
 import '../../core/failure_text.dart';
+import '../auth/sign_in_screen.dart' show showClientLoginMethods;
 
 /// The client portal Company profile page (demo page `company`): what customers
 /// and Abra see about the company, and the bank account payouts go to
@@ -64,11 +65,22 @@ class _CompanyProfileBody extends ConsumerWidget {
     return ListView(
       padding: EdgeInsets.all(isPhone ? AbraSpacing.md : AbraSpacing.lg),
       children: <Widget>[
-        Text(
-          'Company profile',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w800,
-          ),
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                'Company profile',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            TextButton.icon(
+              onPressed: () => showClientLoginMethods(context),
+              icon: const Icon(Icons.key_outlined, size: 18),
+              label: const Text('Login methods'),
+            ),
+          ],
         ),
         const SizedBox(height: AbraSpacing.xs),
         Text(

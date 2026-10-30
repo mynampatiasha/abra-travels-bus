@@ -4,13 +4,15 @@ import { type ClientSession, type Connection, type HydratedDocument, type Model,
 import { type StoredDocument } from '../../database/scoped-repository.base';
 import { ApiException } from '../../common/errors/api-exception';
 import { type ClientRequestInfo } from '../../common/http/client-request-info';
-import { skipOf } from '../../common/pipes/list-query';
+import { escapeRegExp, skipOf } from '../../common/pipes/list-query';
 import { type AuthenticatedUserActor } from '../../common/request-context/request-actor';
 import { AuditedChangeRunner } from '../rbac/services/audited-change.service';
 import { ProofFilesService } from '../files/files_core.service';
 import { TRIP_MODEL, type Trip, type TripPoint, type TripStatus } from './schemas/trip.schema';
 import { SEAT_INVENTORY_MODEL, type SeatInventoryItem } from './schemas/seat-inventory.schema';
-import { busSnapshotOf, healRouteCities, requireBusType, routePointsOf } from './trip_snapshots';
+import { assertBusDocumentsValid } from './bus_document_check';
+import { allocateTripCodes, tripCodeOf } from './trip_codes';
+import { busSnapshotOf, crewFieldsFor, defaultCrewOf, healRouteCities, requireBusType, routePointsOf } from './trip_snapshots';
 
 export type StoredTripDoc = StoredDocument<Trip>;
 export type TripHydratedDoc = HydratedDocument<Trip>;
@@ -24,6 +26,8 @@ export interface ClientTripKpis {
 
 export interface ClientTripView {
   id: string;
+  /** Short code shown on screens, e.g. TRP-1042. The id is only for the app to call the server. */
+  code: string;
   operatorId: string;
   routeId: string;
   route: string;
@@ -118,6 +122,7 @@ export class TripsClientManageService {
 
     return {
       id: t._id.toString(),
+      code: tripCodeOf(t),
       operatorId: t.operatorId.toString(),
       routeId: t.routeId.toString(),
       route: (t as unknown as { route?: string }).route ?? 'General Route',
@@ -192,6 +197,7 @@ export class TripsClientManageService {
     if (query.search && query.search.trim().length > 0) {
       const s = query.search.trim();
       filter.$or = [
+        { tripCode: { $regex: escapeRegExp(s), $options: 'i' } },
         { route: { $regex: s, $options: 'i' } },
         { 'bus.registrationNumber': { $regex: s, $options: 'i' } },
         { 'bus.name': { $regex: s, $options: 'i' } },
@@ -305,6 +311,8 @@ export class TripsClientManageService {
         amenities?: string[];
         seatCapacity?: number;
         activeSeatLayoutVersionId?: Types.ObjectId;
+        defaultDriverId?: Types.ObjectId;
+        defaultConductorId?: Types.ObjectId;
         status: string;
       }>({ _id: busId, operatorId, isDeleted: { $ne: true } }),
     ]);
@@ -365,6 +373,7 @@ export class TripsClientManageService {
       }
     }
 
+    const usualCrew = await defaultCrewOf(this.connection, bus);
     const initialStatus: TripStatus = input.publish ? 'SCHEDULED' : 'DRAFT';
 
     if (input.publish) {
@@ -377,8 +386,10 @@ export class TripsClientManageService {
       if (!bus.activeSeatLayoutVersionId) {
         throw new ApiException('VALIDATION_FAILED', 'Bus has no active seat layout');
       }
+      await assertBusDocumentsValid(this.connection, bus, depDate);
     }
 
+    const [tripCode] = await allocateTripCodes(this.connection, 1);
     const created = await this.auditedChanges.run<TripHydratedDoc>({
       actor,
       client: info,
@@ -389,6 +400,7 @@ export class TripsClientManageService {
         const docs = await this.tripModel.create(
           [
             {
+              tripCode,
               operatorId,
               routeId,
               route: route.name,
@@ -417,8 +429,9 @@ export class TripsClientManageService {
               status: initialStatus,
               publishedAt: input.publish ? new Date() : undefined,
               departureTimeLocal: input.departureTime,
-              driverId: input.driverId ? new Types.ObjectId(input.driverId) : undefined,
-              driverName,
+              // The bus's usual crew start the trip unless the owner chose someone for this trip
+              ...(input.driverId ? {} : crewFieldsFor(usualCrew, depDate)),
+              ...(input.driverId ? { driverId: new Types.ObjectId(input.driverId), driverName } : {}),
               seatCounts: {
                 total: seatCap,
                 available: seatCap,
@@ -574,6 +587,7 @@ export class TripsClientManageService {
       }),
       this.connection.collection('buses').findOne<{
         _id: Types.ObjectId;
+        registrationNumber?: string;
         status: string;
         activeSeatLayoutVersionId?: Types.ObjectId;
         seatCapacity?: number;
@@ -589,6 +603,7 @@ export class TripsClientManageService {
     if (!bus.activeSeatLayoutVersionId) {
       throw new ApiException('VALIDATION_FAILED', 'Bus has no active seat layout');
     }
+    await assertBusDocumentsValid(this.connection, bus, trip.departureAt);
 
     // Lookup active fare for this route & seat type if trip has none
     let fareRuleSetVersionId = trip.fareRuleSetVersionId;

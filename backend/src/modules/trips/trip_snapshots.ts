@@ -271,3 +271,46 @@ export async function routePointsOf(
   }
   return { boardingPoints, droppingPoints, stopCityIds };
 }
+
+// ===== The bus's usual driver and conductor =====
+
+export interface CrewPerson {
+  id: Types.ObjectId;
+  name: string;
+  licenseExpiryDate?: Date | undefined;
+}
+
+/**
+ * The driver and conductor set on the bus, when they are still active. A new trip starts with them;
+ * the owner can change any single trip. A person who is no longer active is simply left out.
+ */
+export async function defaultCrewOf(
+  connection: Connection,
+  bus: { defaultDriverId?: Types.ObjectId | undefined; defaultConductorId?: Types.ObjectId | undefined },
+): Promise<{ driver?: CrewPerson; conductor?: CrewPerson }> {
+  const load = async (id: Types.ObjectId | undefined, role: 'DRIVER' | 'CONDUCTOR'): Promise<CrewPerson | undefined> => {
+    if (!id) return undefined;
+    const person = await connection
+      .collection<{ _id: Types.ObjectId; name: string; licenseExpiryDate?: Date }>('operator_crew')
+      .findOne({ _id: id, role, status: 'ACTIVE', isDeleted: { $ne: true } } as object);
+    return person ? { id: person._id, name: person.name, licenseExpiryDate: person.licenseExpiryDate } : undefined;
+  };
+  const [driver, conductor] = await Promise.all([
+    load(bus.defaultDriverId, 'DRIVER'),
+    load(bus.defaultConductorId, 'CONDUCTOR'),
+  ]);
+  return { ...(driver ? { driver } : {}), ...(conductor ? { conductor } : {}) };
+}
+
+/** The crew fields of a new trip: the bus's usual people (a driver whose licence ends first is left out). */
+export function crewFieldsFor(
+  crew: { driver?: CrewPerson; conductor?: CrewPerson },
+  departureAt: Date,
+): Record<string, unknown> {
+  const driverFit =
+    crew.driver && (!crew.driver.licenseExpiryDate || new Date(crew.driver.licenseExpiryDate) >= departureAt);
+  return {
+    ...(driverFit && crew.driver ? { driverId: crew.driver.id, driverName: crew.driver.name } : {}),
+    ...(crew.conductor ? { conductorId: crew.conductor.id, conductorName: crew.conductor.name } : {}),
+  };
+}

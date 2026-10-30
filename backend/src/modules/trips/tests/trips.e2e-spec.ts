@@ -22,6 +22,7 @@ interface Caller { tokens: Tokens; }
 
 interface TripItem {
   id: string;
+  code: string;
   status: string;
   startingFarePaise: number;
   blockedSeats?: number;
@@ -102,11 +103,19 @@ describe('Trips & Seat Inventory Management e2e (abra_supply_test)', () => {
     const trip = dataOf<TripItem>(res);
     expect(trip.status).toBe('DRAFT');
     expect(trip.startingFarePaise).toBe(85000);
+    // People see a short code, never the database id
+    expect(trip.code).toMatch(/^TRP-\d{4,}$/);
+    expect(trip.code).not.toContain(trip.id);
 
     const listRes = await call(operatorA).get('/client/trips');
     expect(listRes.status).toBe(200);
     const list = dataOf<TripList>(listRes);
     expect(list.items.length).toBeGreaterThan(0);
+    expect(list.items.find((item) => item.id === trip.id)?.code).toBe(trip.code);
+
+    // The trip is found by its code
+    const found = dataOf<TripList>(await call(operatorA).get(`/client/trips?search=${trip.code}`));
+    expect(found.items.map((item) => item.id)).toEqual([trip.id]);
     expect(list.kpis.drafts).toBeGreaterThan(0);
   });
 

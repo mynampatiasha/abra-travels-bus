@@ -15,6 +15,7 @@ import '../../core/async_value_view.dart';
 import '../../core/browser_files.dart';
 import '../../core/failure_text.dart';
 import '../../routing/portal_routes.dart';
+import '../auth/sign_in_screen.dart' show showClientLoginMethods;
 import '../onboarding/onboarding_page.dart';
 import '../onboarding/onboarding_repository.dart';
 
@@ -110,7 +111,27 @@ class _ClientKycVerificationScreenState extends ConsumerState<ClientKycVerificat
   }
 
   @override
-  Widget build(BuildContext context) => ref
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Before, during and after KYC the owner can set a password and link a phone or Google
+          // here; the company approval stays with this one account.
+          Align(
+            alignment: Alignment.centerRight,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(AbraSpacing.lg, AbraSpacing.sm, AbraSpacing.lg, 0),
+              child: TextButton.icon(
+                onPressed: () => showClientLoginMethods(context),
+                icon: const Icon(Icons.key_outlined, size: 18),
+                label: const Text('Login methods'),
+              ),
+            ),
+          ),
+          Expanded(child: _content(context)),
+        ],
+      );
+
+  Widget _content(BuildContext context) => ref
       .watch(clientKycProvider)
       .when(
         loading: () => const Center(child: CircularProgressIndicator()),

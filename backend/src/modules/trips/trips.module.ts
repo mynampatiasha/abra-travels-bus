@@ -19,6 +19,7 @@ import { SEAT_INVENTORY_MODEL, seatInventorySchema } from './schemas/seat-invent
 import { TripDiscoveryService } from './services/trip-discovery.service';
 import { TripManagementService } from './services/trip-management.service';
 import { TripsClientController, TripsClientExportController } from './trips_client_manage';
+import { TripCodeBackfill } from './trip_codes';
 import { TripsClientManageService } from './trips_client_manage.service';
 import { TripsAdminController, TripsAdminExportController } from './trips_admin_manage';
 import { TripsAdminManageService } from './trips_admin_manage.service';
@@ -61,6 +62,7 @@ import { TripsAdminManageService } from './trips_admin_manage.service';
     TripManagementService,
     TripsClientManageService,
     TripsAdminManageService,
+    TripCodeBackfill,
   ],
   exports: [MongooseModule, TripsClientManageService, TripsAdminManageService],
 })

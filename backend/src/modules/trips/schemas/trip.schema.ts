@@ -66,6 +66,8 @@ export interface TripSeatCounts {
  * policy belong to their own modules and attach to the trip by id.
  */
 export interface Trip {
+  /** Short code people read, e.g. `TRP-1042`. Missing only on trips not yet numbered. */
+  tripCode?: string;
   operatorId: Types.ObjectId;
   scheduleId?: Types.ObjectId;
   routeId: Types.ObjectId;
@@ -135,6 +137,7 @@ const nonNegativeInteger = { type: Number, required: true, min: 0, default: 0 };
 /** `trips` (database-architecture.md §1). */
 export const tripSchema = new Schema<Trip>(
   {
+    tripCode: { type: String, trim: true, maxlength: 20 },
     operatorId: { type: Schema.Types.ObjectId, required: true },
     scheduleId: { type: Schema.Types.ObjectId },
     routeId: { type: Schema.Types.ObjectId, required: true },
@@ -208,5 +211,7 @@ tripSchema.index({
   status: 1,
   departureAt: 1,
 });
+// A trip code is unique; trips not yet numbered have none (the index skips them)
+tripSchema.index({ tripCode: 1 }, { unique: true, partialFilterExpression: { tripCode: { $type: 'string' } } });
 tripSchema.index({ operatorId: 1, travelDate: 1 });
 tripSchema.index({ busId: 1, departureAt: 1 });

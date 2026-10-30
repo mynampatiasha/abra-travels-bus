@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { Types } from 'mongoose';
+import { InjectConnection } from '@nestjs/mongoose';
+import { type Connection, Types } from 'mongoose';
 import { ApiException } from '../../../common/errors/api-exception';
 import { type ClientRequestInfo } from '../../../common/http/client-request-info';
 import { PaginatedResult } from '../../../common/interceptors/response-envelope.interceptor';
@@ -21,6 +22,7 @@ import { TripRepository, type StoredTrip } from '../repositories/trip.repository
 import { type Trip, type TripPoint, type TripStatus } from '../schemas/trip.schema';
 import { planOf, tripFieldsOf, type TripPlan, type TripPlanContext } from './trip-plan';
 import { addDays, isCalendarDate, localDateOf } from './travel-date';
+import { assertBusDocumentsValid } from '../bus_document_check';
 
 /** How far ahead a trip can be planned. */
 export const TRIP_PLANNING_HORIZON_DAYS = 180;
@@ -155,6 +157,7 @@ export class TripManagementService {
     private readonly operators: OperatorRepository,
     private readonly cities: CityRepository,
     private readonly changes: AuditedChangeRunner,
+    @InjectConnection() private readonly connection: Connection,
   ) {}
 
   async list(
@@ -256,6 +259,7 @@ export class TripManagementService {
     if (fields.departureAt.getTime() <= Date.now()) {
       throw invalid('The departure time has already passed.');
     }
+    await assertBusDocumentsValid(this.connection, context.bus, fields.departureAt);
     const overlapping = await this.trips.count({
       _id: { $ne: before._id },
       busId: before.busId,

@@ -46,7 +46,6 @@ import { type OperatorView, OperatorsService } from './services/operators.servic
 export const OPERATORS_EXPORT_KIND: ExportKind<OperatorView> = {
   key: 'operators',
   columns: [
-    { header: 'ID', value: (operator) => operator.id },
     { header: 'Operator', value: (operator) => operator.companyName },
     { header: 'Display name', value: (operator) => operator.displayName },
     { header: 'Status', value: (operator) => readable(operator.status) },
