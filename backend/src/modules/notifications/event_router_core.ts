@@ -9,19 +9,26 @@ import {
   type AudienceSpec,
   type EventRule,
   type EventText,
+  type MessageRule,
 } from './event_router_core.service';
 import { NotificationsModule } from './notifications.module';
 
 /*
  * The rules of the event router: plan Appendix B, one rule per event. The feature that owns an
  * event records it in the outbox with the payload named here; nothing else is needed to tell the
- * right people. The words are English; the plan's per-language templates replace them later.
+ * right people. Customer messages (WhatsApp, SMS, email) take their words from
+ * customer_message_templates.ts; the app notices keep theirs here. The words are English; the
+ * plan's per-language templates replace them later.
  *
  * Payload fields (ids as text; the texts are written by the feature, because only it knows them):
  *   operatorId, operatorName, tripId, driverId, driverName, customerId, customerIds (list),
  *   bookingId, settlementId, ticketId, reportId, busId, sosId, route ("Hyderabad to Bengaluru"),
  *   departureText ("12 Jan, 10:30 pm"), busRegistration, pnr, seatsText, amountText ("Rs 1,250"),
  *   statusLabel, reason, minutes, contactName, contactPhone, contactEmail.
+ *   Customer messages also use: boardingPoint, ticketUrl, retryUrl, holdMinutes, refundAmountText,
+ *   reference, departureTime, newDepartureTime, driverPhone, busTypeLabel, reminder ('24H' | '2H'),
+ *   ticketRef, subject, customerName, trackingUrl, emergencyContactName, emergencyContactPhone,
+ *   sharedWithName, sharedWithPhone (customer_message_templates.ts names each template's fields).
  *
  * Not here on purpose: the onboarding and place-request events, which keep their own handlers
  * (onboarding-notification.handler, PlaceRequestNotificationHandler).
@@ -36,6 +43,21 @@ const staff = (permission: string): AudienceSpec => ({ kind: 'staff', permission
 
 const text = (value: unknown): string => (typeof value === 'string' ? value : '');
 const raisedByDriver = (payload: Record<string, unknown>) => payload.raisedBy === 'DRIVER';
+const isTwoHourReminder = (payload: Record<string, unknown>) => payload.reminder === '2H';
+
+// Customer messages go by WhatsApp and email; the app notice and push cover a WhatsApp failure.
+// SMS is not used for now. To turn it back on (sent only when WhatsApp did not reach the
+// person), put 'SMS' back in both lists.
+const ALL_CHANNELS = ['WHATSAPP', /* 'SMS', */ 'EMAIL'] as const;
+const PHONE_CHANNELS = ['WHATSAPP' /* , 'SMS' */] as const;
+/** The booking's contact, who may not be the account holder. */
+const BOOKING_CONTACT: MessageRule['contact'] = {
+  userField: 'customerId',
+  nameField: 'contactName',
+  phoneField: 'contactPhone',
+  emailField: 'contactEmail',
+  bookingField: 'bookingId',
+};
 
 /** `Trip title` choices that depend on the event's own words. */
 const tripLabel: EventText = '{route}, {departureText}';
@@ -283,6 +305,8 @@ export const CORE_EVENT_RULES: readonly EventRule[] = [
   },
 
   // ----- bookings, payments and refunds -----
+  // The trips feature sends one `booking.*` event per booking for what happens to the whole trip
+  // (delay, boarding, cancellation, bus change, arrival), so each customer gets their own message.
   {
     event: 'booking.created',
     notices: [
@@ -303,21 +327,15 @@ export const CORE_EVENT_RULES: readonly EventRule[] = [
   },
   {
     event: 'booking.confirmed',
-    messages: [
+    notices: [
       {
-        channels: ['WHATSAPP', 'EMAIL'],
-        kind: 'BOOKING_CONFIRMED',
-        subject: 'Booking confirmed: {pnr}',
-        body: '{route}, {departureText}. Seats {seatsText}. Boarding at {boardingPoint}. Amount {amountText}. Track your bus and see your ticket in the Abra app.',
-        contact: {
-          userField: 'customerId',
-          nameField: 'contactName',
-          phoneField: 'contactPhone',
-          emailField: 'contactEmail',
-          bookingField: 'bookingId',
-        },
+        to: [CUSTOMER],
+        title: 'Booking confirmed',
+        body: '{pnr}: {route}, {departureText}',
+        goTo: '/my-trips',
       },
     ],
+    messages: [{ template: 'booking_confirmed', channels: ALL_CHANNELS, contact: BOOKING_CONTACT }],
   },
   {
     event: 'booking.cancelled',
@@ -337,75 +355,80 @@ export const CORE_EVENT_RULES: readonly EventRule[] = [
         data: ['bookingId'],
       },
     ],
+    messages: [{ template: 'booking_cancelled', channels: ALL_CHANNELS, contact: BOOKING_CONTACT }],
+  },
+  {
+    // Sent by the reminder job 24 hours (`reminder: '24H'`) and 2 hours (`'2H'`) before departure
+    event: 'booking.reminder',
+    notices: [
+      {
+        to: [CUSTOMER],
+        title: (p) => (isTwoHourReminder(p) ? 'Your bus leaves in 2 hours' : 'Your trip is tomorrow'),
+        body: (p) =>
+          isTwoHourReminder(p)
+            ? `Bus ${text(p.busRegistration)} from ${text(p.boardingPoint)}`
+            : `${text(p.route)} at ${text(p.departureTime)}`,
+        goTo: '/my-trips',
+      },
+    ],
     messages: [
       {
-        channels: ['WHATSAPP', 'EMAIL'],
-        kind: 'BOOKING_CANCELLED',
-        subject: 'Booking cancelled: {pnr}',
-        body: 'Your booking {pnr} on {route} is cancelled. The refund has started and arrives in 5 to 7 working days.',
-        contact: {
-          userField: 'customerId',
-          nameField: 'contactName',
-          phoneField: 'contactPhone',
-          emailField: 'contactEmail',
-          bookingField: 'bookingId',
-        },
+        template: 'travel_reminder_24h',
+        channels: PHONE_CHANNELS,
+        contact: BOOKING_CONTACT,
+        when: (p) => !isTwoHourReminder(p),
+      },
+      {
+        template: 'travel_reminder_2h',
+        channels: PHONE_CHANNELS,
+        contact: BOOKING_CONTACT,
+        when: isTwoHourReminder,
       },
     ],
   },
   {
     event: 'booking.trip-delayed',
-    messages: [
-      {
-        channels: ['WHATSAPP', 'EMAIL'],
-        kind: 'TRIP_DELAYED',
-        subject: 'Bus delayed: {pnr}',
-        body: 'Your bus on {route} is about {minutes} minutes late. {reason} Track it live in the app.',
-        contact: {
-          userField: 'customerId',
-          nameField: 'contactName',
-          phoneField: 'contactPhone',
-          emailField: 'contactEmail',
-          bookingField: 'bookingId',
-        },
-      },
-    ],
+    messages: [{ template: 'bus_delayed', channels: ALL_CHANNELS, contact: BOOKING_CONTACT }],
   },
   {
     event: 'booking.boarding-started',
-    messages: [
+    messages: [{ template: 'boarding_started', channels: PHONE_CHANNELS, contact: BOOKING_CONTACT }],
+  },
+  {
+    // The app notices come from `trip.cancelled`; this is the message to each booking's contact
+    event: 'booking.trip-cancelled',
+    messages: [{ template: 'trip_cancelled', channels: ALL_CHANNELS, contact: BOOKING_CONTACT }],
+  },
+  {
+    event: 'booking.bus-changed',
+    notices: [
       {
-        channels: ['WHATSAPP', 'EMAIL'],
-        kind: 'BOARDING_STARTED',
-        subject: 'Boarding now: {pnr}',
-        body: 'Bus {busRegistration} is boarding. Please reach your boarding point.',
-        contact: {
-          userField: 'customerId',
-          nameField: 'contactName',
-          phoneField: 'contactPhone',
-          emailField: 'contactEmail',
-          bookingField: 'bookingId',
-        },
+        to: [CUSTOMER],
+        title: 'Your bus has changed',
+        body: 'New bus {busRegistration}. Seats {seatsText}.',
+        goTo: '/my-trips',
       },
+    ],
+    messages: [{ template: 'bus_changed', channels: ALL_CHANNELS, contact: BOOKING_CONTACT }],
+  },
+  {
+    // The app notice comes from `trip.arrived`; this asks each booking's contact for a rating
+    event: 'booking.trip-arrived',
+    messages: [
+      { template: 'trip_completed_feedback', channels: ['WHATSAPP'], contact: BOOKING_CONTACT },
     ],
   },
   {
     event: 'payment.failed',
-    messages: [
+    notices: [
       {
-        channels: ['WHATSAPP', 'EMAIL'],
-        kind: 'PAYMENT_FAILED',
-        subject: 'Payment failed',
-        body: 'Your payment of {amountText} did not go through. {reason} Your seats are held for a short time: please try again.',
-        contact: {
-          userField: 'customerId',
-          nameField: 'contactName',
-          phoneField: 'contactPhone',
-          emailField: 'contactEmail',
-          bookingField: 'bookingId',
-        },
+        to: [CUSTOMER],
+        title: 'Payment failed',
+        body: 'Seats held for {holdMinutes} min. Tap to retry.',
+        goTo: '/my-trips',
       },
     ],
+    messages: [{ template: 'payment_failed', channels: ALL_CHANNELS, contact: BOOKING_CONTACT }],
   },
   {
     event: 'refund.updated',
@@ -426,18 +449,21 @@ export const CORE_EVENT_RULES: readonly EventRule[] = [
     ],
     messages: [
       {
-        channels: ['WHATSAPP', 'EMAIL'],
-        kind: 'REFUND_PAID',
-        subject: 'Refund processed: {pnr}',
-        body: 'Your refund of {amountText} for {pnr} has been processed. Reference: {reference}.',
-        contact: {
-          userField: 'customerId',
-          nameField: 'contactName',
-          phoneField: 'contactPhone',
-          emailField: 'contactEmail',
-          bookingField: 'bookingId',
-        },
+        template: 'refund_processed',
+        channels: ALL_CHANNELS,
+        contact: BOOKING_CONTACT,
         when: (payload) => payload.status === 'PAID',
+      },
+    ],
+  },
+  {
+    // A customer shares their live trip with someone (women safety); only that person is told
+    event: 'trip.shared',
+    messages: [
+      {
+        template: 'trip_share',
+        channels: PHONE_CHANNELS,
+        contact: { nameField: 'sharedWithName', phoneField: 'sharedWithPhone' },
       },
     ],
   },
@@ -474,6 +500,15 @@ export const CORE_EVENT_RULES: readonly EventRule[] = [
         data: ['sosId', 'tripId'],
       },
     ],
+    // The customer's saved emergency contact is told on WhatsApp (and SMS once it is back on)
+    messages: [
+      {
+        template: 'sos_emergency_contact',
+        channels: PHONE_CHANNELS,
+        contact: { nameField: 'emergencyContactName', phoneField: 'emergencyContactPhone' },
+        when: (p) => !raisedByDriver(p),
+      },
+    ],
   },
   {
     event: 'sos.updated',
@@ -495,6 +530,14 @@ export const CORE_EVENT_RULES: readonly EventRule[] = [
         data: ['sosId', 'status'],
       },
     ],
+    messages: [
+      {
+        template: 'sos_acknowledged',
+        channels: PHONE_CHANNELS,
+        contact: { userField: 'raisedById', nameField: 'contactName', phoneField: 'contactPhone' },
+        when: (p) => p.status === 'ACKNOWLEDGED' && !raisedByDriver(p),
+      },
+    ],
   },
 
   // ----- support, offers and driver reports -----
@@ -513,6 +556,18 @@ export const CORE_EVENT_RULES: readonly EventRule[] = [
     event: 'ticket.agent-replied',
     notices: [{ to: [CUSTOMER], title: 'Support replied', body: '{subject}', goTo: '/support' }],
     live: [{ type: 'ticket.replied', to: [{ user: 'customerId' }, 'staff'], data: ['ticketId'] }],
+    messages: [
+      {
+        template: 'support_replied',
+        channels: ['WHATSAPP', 'EMAIL'],
+        contact: {
+          userField: 'customerId',
+          nameField: 'contactName',
+          phoneField: 'contactPhone',
+          emailField: 'contactEmail',
+        },
+      },
+    ],
   },
   {
     event: 'ticket.customer-replied',

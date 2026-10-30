@@ -37,8 +37,9 @@ function fakeModel() {
 
 function build(options: {
   emailSend?: () => Promise<void>;
-  whatsApp?: { enabled: boolean; template?: string };
+  whatsApp?: { enabled: boolean; template?: string; approved?: string[] };
   whatsAppSend?: () => Promise<void>;
+  smsSend?: () => Promise<void>;
 }) {
   const model = fakeModel();
   const email = { send: jest.fn(options.emailSend ?? (() => Promise.resolve())) };
@@ -49,15 +50,18 @@ function build(options: {
         enabled: options.whatsApp?.enabled ?? false,
         notificationTemplateName: options.whatsApp?.template,
         notificationTemplateLanguage: options.whatsApp?.template ? 'en' : undefined,
+        approvedTemplateKeys: options.whatsApp?.approved ?? [],
       }),
   };
+  const sms = { send: jest.fn(options.smsSend ?? (() => Promise.resolve())) };
   const sender = new MessageSenderService(
     model as never,
     email as never,
     settings as never,
     whatsApp as never,
+    sms as never,
   );
-  return { sender, model, email, whatsApp };
+  return { sender, model, email, whatsApp, sms };
 }
 
 const emailInput = {
@@ -151,6 +155,70 @@ describe('MessageSenderService', () => {
     });
     expect(view.status).toBe('FAILED');
     expect(view.detail).toBe('WhatsApp did not accept it.');
+  });
+
+  it('sends a template Meta approved as itself, with its own parameters and button', async () => {
+    const { sender, whatsApp } = build({
+      whatsApp: { enabled: true, template: 'abra_update', approved: ['booking_confirmed'] },
+    });
+    const view = await sender.send({
+      ...emailInput,
+      channel: 'WHATSAPP',
+      address: '+919876543210',
+      template: {
+        key: 'booking_confirmed',
+        parameters: ['Priya', 'ABRK1234A'],
+        buttonParameter: 'b1',
+      },
+    });
+    expect(view.status).toBe('SENT');
+    expect(whatsApp.sendTemplate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        templateName: 'booking_confirmed',
+        languageCode: 'en',
+        bodyParameters: ['Priya', 'ABRK1234A'],
+        urlButtonParameter: 'b1',
+      }),
+    );
+  });
+
+  it('uses the general template for a template Meta has not approved yet', async () => {
+    const { sender, whatsApp } = build({ whatsApp: { enabled: true, template: 'abra_update' } });
+    await sender.send({
+      ...emailInput,
+      channel: 'WHATSAPP',
+      address: '+919876543210',
+      template: { key: 'booking_confirmed', parameters: ['Priya'] },
+    });
+    expect(whatsApp.sendTemplate).toHaveBeenCalledWith(
+      expect.objectContaining({ templateName: 'abra_update' }),
+    );
+  });
+
+  it('sends an SMS with its DLT template key and keeps a copy', async () => {
+    const { sender, sms, model } = build({});
+    const view = await sender.send({
+      ...emailInput,
+      channel: 'SMS',
+      address: '+919876543210',
+      body: 'Abra Travels: Booking confirmed. PNR ABRK1234A -ABRA',
+      template: { key: 'booking_confirmed', parameters: [] },
+    });
+    expect(view.status).toBe('SENT');
+    expect(sms.send).toHaveBeenCalledWith({
+      to: '+919876543210',
+      body: 'Abra Travels: Booking confirmed. PNR ABRK1234A -ABRA',
+      purpose: 'NOTIFICATION',
+      templateKey: 'booking_confirmed',
+    });
+    expect(model.docs[0]).toMatchObject({ channel: 'SMS', templateKey: 'booking_confirmed' });
+  });
+
+  it('marks an SMS the provider refused FAILED, without its raw error', async () => {
+    const { sender } = build({ smsSend: () => Promise.reject(new Error('gateway key=secret')) });
+    const view = await sender.send({ ...emailInput, channel: 'SMS', address: '+919876543210' });
+    expect(view.status).toBe('FAILED');
+    expect(JSON.stringify(view)).not.toContain('secret');
   });
 
   it('does nothing the second time for the same event, channel and address', async () => {

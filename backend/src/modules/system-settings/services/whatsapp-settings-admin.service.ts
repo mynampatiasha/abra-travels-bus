@@ -40,6 +40,8 @@ export interface WhatsAppSettingsView {
   otpFallbackToSms: boolean;
   notificationTemplateName: string | null;
   notificationTemplateLanguage: string | null;
+  /** Customer templates Meta approved under their own key. */
+  approvedTemplateKeys: string[];
   graphApiVersion: string | null;
   updatedAt: string | null;
   updatedByUserId: string | null;
@@ -57,6 +59,7 @@ const CHANGE_FIELDS = [
   'otpFallbackToSms',
   'notificationTemplateName',
   'notificationTemplateLanguage',
+  'approvedTemplateKeys',
 ] as const satisfies ReadonlyArray<keyof WhatsAppSettingsChange>;
 
 /**
@@ -165,6 +168,7 @@ export class WhatsAppSettingsAdminService {
       otpFallbackToSms: effective.otpFallbackToSms,
       notificationTemplateName: effective.notificationTemplateName ?? null,
       notificationTemplateLanguage: effective.notificationTemplateLanguage ?? null,
+      approvedTemplateKeys: effective.approvedTemplateKeys,
       graphApiVersion: effective.apiVersion ?? null,
       updatedAt: stored?.updatedAt?.toISOString() ?? null,
       updatedByUserId: stored?.updatedByUserId?.toHexString() ?? null,
@@ -185,6 +189,7 @@ export class WhatsAppSettingsAdminService {
       otpFallbackToSms: stored?.otpFallbackToSms ?? null,
       notificationTemplateName: stored?.notificationTemplateName ?? null,
       notificationTemplateLanguage: stored?.notificationTemplateLanguage ?? null,
+      approvedTemplateKeys: stored?.approvedTemplateKeys ?? [],
     };
   }
 }

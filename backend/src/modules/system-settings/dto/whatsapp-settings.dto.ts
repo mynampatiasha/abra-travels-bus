@@ -1,5 +1,11 @@
 import { z } from 'zod';
 import { createZodDto } from '../../../common/pipes/zod-dto.factory';
+import { CUSTOMER_MESSAGE_TEMPLATES } from '../../notification-templates/customer_message_templates';
+
+const CUSTOMER_TEMPLATE_KEYS = CUSTOMER_MESSAGE_TEMPLATES.map((template) => template.key) as [
+  (typeof CUSTOMER_MESSAGE_TEMPLATES)[number]['key'],
+  ...Array<(typeof CUSTOMER_MESSAGE_TEMPLATES)[number]['key']>,
+];
 
 const metaId = z.string().regex(/^\d{5,32}$/, 'must be the numeric id shown by Meta');
 
@@ -56,6 +62,12 @@ export class UpdateWhatsAppSettingsDto extends createZodDto(
       .string()
       .regex(/^[a-z]{2,3}(_[A-Z]{2})?$/, 'must look like en or en_US')
       .nullable()
+      .optional(),
+    /** The whole list of customer templates Meta has approved; sending it replaces the list. */
+    approvedTemplateKeys: z
+      .array(z.enum(CUSTOMER_TEMPLATE_KEYS))
+      .max(CUSTOMER_TEMPLATE_KEYS.length)
+      .transform((keys) => [...new Set(keys)])
       .optional(),
     reason: z.string().trim().min(3).max(300),
   }),

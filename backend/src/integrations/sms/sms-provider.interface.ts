@@ -6,7 +6,9 @@ export interface SmsMessage {
   to: string;
   body: string;
   /** What the message is for; real providers map it to a registered (DLT) template. */
-  purpose: 'OTP';
+  purpose: 'OTP' | 'NOTIFICATION';
+  /** The customer message template the text was made from: the DLT template it is registered as. */
+  templateKey?: string;
 }
 
 /**
