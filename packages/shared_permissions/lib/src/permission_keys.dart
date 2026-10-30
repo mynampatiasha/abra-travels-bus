@@ -81,6 +81,9 @@ abstract final class PermissionKeys {
   static const payoutManage = 'payout.manage';
   static const payoutExport = 'payout.export';
   static const payoutDelete = 'payout.delete';
+  static const contentRead = 'content.read';
+  static const contentManage = 'content.manage';
+  static const customersAccountDelete = 'customers.account.delete';
 
   /// Every key above.
   static const Set<String> all = <String>{
@@ -158,5 +161,8 @@ abstract final class PermissionKeys {
     payoutManage,
     payoutExport,
     payoutDelete,
+    contentRead,
+    contentManage,
+    customersAccountDelete,
   };
 }

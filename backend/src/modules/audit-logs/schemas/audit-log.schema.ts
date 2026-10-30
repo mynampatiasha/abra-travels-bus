@@ -83,6 +83,18 @@ export const AUDIT_ACTIONS = [
   'payout.slab-added',
   'payout.slab-removed',
   'payout.slab-restored',
+  'content.page.saved',
+  'content.faq.created',
+  'content.faq.updated',
+  'content.faq.deleted',
+  'content.contact.saved',
+  'customer.updated',
+  'customer.blocked',
+  'customer.unblocked',
+  'customer.sessions-revoked',
+  'customer.deleted',
+  'customer.restored',
+  'customer.account-deleted',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

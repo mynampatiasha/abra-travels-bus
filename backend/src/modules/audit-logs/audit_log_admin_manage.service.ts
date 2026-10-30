@@ -97,6 +97,18 @@ export const AUDIT_ACTION_LABELS: Readonly<Record<AuditAction, string>> = {
   'payout.slab-added': 'Added a refund slab',
   'payout.slab-removed': 'Removed a refund slab',
   'payout.slab-restored': 'Restored a refund slab',
+  'content.page.saved': 'Saved an information page',
+  'content.faq.created': 'Added a FAQ',
+  'content.faq.updated': 'Changed a FAQ',
+  'content.faq.deleted': 'Deleted a FAQ',
+  'content.contact.saved': 'Saved the contact details',
+  'customer.updated': 'Changed a customer',
+  'customer.blocked': 'Blocked a customer',
+  'customer.unblocked': 'Unblocked a customer',
+  'customer.sessions-revoked': 'Signed a customer out of all devices',
+  'customer.deleted': 'Deleted a customer',
+  'customer.restored': 'Restored a customer',
+  'customer.account-deleted': 'A customer deleted their own account',
 };
 
 /**

@@ -434,6 +434,28 @@ export const OFFER_PERMISSIONS = definePermissions('offers', {
   },
 });
 
+export const CONTENT_PERMISSIONS = definePermissions('content', {
+  read: {
+    name: 'View help content',
+    description: 'View the information pages, the FAQs and the contact details.',
+    grantableTo: PLATFORM_ONLY,
+  },
+  manage: {
+    name: 'Manage help content',
+    description: 'Edit the information pages, the FAQs and the contact details.',
+    grantableTo: PLATFORM_ONLY,
+  },
+});
+
+export const CUSTOMER_ACCOUNT_PERMISSIONS = definePermissions('customers.account', {
+  delete: {
+    name: 'Delete customer accounts',
+    description: 'Delete a customer account and bring back one that was deleted.',
+    grantableTo: PLATFORM_ONLY,
+    sensitive: true,
+  },
+});
+
 /** Every permission of the platform. A new module's group is added to this object. */
 export const PERMISSION_CATALOG = {
   ...USER_PERMISSIONS,
@@ -462,6 +484,8 @@ export const PERMISSION_CATALOG = {
   ...COMMISSION_PERMISSIONS,
   ...OFFER_PERMISSIONS,
   ...PAYOUT_PERMISSIONS,
+  ...CONTENT_PERMISSIONS,
+  ...CUSTOMER_ACCOUNT_PERMISSIONS,
 } as const;
 
 /** Union of every declared permission key; the only values `@RequirePermission` accepts. */
