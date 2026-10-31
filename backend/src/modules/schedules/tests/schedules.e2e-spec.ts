@@ -35,6 +35,7 @@ interface ScheduleView {
   fare: number;
 }
 interface GeneratedTrip {
+  tripCode?: string;
   bus: { isAc: boolean; berthType: string; busTypeName: string };
   originCityId: Types.ObjectId;
   destinationCityId: Types.ObjectId;
@@ -220,6 +221,10 @@ describe('Schedules Management e2e (abra_supply_test)', () => {
       .find({ scheduleId: new Types.ObjectId(schedId) } as object)
       .toArray();
     expect(trips).toHaveLength(result1.createdCount);
+    // Each trip has its own short code, in order
+    const codes = trips.map((trip) => trip.tripCode ?? '');
+    expect(codes.every((code) => /^TRP-\d{4,}$/.test(code))).toBe(true);
+    expect(new Set(codes).size).toBe(trips.length);
     const cityIds = new Set(
       (await context.connection.collection('cities').find({}).toArray()).map((c) => String(c._id)),
     );

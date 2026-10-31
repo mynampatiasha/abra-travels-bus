@@ -524,7 +524,7 @@ class DriverTripScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('${trip['id']} · ${trip['route']}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+        title: Text('${trip['code'] ?? trip['id']} · ${trip['route']}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
         backgroundColor: const Color(0xFF12304A),
         foregroundColor: Colors.white,
       ),

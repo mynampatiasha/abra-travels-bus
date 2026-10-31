@@ -12,7 +12,6 @@ import { SubmissionsService } from './services/submissions.service';
 export const SUBMISSIONS_EXPORT_KIND: ExportKind<SubmissionSummaryView> = {
   key: 'kyc-reviews',
   columns: [
-    { header: 'ID', value: (submission) => submission.id },
     { header: 'Operator', value: (submission) => submission.companyName },
     {
       header: 'Type',

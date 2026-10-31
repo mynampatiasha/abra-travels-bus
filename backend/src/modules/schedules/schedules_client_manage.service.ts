@@ -8,9 +8,12 @@ import { PaginatedResult } from '../../common/interceptors/response-envelope.int
 import { skipOf } from '../../common/pipes/list-query';
 import { type AuthenticatedUserActor } from '../../common/request-context/request-actor';
 import { AuditedChangeRunner } from '../rbac/services/audited-change.service';
+import { allocateTripCodes } from '../trips/trip_codes';
 import {
   activeFareFor,
   busSnapshotOf,
+  crewFieldsFor,
+  defaultCrewOf,
   healRouteCities,
   missingFareMessage,
   requireBusType,
@@ -428,6 +431,8 @@ export class SchedulesClientManageService {
         amenities?: string[];
         seatCapacity?: number;
         status?: string;
+        defaultDriverId?: Types.ObjectId;
+        defaultConductorId?: Types.ObjectId;
       }>({ _id: sc.busId, operatorId: sc.operatorId }),
     ]);
 
@@ -449,6 +454,8 @@ export class SchedulesClientManageService {
     }
     // Real cities and places of the route (a route saved with made-up ids is repaired here)
     const routeCities = await healRouteCities(this.connection, route);
+    // The bus's usual driver and conductor start on every new trip
+    const usualCrew = await defaultCrewOf(this.connection, bus);
 
     const now = new Date();
     let n = 0;
@@ -518,6 +525,7 @@ export class SchedulesClientManageService {
         boardingPoints: points.boardingPoints,
         droppingPoints: points.droppingPoints,
         bus: busSnapshotOf(bus, busType),
+        ...crewFieldsFor(usualCrew, d),
         ...(fareDoc.fareRuleSetVersionId ? { fareRuleSetVersionId: fareDoc.fareRuleSetVersionId } : {}),
         startingFarePaise: startingFare,
         currency: 'INR',
@@ -536,6 +544,10 @@ export class SchedulesClientManageService {
     }
 
     if (tripsToInsert.length > 0) {
+      const codes = await allocateTripCodes(this.connection, tripsToInsert.length);
+      tripsToInsert.forEach((trip, index) => {
+        trip.tripCode = codes[index];
+      });
       await this.connection.collection('trips').insertMany(tripsToInsert);
     }
 

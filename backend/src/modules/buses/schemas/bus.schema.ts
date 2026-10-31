@@ -45,6 +45,9 @@ export interface Bus {
   busTypeId: Types.ObjectId;
   /** Maker of the bus, e.g. "Volvo" or "Scania". Optional. */
   make?: string;
+  /** The driver and conductor who normally run this bus; new trips start with them. Optional. */
+  defaultDriverId?: Types.ObjectId;
+  defaultConductorId?: Types.ObjectId;
   amenities: BusAmenity[];
   /**
    * Number of seats and berths sold on this bus. Catalogue information until seat layouts exist;
@@ -75,6 +78,8 @@ export const busSchema = new Schema<Bus>(
     name: { type: String, required: true, trim: true, maxlength: 80 },
     busTypeId: { type: Schema.Types.ObjectId, required: true },
     make: { type: String, trim: true, maxlength: 40 },
+    defaultDriverId: { type: Schema.Types.ObjectId },
+    defaultConductorId: { type: Schema.Types.ObjectId },
     amenities: { type: [String], match: /^[A-Z][A-Z0-9_]{1,39}$/, default: [] },
     seatCapacity: { type: Number, min: 1, max: 100, validate: Number.isInteger },
     activeSeatLayoutVersionId: { type: Schema.Types.ObjectId },

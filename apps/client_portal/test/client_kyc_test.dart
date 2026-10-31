@@ -2,6 +2,7 @@ import 'package:client_portal/app/providers.dart';
 import 'package:client_portal/features/dashboard/client_dashboard_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_network/shared_network.dart';
 import 'support/test_portal.dart';
 
 FakeBackend pendingClient({String status = 'DRAFT'}) {
@@ -129,4 +130,86 @@ void main() {
       expect(find.widgetWithText(TextField, 'Password'), findsOneWidget);
     },
   );
+
+  group('login methods before KYC is finished', () {
+    FakeBackend withMethods({bool hasPassword = false, String? phone}) {
+      final backend = pendingClient();
+      backend.overrides['GET client/kyc/login-methods'] = (req) => FakeResponse.ok(<String, Object?>{
+        'phone': phone,
+        'email': 'asha@example.com',
+        'hasPassword': hasPassword,
+        'socialLinked': true,
+      });
+      backend.overrides['POST me/password'] = (req) =>
+          FakeResponse.ok(<String, Object?>{'otherSessionsSignedOut': 0});
+      backend.overrides['POST auth/otp/send'] = (req) =>
+          FakeResponse.ok(<String, Object?>{'codeLength': 6, 'resendAfterSeconds': 30});
+      backend.overrides['POST client/kyc/login-methods/phone'] = (req) =>
+          FakeResponse.ok(<String, Object?>{'linked': true});
+      return backend;
+    }
+
+    testWidgets('the KYC screen offers Login methods, and the owner sees what is linked', (tester) async {
+      final app = TestPortal.signedIn(withMethods(phone: '+919876543210'));
+      await app.pump(tester);
+      expect(locationOf(tester), '/kyc');
+      await tester.tap(find.text('Login methods'));
+      await settle(tester);
+      expect(find.textContaining('Email: asha@example.com'), findsOneWidget);
+      expect(find.textContaining('Phone: +919876543210'), findsOneWidget);
+      expect(find.text('Your company approval stays with this account.'), findsNothing);
+      expect(
+        find.text('Link your login methods here. Your company approval stays with this account.'),
+        findsOneWidget,
+      );
+      expect(app.requestsTo('client/kyc/login-methods', 'GET'), isNotEmpty);
+    });
+
+    testWidgets('an owner can set a password before KYC is finished', (tester) async {
+      final app = TestPortal.signedIn(withMethods());
+      await app.pump(tester);
+      await tester.tap(find.text('Login methods'));
+      await settle(tester);
+      await tester.enterText(find.widgetWithText(TextField, 'New password'), 'Fresh-owner-password-2026');
+      await tester.ensureVisible(find.text('Save password'));
+      await tester.tap(find.text('Save password'));
+      await settle(tester);
+      final sent = app.requestsTo('me/password', 'POST').single.body! as Map;
+      expect(sent, <String, Object?>{'newPassword': 'Fresh-owner-password-2026'});
+    });
+
+    testWidgets('changing the password asks for the current one', (tester) async {
+      final app = TestPortal.signedIn(withMethods(hasPassword: true));
+      await app.pump(tester);
+      await tester.tap(find.text('Login methods'));
+      await settle(tester);
+      expect(find.widgetWithText(TextField, 'Current password'), findsOneWidget);
+      await tester.enterText(find.widgetWithText(TextField, 'Current password'), 'Old-owner-password-2026');
+      await tester.enterText(find.widgetWithText(TextField, 'New password'), 'New-owner-password-2026');
+      await tester.ensureVisible(find.text('Save password'));
+      await tester.tap(find.text('Save password'));
+      await settle(tester);
+      final sent = app.requestsTo('me/password', 'POST').single.body! as Map;
+      expect(sent, <String, Object?>{
+        'newPassword': 'New-owner-password-2026',
+        'currentPassword': 'Old-owner-password-2026',
+      });
+    });
+
+    testWidgets('the phone number can be changed with a code sent to the new number', (tester) async {
+      final app = TestPortal.signedIn(withMethods(phone: '+919876543210'));
+      await app.pump(tester);
+      await tester.tap(find.text('Login methods'));
+      await settle(tester);
+      await tester.enterText(find.widgetWithText(TextField, 'Phone number'), '9123456789');
+      await tester.tap(find.text('Send code'));
+      await settle(tester);
+      expect((app.requestsTo('auth/otp/send', 'POST').single.body! as Map)['phone'], '+919123456789');
+      await tester.enterText(find.widgetWithText(TextField, 'Verification code'), '123456');
+      await tester.tap(find.text('Verify and link phone'));
+      await settle(tester);
+      final linked = app.requestsTo('client/kyc/login-methods/phone', 'POST').single.body! as Map;
+      expect(linked, <String, Object?>{'phone': '+919123456789', 'code': '123456'});
+    });
+  });
 }

@@ -42,4 +42,20 @@ void main() {
     expect(find.text('Draft'), findsWidgets);
     expect(find.text('Scheduled'), findsWidgets);
   });
+
+  testWidgets('AdminTripsPage shows the short trip code, never the database id', (tester) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final backend = seeded(Persona.superAdmin);
+    final trip = backend.of('trips').first;
+    trip['code'] = 'TRP-2001';
+    final app = TestAdmin.signedIn(backend);
+    await app.pump(tester);
+    await open(tester, AdminRoutes.trips);
+
+    expect(find.text('TRP-2001'), findsOneWidget);
+    expect(find.textContaining('${trip['id']}'), findsNothing);
+  });
 }
