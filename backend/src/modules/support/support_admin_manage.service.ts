@@ -21,6 +21,10 @@ import { UsersService } from '../users/services/users.service';
 export const SUPPORT_TICKET_MODEL = 'SupportTicket';
 export const SUPPORT_REPLY_MODEL = 'SupportReply';
 export const SUPPORT_CANNED_MODEL = 'SupportCannedReply';
+export const SUPPORT_AGENT_MODEL = 'SupportAgent';
+
+/** How many open tickets one agent holds before new ones go to somebody else (or wait). */
+export const SUPPORT_AGENT_CAPACITY = 5;
 
 export const TICKET_CATEGORIES = ['BOOKING', 'PAYMENT', 'REFUND', 'TRIP', 'SAFETY', 'ACCOUNT', 'OTHER'] as const;
 export type TicketCategory = (typeof TICKET_CATEGORIES)[number];
@@ -57,6 +61,8 @@ export interface SupportTicket {
   lastReplyAt: Date;
   resolvedAt: Date | null;
   reopenedCount: number;
+  /** The system gave this ticket to the agent (the least loaded one who was free). */
+  autoAssigned: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -99,6 +105,7 @@ export const supportTicketSchema = new Schema<SupportTicket>(
     lastReplyAt: { type: Date, required: true },
     resolvedAt: { type: Date, default: null },
     reopenedCount: { type: Number, default: 0 },
+    autoAssigned: { type: Boolean, default: false },
   },
   { collection: 'support_tickets', timestamps: true, versionKey: false },
 );
@@ -106,6 +113,25 @@ supportTicketSchema.index({ shortId: 1 }, { unique: true });
 supportTicketSchema.index({ seq: 1 }, { unique: true });
 supportTicketSchema.index({ customerId: 1, createdAt: -1 });
 supportTicketSchema.index({ status: 1, respondBy: 1 });
+supportTicketSchema.index({ assignedTo: 1, status: 1 });
+
+/** `support_agents`: who is free to receive tickets. An agent turns themselves Available or not. */
+export interface SupportAgent {
+  userId: Types.ObjectId;
+  available: boolean;
+  lastAssignedAt: Date | null;
+}
+export type StoredAgent = SupportAgent & { _id: Types.ObjectId };
+
+export const supportAgentSchema = new Schema<SupportAgent>(
+  {
+    userId: { type: Schema.Types.ObjectId, required: true },
+    available: { type: Boolean, default: false },
+    lastAssignedAt: { type: Date, default: null },
+  },
+  { collection: 'support_agents', timestamps: true, versionKey: false },
+);
+supportAgentSchema.index({ userId: 1 }, { unique: true });
 
 /** `support_replies`. */
 export const supportReplySchema = new Schema<SupportReply>(
@@ -153,6 +179,8 @@ export interface TicketView {
   priority: TicketPriority;
   assignedToName: string;
   assignedToMe: boolean;
+  /** Given automatically to the least loaded free agent. */
+  autoAssigned: boolean;
   respondBy: string | null;
   /** Staff have not answered in time. */
   overdue: boolean;
@@ -202,6 +230,7 @@ export function ticketViewOf(
     priority: ticket.priority,
     assignedToName: ticket.assignedToName,
     assignedToMe: Boolean(options.viewerId && ticket.assignedTo?.toHexString() === options.viewerId),
+    autoAssigned: Boolean(ticket.autoAssigned),
     respondBy: ticket.respondBy ? ticket.respondBy.toISOString() : null,
     overdue: isOverdue(ticket),
     lastReplyBy: ticket.lastReplyBy,
@@ -225,6 +254,8 @@ export interface TicketListQuery {
   priority?: TicketPriority | undefined;
   overdue?: boolean | undefined;
   mine?: boolean | undefined;
+  /** Waiting for an agent. */
+  unassigned?: boolean | undefined;
   page: number;
   pageSize: number;
 }
@@ -237,6 +268,7 @@ export class SupportAdminService {
     @InjectModel(SUPPORT_TICKET_MODEL) readonly tickets: Model<SupportTicket>,
     @InjectModel(SUPPORT_REPLY_MODEL) readonly replies: Model<SupportReply>,
     @InjectModel(SUPPORT_CANNED_MODEL) private readonly canned: Model<SupportCanned>,
+    @InjectModel(SUPPORT_AGENT_MODEL) private readonly agents: Model<SupportAgent>,
     private readonly changes: AuditedChangeRunner,
     private readonly users: UsersService,
     private readonly moduleRef: ModuleRef,
@@ -255,6 +287,10 @@ export class SupportAdminService {
     if (query.category) filter.category = query.category;
     if (query.priority) filter.priority = query.priority;
     if (query.mine) filter.assignedTo = new Types.ObjectId(actor.userId);
+    if (query.unassigned) {
+      filter.assignedTo = null;
+      filter.status = { $ne: 'RESOLVED' };
+    }
     if (query.overdue) {
       filter.status = { $ne: 'RESOLVED' };
       filter.respondBy = { $lt: new Date() };
@@ -369,6 +405,7 @@ export class SupportAdminService {
     await this.change(actor, client, 'support.ticket.resolved', before, (session) =>
       this.save(before._id, { $set: { status: 'RESOLVED', resolvedAt: new Date(), respondBy: null } }, session),
     );
+    if (before.assignedTo) await this.fillAgent(before.assignedTo);
     return this.get(actor, id);
   }
 
@@ -433,6 +470,96 @@ export class SupportAdminService {
       },
       describe: (item) => ({ name: item.title, deleted: true }),
     });
+  }
+
+  // ----- automatic assignment -----
+
+  async availability(actor: AuthenticatedUserActor): Promise<{ available: boolean; capacity: number; open: number }> {
+    const me = new Types.ObjectId(actor.userId);
+    const agent = await this.agents.findOne({ userId: me }).lean<StoredAgent>().exec();
+    return { available: agent?.available ?? false, capacity: SUPPORT_AGENT_CAPACITY, open: await this.openCount(me) };
+  }
+
+  /** An agent says they are free (or not). Becoming free hands them the waiting tickets, up to their limit. */
+  async setAvailability(actor: AuthenticatedUserActor, available: boolean) {
+    const me = new Types.ObjectId(actor.userId);
+    await this.agents.updateOne({ userId: me }, { $set: { available } }, { upsert: true }).exec();
+    if (available) await this.fillAgent(me);
+    return this.availability(actor);
+  }
+
+  /**
+   * Gives a waiting ticket to the free agent with the fewest open tickets (the one who was given a
+   * ticket longest ago when they tie). Nobody free: the ticket stays in the waiting list.
+   */
+  async autoAssign(ticketId: Types.ObjectId): Promise<boolean> {
+    for (const agent of await this.freeAgents()) {
+      if (await this.claim(ticketId, agent.userId)) return true;
+    }
+    return false;
+  }
+
+  /** Hands the agent the most urgent waiting tickets until they hold as many as they may. */
+  async fillAgent(agentId: Types.ObjectId): Promise<void> {
+    const agent = await this.agents.findOne({ userId: agentId, available: true }).lean<StoredAgent>().exec();
+    if (!agent) return;
+    let open = await this.openCount(agentId);
+    while (open < SUPPORT_AGENT_CAPACITY) {
+      const waiting = await this.tickets
+        .find({ assignedTo: null, status: { $ne: 'RESOLVED' } })
+        .sort({ createdAt: 1 })
+        .limit(50)
+        .lean<StoredTicket[]>()
+        .exec();
+      const rank = { HIGH: 0, NORMAL: 1, LOW: 2 } as const;
+      const next = [...waiting].sort(
+        (a, b) =>
+          Number(isOverdue(b)) - Number(isOverdue(a)) ||
+          rank[a.priority] - rank[b.priority] ||
+          (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0),
+      )[0];
+      if (!next || !(await this.claim(next._id, agentId))) return;
+      open += 1;
+    }
+  }
+
+  private async freeAgents(): Promise<Array<StoredAgent & { load: number }>> {
+    const agents = await this.agents.find({ available: true }).lean<StoredAgent[]>().exec();
+    if (agents.length === 0) return [];
+    const rows = await this.tickets
+      .aggregate<{ _id: Types.ObjectId; n: number }>([
+        { $match: { assignedTo: { $in: agents.map((a) => a.userId) }, status: { $ne: 'RESOLVED' } } },
+        { $group: { _id: '$assignedTo', n: { $sum: 1 } } },
+      ])
+      .exec();
+    const loads = new Map(rows.map((row) => [row._id.toHexString(), row.n]));
+    return agents
+      .map((agent) => ({ ...agent, load: loads.get(agent.userId.toHexString()) ?? 0 }))
+      .filter((agent) => agent.load < SUPPORT_AGENT_CAPACITY)
+      .sort(
+        (a, b) =>
+          a.load - b.load || (a.lastAssignedAt?.getTime() ?? 0) - (b.lastAssignedAt?.getTime() ?? 0),
+      );
+  }
+
+  /** One atomic step: the ticket goes to this agent only if nobody has it yet. */
+  private async claim(ticketId: Types.ObjectId, agentId: Types.ObjectId): Promise<boolean> {
+    const [found] = await this.users.findNames([agentId]);
+    const taken = await this.tickets
+      .findOneAndUpdate(
+        { _id: ticketId, assignedTo: null, status: { $ne: 'RESOLVED' } },
+        { $set: { assignedTo: agentId, assignedToName: found?.name?.trim() || 'Support', status: 'IN_PROGRESS', autoAssigned: true } },
+        { returnDocument: 'after' },
+      )
+      .lean<StoredTicket>()
+      .exec();
+    if (!taken) return false;
+    await this.agents.updateOne({ userId: agentId }, { $set: { lastAssignedAt: new Date() } }).exec();
+    return true;
+  }
+
+  private openCount(agentId: Types.ObjectId): Promise<number> {
+    return this.tickets.countDocuments({ assignedTo: agentId, status: { $ne: 'RESOLVED' } }).exec();
   }
 
   // ----- helpers -----

@@ -62,7 +62,14 @@ class _AdminTicketsPageState extends ConsumerState<AdminTicketsPage> {
   String _priority = '';
   bool _overdueOnly = false;
   bool _mineOnly = false;
+  bool _unassignedOnly = false;
   bool _exporting = false;
+  // Am I free for tickets, how many may I hold, how many do I hold (null until loaded)
+  bool _available = false;
+  int _openCount = 0;
+  int _capacity = 5;
+  bool _availabilityLoaded = false;
+  bool _savingAvailability = false;
   int _page = 1;
   int _total = 0;
   bool _busy = true;
@@ -76,13 +83,54 @@ class _AdminTicketsPageState extends ConsumerState<AdminTicketsPage> {
   @override
   void initState() {
     super.initState();
-    Future<void>.microtask(_load);
+    Future<void>.microtask(() {
+      _load();
+      _loadAvailability();
+    });
   }
 
   @override
   void dispose() {
     _search.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadAvailability() async {
+    try {
+      final response = await _api.get('admin/support/availability');
+      final data = response.data;
+      if (mounted && data is Map) _applyAvailability(asJsonMap(data));
+    } on Object {
+      // The switch is a convenience: tickets still load without it
+    }
+  }
+
+  void _applyAvailability(JsonMap data) {
+    setState(() {
+      _available = data['available'] == true;
+      _openCount = (data['open'] as num?)?.toInt() ?? 0;
+      _capacity = (data['capacity'] as num?)?.toInt() ?? 5;
+      _availabilityLoaded = true;
+    });
+  }
+
+  /// Turning it on hands me the waiting tickets, so the list is loaded again.
+  Future<void> _setAvailable(bool value) async {
+    setState(() => _savingAvailability = true);
+    try {
+      final response = await _api.put('admin/support/availability', body: {'available': value});
+      final data = response.data;
+      if (mounted && data is Map) _applyAvailability(asJsonMap(data));
+      await _load();
+    } on Object catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(_say(e))));
+      }
+    } finally {
+      if (mounted) setState(() => _savingAvailability = false);
+    }
   }
 
   Future<void> _load() async {
@@ -172,6 +220,7 @@ class _AdminTicketsPageState extends ConsumerState<AdminTicketsPage> {
     if (_priority.isNotEmpty) 'priority': _priority,
     if (_overdueOnly) 'overdue': 'true',
     if (_mineOnly) 'mine': 'true',
+    if (_unassignedOnly) 'unassigned': 'true',
   };
 
   void _filter(VoidCallback change) {
@@ -260,7 +309,7 @@ class _AdminTicketsPageState extends ConsumerState<AdminTicketsPage> {
           const SizedBox(height: AbraSpacing.xs),
           Text(
             '${t['repliesCount'] ?? 0} replies'
-            '${'${t['assignedToName']}'.isEmpty ? '' : ' - ${t['assignedToName']}'}',
+            '${'${t['assignedToName']}'.isEmpty ? ' - waiting for an agent' : ' - ${t['assignedToName']}${t['autoAssigned'] == true ? ' (assigned automatically)' : ''}'}',
             style: theme.textTheme.bodySmall?.copyWith(color: AbraColors.textSecondary),
           ),
         ],
@@ -282,6 +331,23 @@ class _AdminTicketsPageState extends ConsumerState<AdminTicketsPage> {
             'Questions and problems customers raised. Staff have a day to answer each one.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AbraColors.textSecondary),
           ),
+          const SizedBox(height: AbraSpacing.md),
+          if (_availabilityLoaded)
+            AbraCard(
+              child: SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('I am available for tickets'),
+                subtitle: Text(
+                  _available
+                      ? 'New tickets go to the free agent with the fewest open tickets. You hold $_openCount of $_capacity.'
+                      : 'Switch on to receive tickets automatically. Waiting tickets are given to you first.',
+                ),
+                value: _available,
+                onChanged: _savingAvailability || !ref.read(accessProvider).can(PermissionKeys.supportManage)
+                    ? null
+                    : _setAvailable,
+              ),
+            ),
           const SizedBox(height: AbraSpacing.lg),
           Wrap(
             spacing: AbraSpacing.md,
@@ -308,6 +374,11 @@ class _AdminTicketsPageState extends ConsumerState<AdminTicketsPage> {
                 label: const Text('Overdue only'),
                 selected: _overdueOnly,
                 onSelected: (v) => _filter(() => _overdueOnly = v),
+              ),
+              FilterChip(
+                label: const Text('Unassigned'),
+                selected: _unassignedOnly,
+                onSelected: (v) => _filter(() => _unassignedOnly = v),
               ),
               FilterChip(
                 label: const Text('Assigned to me'),

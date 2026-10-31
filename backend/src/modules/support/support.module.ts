@@ -4,10 +4,12 @@ import { RbacModule } from '../rbac/rbac.module';
 import { UsersModule } from '../users/users.module';
 import { SupportAdminController } from './support_admin_manage';
 import {
+  SUPPORT_AGENT_MODEL,
   SUPPORT_CANNED_MODEL,
   SUPPORT_REPLY_MODEL,
   SUPPORT_TICKET_MODEL,
   SupportAdminService,
+  supportAgentSchema,
   supportCannedSchema,
   supportReplySchema,
   supportTicketSchema,
@@ -25,6 +27,7 @@ import { SupportCustomerService } from './support_customer.service';
       { name: SUPPORT_TICKET_MODEL, schema: supportTicketSchema },
       { name: SUPPORT_REPLY_MODEL, schema: supportReplySchema },
       { name: SUPPORT_CANNED_MODEL, schema: supportCannedSchema },
+      { name: SUPPORT_AGENT_MODEL, schema: supportAgentSchema },
     ]),
     RbacModule,
     UsersModule,

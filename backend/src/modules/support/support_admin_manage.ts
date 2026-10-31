@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, Req } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { type Request } from 'express';
 import { z } from 'zod';
@@ -30,11 +30,13 @@ export class TicketListQueryDto extends createZodDto(
     priority: z.enum(TICKET_PRIORITIES).optional(),
     overdue: z.enum(['true', 'false']).transform((value) => value === 'true').optional(),
     mine: z.enum(['true', 'false']).transform((value) => value === 'true').optional(),
+    unassigned: z.enum(['true', 'false']).transform((value) => value === 'true').optional(),
     page: z.coerce.number().int().min(1).max(10_000).default(1),
     pageSize: z.coerce.number().int().min(1).max(100).default(10),
   }),
 ) {}
 
+export class AvailabilityDto extends createZodDto(z.object({ available: z.boolean() })) {}
 export class PriorityDto extends createZodDto(z.object({ priority: z.enum(TICKET_PRIORITIES) })) {}
 export class AssignDto extends createZodDto(z.object({ assignToMe: z.boolean() })) {}
 export class StaffReplyDto extends createZodDto(z.object({ message: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH) })) {}
@@ -61,6 +63,32 @@ export class SupportAdminController {
     @Query() query: TicketListQueryDto,
   ): Promise<PaginatedResult<TicketView>> {
     return this.support.list(actor, query);
+  }
+
+  @Get('availability')
+  @RequirePermission('support.read')
+  @ApiOperation({
+    summary: 'Am I free for tickets?',
+    description: 'Requires support.read. My status, how many tickets I may hold, and how many I hold now.',
+  })
+  availability(@CurrentActor() actor: AuthenticatedUserActor): Promise<{ available: boolean; capacity: number; open: number }> {
+    return this.support.availability(actor);
+  }
+
+  @Put('availability')
+  @RequirePermission('support.manage')
+  @ZodApiBody(AvailabilityDto)
+  @ApiOperation({
+    summary: 'Say I am free (or not) for tickets',
+    description:
+      'Requires support.manage. While Available, new tickets go to the free agent with the fewest ' +
+      'open tickets. Turning it on hands me the waiting tickets up to my limit.',
+  })
+  setAvailability(
+    @CurrentActor() actor: AuthenticatedUserActor,
+    @Body() body: AvailabilityDto,
+  ): Promise<{ available: boolean; capacity: number; open: number }> {
+    return this.support.setAvailability(actor, body.available);
   }
 
   @Get('canned-replies')

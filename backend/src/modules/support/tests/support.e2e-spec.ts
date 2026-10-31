@@ -276,6 +276,101 @@ describe('Support tickets e2e', () => {
     });
   });
 
+  describe('automatic assignment (least loaded, up to 5 open tickets each)', () => {
+    let agentB: Caller;
+    const availability = (who: Caller, available: boolean) =>
+      asStaff(who, 'put', '/availability', { available });
+    const fresh = async () => {
+      for (const name of ['support_tickets', 'support_replies', 'support_agents']) {
+        await context.connection.collection(name).deleteMany({});
+      }
+    };
+    const assignedTo = async (ticketId: string) =>
+      (
+        await context.connection
+          .collection('support_tickets')
+          .findOne({ _id: new Types.ObjectId(ticketId) })
+      )?.['assignedTo']?.toString() ?? null;
+
+    beforeAll(async () => {
+      agentB = await seedAndSignIn(context, { roleKeys: ['SUPPORT'] });
+    });
+    beforeEach(fresh);
+
+    it('keeps a new ticket waiting when nobody is free, and lists it as unassigned', async () => {
+      const me = await newCustomer();
+      const ticket = await raise(me);
+      expect(ticket).toMatchObject({ status: 'OPEN', assignedToName: '', autoAssigned: false });
+      const waiting = dataOf<TicketView[]>(await asStaff(superAdmin, 'get', '/tickets?unassigned=true').expect(200));
+      expect(waiting.map((t) => t.id)).toEqual([ticket.id]);
+    });
+
+    it('gives a new ticket to a free agent at once', async () => {
+      await availability(support, true).expect(200);
+      const me = await newCustomer();
+      const ticket = await raise(me);
+      expect(ticket).toMatchObject({ status: 'IN_PROGRESS', assignedToMe: false, autoAssigned: true });
+      expect(await assignedTo(ticket.id)).toBe(support.id);
+      const mine = dataOf<TicketView[]>(await asStaff(support, 'get', '/tickets?mine=true').expect(200));
+      expect(mine.map((t) => t.id)).toEqual([ticket.id]);
+    });
+
+    it('turning Available hands the agent the tickets that were waiting', async () => {
+      const me = await newCustomer();
+      const first = await raise(me, { message: 'First waiting' });
+      const second = await raise(me, { message: 'Second waiting' });
+      const result = dataOf<{ available: boolean; capacity: number; open: number }>(
+        await availability(support, true).expect(200),
+      );
+      expect(result).toEqual({ available: true, capacity: 5, open: 2 });
+      expect(await assignedTo(first.id)).toBe(support.id);
+      expect(await assignedTo(second.id)).toBe(support.id);
+    });
+
+    it('gives each new ticket to the agent with the fewest open tickets', async () => {
+      await availability(support, true).expect(200);
+      await availability(agentB, true).expect(200);
+      const me = await newCustomer();
+      const owners: Array<string | null> = [];
+      for (let i = 0; i < 4; i += 1) owners.push(await assignedTo((await raise(me)).id));
+      const count = (id: string) => owners.filter((owner) => owner === id).length;
+      expect([count(support.id), count(agentB.id)]).toEqual([2, 2]);
+    });
+
+    it('stops at the limit; the next waits, and resolving one frees the agent to take it', async () => {
+      await availability(support, true).expect(200);
+      const me = await newCustomer();
+      const held: TicketDetailView[] = [];
+      for (let i = 0; i < 5; i += 1) held.push(await raise(me));
+      const sixth = await raise(me, { message: 'Sixth ticket' });
+      expect(sixth.status).toBe('OPEN');
+      expect(await assignedTo(sixth.id)).toBeNull();
+
+      await asStaff(support, 'post', `/tickets/${held[0]!.id}/resolve`).expect(201);
+      expect(await assignedTo(sixth.id)).toBe(support.id);
+      const after = dataOf<{ open: number }>(await asStaff(support, 'get', '/availability').expect(200));
+      expect(after.open).toBe(5);
+    });
+
+    it('an agent who is not free is never given a ticket', async () => {
+      await availability(support, true).expect(200);
+      await availability(support, false).expect(200);
+      const me = await newCustomer();
+      const ticket = await raise(me);
+      expect(await assignedTo(ticket.id)).toBeNull();
+    });
+
+    it('only staff who may manage can set it; a customer and Accounts cannot', async () => {
+      const me = await newCustomer();
+      await asStaff({ ...support, tokens: me.tokens }, 'put', '/availability', { available: true }).expect(403);
+      await availability(accounts, true).expect(403);
+      await asStaff(accounts, 'get', '/availability').expect(403);
+      await asStaff(support, 'put', '/availability', { available: 'yes' }).expect(400);
+      const mine = dataOf<{ available: boolean }>(await asStaff(support, 'get', '/availability').expect(200));
+      expect(mine.available).toBe(false);
+    });
+  });
+
   describe('audit', () => {
     it('every staff change left an entry, and none holds what the customer wrote', async () => {
       const entries = await context.connection.collection('audit_logs').find({ action: /^support\./ }).toArray();

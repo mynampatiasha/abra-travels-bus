@@ -91,7 +91,10 @@ export class SupportCustomerService {
           );
           return doc.toObject() as StoredTicket;
         });
-        return this.admin.detail(created, me.toHexString());
+        // A free agent takes it at once; if nobody is free it waits in the unassigned list
+        await this.admin.autoAssign(created._id).catch(() => false);
+        const latest = await this.tickets.findById(created._id).lean<StoredTicket>().exec();
+        return this.admin.detail(latest ?? created, me.toHexString());
       } catch (error) {
         if (!isDuplicateKeyError(error)) throw error;
         // another customer took that number at the same moment: try the next one

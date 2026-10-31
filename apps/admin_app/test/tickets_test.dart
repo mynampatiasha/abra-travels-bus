@@ -78,6 +78,18 @@ FakeBackend withTickets(Persona persona, {String status = 'OPEN', bool overdue =
       <String, Object?>{'id': 'c1', 'title': 'Refund timeline', 'body': 'Refunds reach you in 5 to 7 days.'},
     ]),
   );
+  overrides['GET admin/support/availability'] = (_) => guarded(
+    'support.read',
+    () => FakeResponse.ok(<String, Object?>{'available': false, 'capacity': 5, 'open': 0}),
+  );
+  overrides['PUT admin/support/availability'] = (request) => guarded(
+    'support.manage',
+    () => FakeResponse.ok(<String, Object?>{
+      'available': (request.body! as Map)['available'],
+      'capacity': 5,
+      'open': 2,
+    }),
+  );
   overrides['DELETE admin/support/canned-replies/c1'] = (_) =>
       guarded('support.manage', () => FakeResponse.ok(<String, Object?>{'deleted': true}));
   for (final action in ['reply', 'assign', 'resolve', 'reopen']) {
@@ -143,6 +155,46 @@ void main() {
       await openTickets(tester, backend);
       expect(find.text('Tickets are being moved. Try again in a minute.'), findsOneWidget);
       expect(find.widgetWithText(FilledButton, 'Try again'), findsOneWidget);
+    });
+  });
+
+  group('automatic assignment', () {
+    testWidgets('the switch shows my status and turning it on tells the server and reloads the list', (tester) async {
+      final app = await openTickets(tester, withTickets(Persona.superAdmin));
+      expect(find.text('I am available for tickets'), findsOneWidget);
+      expect(find.textContaining('Switch on to receive tickets automatically'), findsOneWidget);
+      final before = app.requestsTo('admin/support/tickets', 'GET').length;
+
+      await tapOn(tester, find.byType(Switch));
+
+      final sent = app.requestsTo('admin/support/availability', 'PUT');
+      expect(sent, hasLength(1));
+      expect((sent.single.body! as Map)['available'], true);
+      expect(find.textContaining('You hold 2 of 5'), findsOneWidget);
+      expect(app.requestsTo('admin/support/tickets', 'GET').length, greaterThan(before));
+    });
+
+    testWidgets('a view-only role cannot switch it', (tester) async {
+      await openTickets(tester, withTickets(viewer));
+      expect(tester.widget<Switch>(find.byType(Switch)).onChanged, isNull);
+    });
+
+    testWidgets('the Unassigned filter asks for tickets nobody has taken', (tester) async {
+      final app = await openTickets(tester, withTickets(Persona.superAdmin));
+      await tapOn(tester, find.widgetWithText(FilterChip, 'Unassigned'));
+      expect(app.requestsTo('admin/support/tickets', 'GET').last.options.queryParameters['unassigned'], 'true');
+    });
+
+    testWidgets('says who has a ticket and whether it was assigned automatically', (tester) async {
+      final backend = withTickets(Persona.superAdmin);
+      final auto = ticket('t1', 'TK-1', assignedToMe: true)..['autoAssigned'] = true;
+      backend.overrides['GET admin/support/tickets'] = (_) => FakeResponse.ok(
+        <Map<String, Object?>>[auto, ticket('t2', 'TK-2')],
+        meta: <String, Object?>{'page': 1, 'pageSize': 10, 'total': 2},
+      );
+      await openTickets(tester, backend);
+      expect(find.textContaining('assigned automatically'), findsOneWidget);
+      expect(find.textContaining('waiting for an agent'), findsOneWidget);
     });
   });
 
