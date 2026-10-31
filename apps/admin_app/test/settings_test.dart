@@ -198,6 +198,7 @@ void main() {
         'notificationTemplateName': null,
         'notificationTemplateLanguage': null,
         'otpFallbackToSms': true,
+        'approvedTemplateKeys': <String>['bus_delayed'],
         'reason': 'Updated in the management app',
       });
       expect(find.text('Saved.'), findsOneWidget);
@@ -210,6 +211,49 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('EAAbigSecretTokenValue1234'), findsNothing);
+    });
+
+    testWidgets('ticking the templates Meta approved sends the whole list, '
+        'in the order the backend gives', (tester) async {
+      final app = await openSettings(tester, Persona.superAdmin);
+
+      expect(find.text('Templates approved by Meta'), findsOneWidget);
+      FilterChip chip(String key) =>
+          tester.widget<FilterChip>(find.widgetWithText(FilterChip, key));
+      expect(chip('bus_delayed').selected, isTrue);
+      expect(chip('booking_confirmed').selected, isFalse);
+
+      await tapOn(tester, find.widgetWithText(FilterChip, 'sos_emergency_contact'));
+      await tapOn(tester, find.widgetWithText(FilterChip, 'booking_confirmed'));
+      await tapOn(tester, find.widgetWithText(FilterChip, 'bus_delayed'));
+      await tapOn(tester, button('Save'));
+
+      final body =
+          app.requestsTo('settings/integrations/whatsapp', 'PUT').single.body
+              as Map;
+      expect(body['approvedTemplateKeys'], <String>[
+        'booking_confirmed',
+        'sos_emergency_contact',
+      ]);
+    });
+
+    testWidgets('a backend without the template list shows no picker and '
+        'sends no list', (tester) async {
+      final app = await openSettings(
+        tester,
+        Persona.superAdmin,
+        prepare: (backend) => backend.settings['whatsapp']!
+          ..remove('templateKeys')
+          ..remove('approvedTemplateKeys'),
+      );
+
+      expect(find.text('Templates approved by Meta'), findsNothing);
+      await tester.enterText(field('Phone number ID'), '109876543210987');
+      await tapOn(tester, button('Save'));
+      final body =
+          app.requestsTo('settings/integrations/whatsapp', 'PUT').single.body
+              as Map;
+      expect(body.containsKey('approvedTemplateKeys'), isFalse);
     });
 
     testWidgets('saving without typing a token keeps the saved one', (

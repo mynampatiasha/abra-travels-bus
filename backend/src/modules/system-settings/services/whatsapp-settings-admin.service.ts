@@ -12,6 +12,7 @@ import {
   WhatsAppSettingsStore,
 } from '../../../integrations/whatsapp/whatsapp-settings.store';
 import { AuditLogService } from '../../audit-logs/services/audit-log.service';
+import { CUSTOMER_MESSAGE_TEMPLATES } from '../../notification-templates/customer_message_templates';
 import { EffectivePermissionsService } from '../../rbac/services/effective-permissions.service';
 import { type SettingsTestResult } from './email-settings-admin.service';
 import { checkWhatsAppConnection } from './whatsapp-connection-check';
@@ -42,10 +43,17 @@ export interface WhatsAppSettingsView {
   notificationTemplateLanguage: string | null;
   /** Customer templates Meta approved under their own key. */
   approvedTemplateKeys: string[];
+  /** Every customer template sent by WhatsApp: the names an administrator can mark approved. */
+  templateKeys: string[];
   graphApiVersion: string | null;
   updatedAt: string | null;
   updatedByUserId: string | null;
 }
+
+// The login code has its own template (otpTemplateName), so it is not offered here
+const WHATSAPP_TEMPLATE_KEYS = CUSTOMER_MESSAGE_TEMPLATES.filter(
+  (template) => template.key !== 'login_otp' && 'text' in template,
+).map((template) => template.key);
 
 const CHANGE_FIELDS = [
   'enabled',
@@ -169,6 +177,7 @@ export class WhatsAppSettingsAdminService {
       notificationTemplateName: effective.notificationTemplateName ?? null,
       notificationTemplateLanguage: effective.notificationTemplateLanguage ?? null,
       approvedTemplateKeys: effective.approvedTemplateKeys,
+      templateKeys: WHATSAPP_TEMPLATE_KEYS,
       graphApiVersion: effective.apiVersion ?? null,
       updatedAt: stored?.updatedAt?.toISOString() ?? null,
       updatedByUserId: stored?.updatedByUserId?.toHexString() ?? null,

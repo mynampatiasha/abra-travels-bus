@@ -222,6 +222,12 @@ class FakeBackend {
       'otpTemplateName': null,
       'otpTemplateLanguage': null,
       'otpFallbackToSms': true,
+      'approvedTemplateKeys': <String>['bus_delayed'],
+      'templateKeys': <String>[
+        'booking_confirmed',
+        'bus_delayed',
+        'sos_emergency_contact',
+      ],
     },
     'email': <String, Object?>{
       'provider': 'smtp',

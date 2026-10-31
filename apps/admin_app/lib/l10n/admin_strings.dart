@@ -375,6 +375,8 @@ abstract final class AdminStrings {
   static const fieldNotificationTemplate = 'fieldNotificationTemplate';
   static const fieldNotificationLanguage = 'fieldNotificationLanguage';
   static const settingsNotificationHelp = 'settingsNotificationHelp';
+  static const settingsApprovedTemplates = 'settingsApprovedTemplates';
+  static const settingsApprovedTemplatesHelp = 'settingsApprovedTemplatesHelp';
   static const listEmptyMessage = 'listEmptyMessage';
   static const listEmptyAction = 'listEmptyAction';
   static const listClearFilters = 'listClearFilters';
@@ -917,12 +919,20 @@ abstract final class AdminStrings {
   static const msgStatusSkipped = 'msgStatusSkipped';
   static const msgChannelWhatsApp = 'msgChannelWhatsApp';
   static const msgChannelEmail = 'msgChannelEmail';
+  static const msgChannelSms = 'msgChannelSms';
   static const msgKindBookingConfirmed = 'msgKindBookingConfirmed';
   static const msgKindBookingCancelled = 'msgKindBookingCancelled';
   static const msgKindRefundPaid = 'msgKindRefundPaid';
   static const msgKindPaymentFailed = 'msgKindPaymentFailed';
   static const msgKindTripDelayed = 'msgKindTripDelayed';
   static const msgKindBoardingStarted = 'msgKindBoardingStarted';
+  static const msgKindTravelReminder = 'msgKindTravelReminder';
+  static const msgKindTripCancelled = 'msgKindTripCancelled';
+  static const msgKindBusChanged = 'msgKindBusChanged';
+  static const msgKindTripFeedback = 'msgKindTripFeedback';
+  static const msgKindSupportReplied = 'msgKindSupportReplied';
+  static const msgKindSosAlert = 'msgKindSosAlert';
+  static const msgKindTripShared = 'msgKindTripShared';
   static const msgKindAnnouncement = 'msgKindAnnouncement';
   static const msgKindGeneral = 'msgKindGeneral';
   static const msgDetailTitle = 'msgDetailTitle';
@@ -1309,6 +1319,8 @@ abstract final class AdminStrings {
     fieldNotificationTemplate,
     fieldNotificationLanguage,
     settingsNotificationHelp,
+    settingsApprovedTemplates,
+    settingsApprovedTemplatesHelp,
     listEmptyMessage,
     listEmptyAction,
     listClearFilters,
@@ -1937,12 +1949,20 @@ abstract final class AdminStrings {
     msgStatusSkipped,
     msgChannelWhatsApp,
     msgChannelEmail,
+    msgChannelSms,
     msgKindBookingConfirmed,
     msgKindBookingCancelled,
     msgKindRefundPaid,
     msgKindPaymentFailed,
     msgKindTripDelayed,
     msgKindBoardingStarted,
+    msgKindTravelReminder,
+    msgKindTripCancelled,
+    msgKindBusChanged,
+    msgKindTripFeedback,
+    msgKindSupportReplied,
+    msgKindSosAlert,
+    msgKindTripShared,
     msgKindAnnouncement,
     msgKindGeneral,
     msgDetailTitle,

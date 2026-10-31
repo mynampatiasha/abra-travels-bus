@@ -712,6 +712,7 @@ class _WhatsAppFormState extends ConsumerState<_WhatsAppForm>
   final _notificationLanguage = TextEditingController();
   bool _enabled = true;
   bool _fallbackToSms = true;
+  final Set<String> _approved = <String>{};
 
   @override
   void initState() {
@@ -731,6 +732,15 @@ class _WhatsAppFormState extends ConsumerState<_WhatsAppForm>
     _templateLanguage.text = text('otpTemplateLanguage') ?? '';
     _notificationTemplate.text = text('notificationTemplateName') ?? '';
     _notificationLanguage.text = text('notificationTemplateLanguage') ?? '';
+    _approved
+      ..clear()
+      ..addAll(_keys('approvedTemplateKeys'));
+  }
+
+  /// A list of template names from the settings view; anything else is ignored.
+  List<String> _keys(String field) {
+    final value = view[field];
+    return value is List ? value.whereType<String>().toList() : const <String>[];
   }
 
   @override
@@ -911,6 +921,36 @@ class _WhatsAppFormState extends ConsumerState<_WhatsAppForm>
             hintText: 'en',
           ),
         ),
+        if (_keys('templateKeys').isNotEmpty) ...<Widget>[
+          _gap(),
+          Text(
+            l10n.text(AdminStrings.settingsApprovedTemplates),
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: AbraSpacing.xs),
+          Text(
+            l10n.text(AdminStrings.settingsApprovedTemplatesHelp),
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: AbraSpacing.sm),
+          Wrap(
+            spacing: AbraSpacing.sm,
+            runSpacing: AbraSpacing.sm,
+            children: <Widget>[
+              for (final key in _keys('templateKeys'))
+                FilterChip(
+                  // The exact Meta template name, so it is shown as it is
+                  label: Text(key, style: const TextStyle(fontFamily: 'monospace')),
+                  selected: _approved.contains(key),
+                  onSelected: editable
+                      ? (selected) => setState(() {
+                          selected ? _approved.add(key) : _approved.remove(key);
+                        })
+                      : null,
+                ),
+            ],
+          ),
+        ],
         if (editable) ...<Widget>[
           _gap(),
           TextField(
@@ -946,6 +986,11 @@ class _WhatsAppFormState extends ConsumerState<_WhatsAppForm>
                       _notificationLanguage,
                     ),
                     'otpFallbackToSms': _fallbackToSms,
+                    if (_keys('templateKeys').isNotEmpty)
+                      'approvedTemplateKeys': <String>[
+                        for (final key in _keys('templateKeys'))
+                          if (_approved.contains(key)) key,
+                      ],
                   }),
                 ),
               ),

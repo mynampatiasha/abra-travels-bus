@@ -37,9 +37,12 @@ class AdminMessagesPage extends ConsumerWidget {
   }
 
   static Widget _channelBadge(Object? channel) {
-    final isWhatsApp = '${channel ?? ''}'.toUpperCase() == 'WHATSAPP';
-    final bg = isWhatsApp ? const Color(0xFFE6F7ED) : const Color(0xFFEBF3FE);
-    final fg = isWhatsApp ? const Color(0xFF0D6832) : const Color(0xFF185ABC);
+    final kind = '${channel ?? ''}'.toUpperCase();
+    final (bg, fg, label) = switch (kind) {
+      'WHATSAPP' => (const Color(0xFFE6F7ED), const Color(0xFF0D6832), 'WhatsApp'),
+      'SMS' => (const Color(0xFFF3EEFD), const Color(0xFF5B3BB5), 'SMS'),
+      _ => (const Color(0xFFEBF3FE), const Color(0xFF185ABC), 'Email'),
+    };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -47,7 +50,7 @@ class AdminMessagesPage extends ConsumerWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
-        isWhatsApp ? 'WhatsApp' : 'Email',
+        label,
         style: TextStyle(
           color: fg,
           fontSize: 12,
@@ -98,6 +101,13 @@ class AdminMessagesPage extends ConsumerWidget {
       'PAYMENT_FAILED' => l10n.text(AdminStrings.msgKindPaymentFailed),
       'TRIP_DELAYED' => l10n.text(AdminStrings.msgKindTripDelayed),
       'BOARDING_STARTED' => l10n.text(AdminStrings.msgKindBoardingStarted),
+      'TRAVEL_REMINDER' => l10n.text(AdminStrings.msgKindTravelReminder),
+      'TRIP_CANCELLED' => l10n.text(AdminStrings.msgKindTripCancelled),
+      'BUS_CHANGED' => l10n.text(AdminStrings.msgKindBusChanged),
+      'TRIP_FEEDBACK' => l10n.text(AdminStrings.msgKindTripFeedback),
+      'SUPPORT_REPLIED' => l10n.text(AdminStrings.msgKindSupportReplied),
+      'SOS_ALERT' => l10n.text(AdminStrings.msgKindSosAlert),
+      'TRIP_SHARED' => l10n.text(AdminStrings.msgKindTripShared),
       'ANNOUNCEMENT' => l10n.text(AdminStrings.msgKindAnnouncement),
       'GENERAL' => l10n.text(AdminStrings.msgKindGeneral),
       _ => kind,
@@ -171,6 +181,13 @@ class AdminMessagesPage extends ConsumerWidget {
             'PAYMENT_FAILED': AdminStrings.msgKindPaymentFailed,
             'TRIP_DELAYED': AdminStrings.msgKindTripDelayed,
             'BOARDING_STARTED': AdminStrings.msgKindBoardingStarted,
+            'TRAVEL_REMINDER': AdminStrings.msgKindTravelReminder,
+            'TRIP_CANCELLED': AdminStrings.msgKindTripCancelled,
+            'BUS_CHANGED': AdminStrings.msgKindBusChanged,
+            'TRIP_FEEDBACK': AdminStrings.msgKindTripFeedback,
+            'SUPPORT_REPLIED': AdminStrings.msgKindSupportReplied,
+            'SOS_ALERT': AdminStrings.msgKindSosAlert,
+            'TRIP_SHARED': AdminStrings.msgKindTripShared,
             'ANNOUNCEMENT': AdminStrings.msgKindAnnouncement,
             'GENERAL': AdminStrings.msgKindGeneral,
           },

@@ -66,6 +66,26 @@ Future<TestAdmin> openMessages(
 
 void main() {
   group('Messages log', () {
+    testWidgets('names the new message types and the SMS channel in words', (
+      tester,
+    ) async {
+      final backend = FakeBackend(Persona.superAdmin)
+        ..addMessage(kind: 'BUS_CHANGED', subject: 'Bus changed for your trip: ABR1')
+        ..addMessage(
+          channel: 'SMS',
+          kind: 'SOS_ALERT',
+          subject: 'SOS alert from Asha',
+        )
+        ..addMessage(kind: 'TRAVEL_REMINDER', subject: 'Your trip is tomorrow: ABR2');
+      await openMessages(tester, backend: backend);
+
+      expect(find.text('Bus changed'), findsWidgets);
+      expect(find.text('SOS alert'), findsWidgets);
+      expect(find.text('Travel reminder'), findsWidgets);
+      expect(find.text('SMS'), findsOneWidget);
+      expect(find.text('BUS_CHANGED'), findsNothing);
+    });
+
     testWidgets('shows the demo stats and columns with real message records', (
       tester,
     ) async {
