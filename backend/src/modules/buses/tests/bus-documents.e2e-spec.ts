@@ -1,3 +1,5 @@
+/* eslint-disable max-lines -- One journey covers a bus's documents, reminders, usual crew and the driver's view. */
+import { randomUUID } from 'node:crypto';
 import { Types } from 'mongoose';
 import {
   type AuthTestContext,
@@ -7,6 +9,7 @@ import {
   dataOf,
   type Tokens,
 } from '../../authentication/tests/auth-e2e.harness';
+import { EventRouter } from '../../notifications/event_router_core.service';
 import { seedAndSignIn } from '../../rbac/tests/rbac-e2e.harness';
 import {
   buildNetwork,
@@ -17,6 +20,7 @@ import {
   type Network,
 } from '../../trips/tests/catalogue-e2e.support';
 import { runId } from '../../trips/tests/discovery-e2e.fixture';
+import { BUS_DOCUMENT_EVENT_RULES } from '../../../workers/bus-document-reminder.worker';
 import {
   BusDocumentsClientManageService,
   cleanRemindDays,
@@ -351,6 +355,40 @@ describe('Bus documents e2e (abra_supply_test)', () => {
     await service.scanExpiries(new Date());
     const renewed = (await outbox()).filter((event) => (event.payload as { documentName: string }).documentName === 'Fitness certificate');
     expect(renewed.map((event) => (event.payload as { stage: string }).stage).sort()).toEqual(['20', '5', 'DAY0']);
+  });
+
+  it('delivers the reminder as a notification to the driver and to the owner', async () => {
+    // The worker registers these rules in production; the router then turns the recorded event into notifications
+    const router = context.app.get(EventRouter);
+    router.addRules(BUS_DOCUMENT_EVENT_RULES);
+    const recorded = (await outbox()).find(
+      (event) => (event.payload as { documentName: string }).documentName === 'Fitness certificate',
+    )!;
+    const eventId = randomUUID();
+    await router.handle({
+      eventId,
+      type: 'bus.document-expiring',
+      aggregateType: 'bus',
+      aggregateId: busId,
+      occurredAt: new Date().toISOString(),
+      payload: recorded.payload as Record<string, unknown>,
+    });
+
+    const notices = await context.connection.collection('notifications').find({ eventId }).toArray();
+    const forDriver = notices.filter((notice) => String(notice.userId) === driver.id);
+    expect(forDriver).toHaveLength(1);
+    expect(forDriver[0]).toMatchObject({ type: 'bus.document-expiring' });
+    expect(String(forDriver[0]!.title)).toMatch(/^Bus document/);
+    expect(String(forDriver[0]!.body)).toContain('Fitness certificate');
+    expect(String(forDriver[0]!.body)).toContain('Please remind your operator');
+    // The owner of the company is told too, in other words
+    const ownerNotices = notices.filter((notice) => String(notice.userId) !== driver.id);
+    expect(ownerNotices.length).toBeGreaterThanOrEqual(1);
+    expect(ownerNotices.every((notice) => !String(notice.body).includes('Please remind your operator'))).toBe(true);
+    // Nothing shows a database id
+    for (const notice of notices) {
+      expect(String(notice.body)).not.toMatch(/[0-9a-f]{24}/);
+    }
   });
 
   it('lets the driver of the bus see and download its documents, and nobody else', async () => {
