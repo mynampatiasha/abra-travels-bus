@@ -62,8 +62,8 @@ describe('keysForPageLevel', () => {
   });
 
   it('grants nothing for a module that has no permissions yet (fail closed)', () => {
-    const payments = findPage('ADMIN', 'payments')!;
-    expect(keysForPageLevel(payments, 'FULL')).toEqual([]);
+    const unbuilt = { id: 'unbuilt', title: 'Unbuilt', audience: 'ADMIN' as const, modules: ['no-such-module'] };
+    expect(keysForPageLevel(unbuilt, 'FULL')).toEqual([]);
   });
 
   it('every granted key exists in the permission registry', () => {

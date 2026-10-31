@@ -21,11 +21,8 @@ const PROVIDER_REQUIREMENTS: ReadonlyArray<{
   reason: string;
   keys: ReadonlyArray<keyof ParsedEnvironment>;
 }> = [
-  {
-    when: (env) => env.PAYMENT_GATEWAY === 'razorpay',
-    reason: 'required when PAYMENT_GATEWAY=razorpay',
-    keys: ['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'RAZORPAY_WEBHOOK_SECRET'],
-  },
+  // Razorpay is not listed: its keys may be saved in the admin app (Settings, Integrations) instead
+  // of this file. Without keys anywhere, customers are told payments are not set up yet.
   {
     when: (env) => env.WHATSAPP_PROVIDER === 'meta',
     reason: 'required when WHATSAPP_PROVIDER=meta',

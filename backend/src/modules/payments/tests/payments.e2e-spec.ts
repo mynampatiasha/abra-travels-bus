@@ -70,10 +70,10 @@ describe('Payments e2e (abra_supply_test, development gateway)', () => {
       bus: { berthType: 'SEATER' },
       boardingPoints: [],
       droppingPoints: [],
-      seatCounts: { total: 16, available: 16, locked: 0, booked: 0, blocked: 0 },
+      seatCounts: { total: 20, available: 20, locked: 0, booked: 0, blocked: 0 },
     });
     await seats().insertMany(
-      Array.from({ length: 16 }, (_, index) => ({
+      Array.from({ length: 20 }, (_, index) => ({
         tripId,
         operatorId,
         seatNumber: String(index + 1),
@@ -132,7 +132,7 @@ describe('Payments e2e (abra_supply_test, development gateway)', () => {
       pnr: booking.pnr,
       seatsText: '2',
       amountText: 'Rs 941.50',
-      contactPhone: '9876543210',
+      contactPhone: '+919876543210',
       contactEmail: 'asha@example.com',
       customerId: expect.any(String),
     });
@@ -291,6 +291,26 @@ describe('Payments e2e (abra_supply_test, development gateway)', () => {
       expect(payment).toMatchObject({ status: 'FAILED', failureReason: 'AMOUNT_MISMATCH' });
     });
 
+    it('confirms a booking paid by someone else through the shared link', async () => {
+      const booking = await book(ben, '17');
+      const o = await order(ben, booking.bookingId);
+      // The link's payment has the link's own order id; our payment is named in the notes
+      const payload = {
+        event: 'payment.captured',
+        payload: {
+          payment: {
+            entity: { id: 'pay_link_1', order_id: 'order_of_the_link', amount: o.amountPaise, currency: 'INR', notes: { paymentId: o.paymentId } },
+          },
+        },
+      };
+      const res = await send(payload, { eventId: 'evt_link_1' }).expect(200);
+      expect(dataOf<{ outcome: string }>(res).outcome).toBe('CONFIRMED');
+      expect(await bookingStatus(booking.bookingId)).toBe('CONFIRMED');
+      const payment = await context.connection.collection('payments').findOne({ _id: new Types.ObjectId(o.paymentId) });
+      expect(payment).toMatchObject({ status: 'SUCCESS', gatewayPaymentId: 'pay_link_1' });
+      await context.connection.collection('payment_gateway_events').deleteMany({ eventId: 'evt_link_1' });
+    });
+
     it('ignores a failed attempt and an order it does not know', async () => {
       const booking = await book(ben, '13');
       const o = await order(ben, booking.bookingId);
@@ -316,6 +336,23 @@ describe('Payments e2e (abra_supply_test, development gateway)', () => {
     const second = await book(ben, '15');
     const o2 = await order(ben, second.bookingId);
     await expect(service.refund(new Types.ObjectId(o2.paymentId), 100, 'TEST_UNPAID')).rejects.toMatchObject({ code: 'INVALID_STATE_TRANSITION' });
+  });
+
+  it('makes one link for someone else to pay, for the owner only, until the payment is done', async () => {
+    const booking = await book(ben, '18');
+    const o = await order(ben, booking.bookingId);
+    const make = (caller: Caller, id: string) => client(context).post(`${API}/payments/${id}/share-link`).set(...auth(caller));
+    const first = dataOf<{ url: string; amountPaise: number; expiresAt: string }>(await make(ben, o.paymentId).expect(200));
+    expect(first.url).toMatch(/^https:\/\//);
+    expect(first.amountPaise).toBe(o.amountPaise);
+    expect(new Date(first.expiresAt).getTime()).toBeGreaterThan(Date.now());
+    const again = dataOf<{ url: string }>(await make(ben, o.paymentId).expect(200));
+    expect(again.url).toBe(first.url);
+    await make(anna, o.paymentId).expect(404);
+    await client(context).post(`${API}/payments/${o.paymentId}/share-link`).expect(401);
+    await devComplete(ben, o.paymentId, 'success').expect(200);
+    const done = await make(ben, o.paymentId).expect(409);
+    expect(errorCodeOf(done)).toBe('INVALID_STATE_TRANSITION');
   });
 
   it('checks Razorpay signatures the way Razorpay makes them', () => {

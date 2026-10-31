@@ -20,9 +20,13 @@ const reply = (status: number, body: unknown = {}) =>
 
 describe('connection tests', () => {
   it('Razorpay: ok, rejected key, unreachable, and missing values', async () => {
-    const values = { keyId: 'rzp_test_abcdef123456', keySecret: 'secret-secret-1' };
+    const values = { keyId: 'rzp_test_abcdef123456', keySecret: 'secret-secret-1', webhookSecret: 'hook-secret-1' };
     const ok = await testRazorpay(values, () => reply(200, { items: [] }));
     expect(ok).toEqual({ ok: true, message: 'Connected to Razorpay in test mode.' });
+    // Keys that work but no webhook secret: it says what that costs
+    const noHook = await testRazorpay({ keyId: values.keyId, keySecret: values.keySecret }, () => reply(200, { items: [] }));
+    expect(noHook.ok).toBe(true);
+    expect(noHook.message).toContain('webhook secret is not saved yet');
     const live = await testRazorpay({ ...values, keyId: 'rzp_live_abcdef123456' }, () =>
       reply(200),
     );

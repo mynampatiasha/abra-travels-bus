@@ -25,11 +25,20 @@ export interface GatewayWebhookEvent {
   gatewayRefundId?: string;
   amountPaise?: number;
   currency?: string;
+  /** The id of our payment, when the money came through a payment link (its order is the link's own). */
+  notePaymentId?: string;
 }
 
 export interface GatewayRefund {
   gatewayRefundId: string;
   status: 'PENDING' | 'COMPLETED';
+}
+
+export interface GatewayPaymentLink {
+  linkId: string;
+  url: string;
+  /** When the link stops working. */
+  expiresAt: Date;
 }
 
 export interface PaymentGateway {
@@ -39,6 +48,15 @@ export interface PaymentGateway {
   parseWebhookEvent(rawBody: Buffer): GatewayWebhookEvent;
   /** Sends money back for a captured payment. */
   createRefund(input: { gatewayPaymentId: string; amountPaise: number; receipt: string }): Promise<GatewayRefund>;
+  /** A link anyone can open to pay this amount, for the person who is not holding the phone. */
+  createPaymentLink(input: {
+    amountPaise: number;
+    currency: string;
+    description: string;
+    /** Comes back on the payment, so the webhook knows which of our payments it belongs to. */
+    notes: Record<string, string>;
+    expiresAt: Date;
+  }): Promise<GatewayPaymentLink>;
   /** Development only: the webhook signature the gateway itself would give. */
   signWebhookForDevelopment?(rawBody: Buffer): string;
   createOrder(input: { amountPaise: number; currency: string; receipt: string }): Promise<GatewayOrder>;
@@ -68,6 +86,11 @@ export class DevelopmentPaymentGateway implements PaymentGateway {
 
   parseWebhookEvent(rawBody: Buffer): GatewayWebhookEvent {
     return parseRazorpayShape(rawBody);
+  }
+
+  createPaymentLink(input: { expiresAt: Date }): Promise<GatewayPaymentLink> {
+    const linkId = `plink_dev_${randomBytes(6).toString('hex')}`;
+    return Promise.resolve({ linkId, url: `https://pay.development.invalid/${linkId}`, expiresAt: input.expiresAt });
   }
 
   createRefund(input: { gatewayPaymentId: string; amountPaise: number; receipt: string }): Promise<GatewayRefund> {
@@ -101,6 +124,44 @@ export class RazorpayPaymentGateway implements PaymentGateway {
 
   parseWebhookEvent(rawBody: Buffer): GatewayWebhookEvent {
     return parseRazorpayShape(rawBody);
+  }
+
+  async createPaymentLink(input: {
+    amountPaise: number;
+    currency: string;
+    description: string;
+    notes: Record<string, string>;
+    expiresAt: Date;
+  }): Promise<GatewayPaymentLink> {
+    // Razorpay wants a link to live at least 15 minutes
+    const expiresAt = new Date(Math.max(input.expiresAt.getTime(), Date.now() + 16 * 60_000));
+    let response: Response;
+    try {
+      response = await fetch('https://api.razorpay.com/v1/payment_links', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Basic ${Buffer.from(`${this.keyId}:${this.keySecret}`).toString('base64')}`,
+        },
+        body: JSON.stringify({
+          amount: input.amountPaise,
+          currency: input.currency,
+          accept_partial: false,
+          description: input.description,
+          expire_by: Math.floor(expiresAt.getTime() / 1000),
+          reminder_enable: false,
+          notes: input.notes,
+        }),
+        signal: AbortSignal.timeout(15_000),
+      });
+    } catch {
+      throw new ApiException('PAYMENT_PROVIDER_UNAVAILABLE', 'The payment service could not be reached. Please try again.');
+    }
+    const body = (await response.json().catch(() => undefined)) as { id?: string; short_url?: string } | undefined;
+    if (!response.ok || !body?.id || !body.short_url) {
+      throw new ApiException('PAYMENT_PROVIDER_UNAVAILABLE', 'The payment service could not make a link. Please try again.');
+    }
+    return { linkId: body.id, url: body.short_url, expiresAt };
   }
 
   async createRefund(input: { gatewayPaymentId: string; amountPaise: number; receipt: string }): Promise<GatewayRefund> {
@@ -161,7 +222,7 @@ function parseRazorpayShape(rawBody: Buffer): GatewayWebhookEvent {
     const body = JSON.parse(rawBody.toString('utf8')) as {
       event?: string;
       payload?: {
-        payment?: { entity?: { id?: string; order_id?: string; amount?: number; currency?: string } };
+        payment?: { entity?: { id?: string; order_id?: string; amount?: number; currency?: string; notes?: Record<string, unknown> | unknown[] } };
         refund?: { entity?: { id?: string; payment_id?: string; amount?: number } };
       };
     };
@@ -174,6 +235,9 @@ function parseRazorpayShape(rawBody: Buffer): GatewayWebhookEvent {
         ...(payment?.id ? { gatewayPaymentId: payment.id } : {}),
         ...(typeof payment?.amount === 'number' ? { amountPaise: payment.amount } : {}),
         ...(payment?.currency ? { currency: payment.currency } : {}),
+        ...(typeof (payment?.notes as Record<string, unknown> | undefined)?.paymentId === 'string'
+          ? { notePaymentId: (payment?.notes as Record<string, string>).paymentId as string }
+          : {}),
       };
     }
     if (body.event === 'refund.processed') {

@@ -1,4 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { ABRA_LOGO_PNG_BASE64 } from '../tickets/ticket_logo';
+import { EMAIL_LOGO_CID, renderEmail, whatsAppFor } from './message_templates';
 import { InjectModel } from '@nestjs/mongoose';
 import { type QueryFilter, isValidObjectId, type Model, Schema, Types } from 'mongoose';
 import { ApiException } from '../../common/errors/api-exception';
@@ -34,6 +36,9 @@ export const MESSAGE_KINDS = [
   'BOARDING_STARTED',
   'ANNOUNCEMENT',
   'GENERAL',
+  'TRIP_REMINDER',
+  'FEEDBACK_REQUEST',
+  'SUPPORT_REPLY',
 ] as const;
 export type MessageKind = (typeof MESSAGE_KINDS)[number];
 
@@ -151,6 +156,20 @@ export interface SendMessageInput {
   bookingId?: Types.ObjectId | undefined;
   /** The domain event that caused this message: sending it twice for one event does nothing. */
   eventId?: string | undefined;
+  /**
+   * The values behind the message (PNR, route, amount ...). With them, a kind that has a template
+   * (message_templates.ts) goes out as its branded email and its approved WhatsApp template; without
+   * them the plain subject and body are sent, as before.
+   */
+  variables?: Readonly<Record<string, string | undefined>> | undefined;
+  /** The ticket PDF, sent with the email and as the WhatsApp header. Not stored with the message. */
+  attachment?: { filename: string; content: Buffer; contentType: string } | undefined;
+}
+
+/** What is only needed while the message is being delivered. */
+interface DeliveryExtras {
+  variables?: SendMessageInput['variables'];
+  attachment?: SendMessageInput['attachment'];
 }
 
 const escapeHtml = (text: string): string =>
@@ -204,12 +223,12 @@ export class MessageSenderService {
           attempts: 0,
         })
       ).toObject() as StoredMessage);
-    return this.attempt(record);
+    return this.attempt(record, { variables: input.variables, attachment: input.attachment });
   }
 
   /** Tries the channel once more for an existing record and stores the outcome. */
-  async attempt(record: StoredMessage): Promise<MessageView> {
-    const outcome = await this.deliver(record);
+  async attempt(record: StoredMessage, extras: DeliveryExtras = {}): Promise<MessageView> {
+    const outcome = await this.deliver(record, extras);
     const now = new Date();
     const updated = await this.model
       .findByIdAndUpdate(
@@ -232,14 +251,39 @@ export class MessageSenderService {
 
   private async deliver(
     record: StoredMessage,
+    extras: DeliveryExtras,
   ): Promise<{ status: Exclude<MessageStatus, 'QUEUED'>; detail?: string }> {
     try {
       if (record.channel === 'EMAIL') {
+        const branded = extras.variables ? renderEmail(record.kind, extras.variables) : null;
         await this.email.send({
           to: record.address,
-          subject: record.subject,
-          text: record.body,
-          html: `<p><strong>${escapeHtml(record.subject)}</strong></p><p>${escapeHtml(record.body).replaceAll('\n', '<br>')}</p>`,
+          subject: branded?.subject ?? record.subject,
+          text: branded?.text ?? record.body,
+          html:
+            branded?.html ??
+            `<p><strong>${escapeHtml(record.subject)}</strong></p><p>${escapeHtml(record.body).replaceAll('\n', '<br>')}</p>`,
+          attachments: [
+            ...(branded
+              ? [{ filename: 'abra-logo.png', content: Buffer.from(ABRA_LOGO_PNG_BASE64, 'base64'), contentType: 'image/png', cid: EMAIL_LOGO_CID }]
+              : []),
+            ...(extras.attachment ? [extras.attachment] : []),
+          ],
+        });
+        return { status: 'SENT' };
+      }
+      const templated = extras.variables ? whatsAppFor(record.kind, extras.variables) : null;
+      if (templated) {
+        // The approved template of this kind: its name and blanks are fixed in message_templates.ts
+        const own = await this.whatsAppSettings.effective();
+        if (!own.enabled) return { status: 'SKIPPED', detail: 'WhatsApp is not set up.' };
+        await this.whatsApp.sendTemplate({
+          to: record.address,
+          templateName: templated.template.name,
+          languageCode: templated.template.language,
+          bodyParameters: templated.parameters,
+          purpose: 'NOTIFICATION',
+          ...(templated.template.withDocument && extras.attachment ? { documentHeader: extras.attachment } : {}),
         });
         return { status: 'SENT' };
       }

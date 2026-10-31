@@ -6,6 +6,7 @@ import { ApiException } from '../../common/errors/api-exception';
 import { type AuthenticatedUserActor } from '../../common/request-context/request-actor';
 import { AppConfigService } from '../../config/app-config.service';
 import { BOOKING_MODEL, type BookingRow } from '../bookings/bookings_customer.service';
+import { renderTicketPdf } from './ticket_pdf';
 
 /*
  * The ticket of a confirmed booking: everything the e-ticket shows, and the QR text the
@@ -101,6 +102,26 @@ export class TicketsCustomerService {
     @InjectModel(BOOKING_MODEL) private readonly bookings: Model<BookingRow>,
     private readonly config: AppConfigService,
   ) {}
+
+  /** The ticket PDF of a paid booking for the message worker: there is no customer behind this call. */
+  async pdfForBooking(bookingIdText: string): Promise<{ fileName: string; body: Buffer }> {
+    if (!Types.ObjectId.isValid(bookingIdText)) throw new ApiException('RESOURCE_NOT_FOUND', 'Ticket not found.');
+    const row = await this.bookings.findById(bookingIdText).lean<BookingRow & { _id: Types.ObjectId }>().exec();
+    if (!row) throw new ApiException('RESOURCE_NOT_FOUND', 'Ticket not found.');
+    return this.pdf({ userId: row.customerId.toHexString(), userType: 'CUSTOMER' } as unknown as AuthenticatedUserActor, bookingIdText);
+  }
+
+  /** The ticket as a PDF, with this booking's own cancellation policy. Same rules as the ticket: the owner, after payment. */
+  async pdf(actor: AuthenticatedUserActor, bookingIdText: string): Promise<{ fileName: string; body: Buffer }> {
+    const ticket = await this.ticket(actor, bookingIdText);
+    const row = await this.bookings
+      .findById(new Types.ObjectId(bookingIdText))
+      .select('cancellationPolicy')
+      .lean<{ cancellationPolicy?: Array<{ hoursBefore: number; refundPct: number }> }>()
+      .exec();
+    const body = await renderTicketPdf({ ticket, policy: row?.cancellationPolicy ?? [] });
+    return { fileName: `abra-ticket-${ticket.pnr}.pdf`, body };
+  }
 
   async ticket(actor: AuthenticatedUserActor, bookingIdText: string): Promise<TicketView> {
     if (!Types.ObjectId.isValid(bookingIdText)) throw new ApiException('RESOURCE_NOT_FOUND', 'Ticket not found.');

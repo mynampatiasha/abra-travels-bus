@@ -6,7 +6,12 @@ import { CurrentActor } from '../../common/decorators/current-actor.decorator';
 import { ZodApiBody } from '../../common/openapi/zod-api-body';
 import { createZodDto } from '../../common/pipes/zod-dto.factory';
 import { type AuthenticatedUserActor } from '../../common/request-context/request-actor';
-import { type PaymentOrderView, type PaymentResultView, PaymentsCustomerService } from './payments_customer.service';
+import {
+  type PaymentOrderView,
+  type PaymentResultView,
+  PaymentsCustomerService,
+  type ShareLinkView,
+} from './payments_customer.service';
 
 class CreateOrderDto extends createZodDto(z.object({ bookingId: z.string().trim().min(1).max(40) })) {}
 class CallbackDto extends createZodDto(
@@ -36,6 +41,22 @@ export class PaymentsCustomerController {
   @ApiResponse({ status: 201, description: 'The order: paymentId, gatewayOrderId, keyId, amountPaise' })
   createOrder(@CurrentActor() actor: AuthenticatedUserActor, @Body() body: CreateOrderDto): Promise<PaymentOrderView> {
     return this.payments.createOrder(actor, body.bookingId);
+  }
+
+  @Post(':paymentId/share-link')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'A link for someone else to pay',
+    description:
+      'Customer. A link that anyone can open to pay this order, to share by WhatsApp or any app. One link for each ' +
+      'payment (asking again returns it). It stops working when the seat hold ends (Razorpay keeps a link at least ' +
+      '15 minutes). A payment made through it confirms the booking like any other.',
+  })
+  shareLink(
+    @CurrentActor() actor: AuthenticatedUserActor,
+    @Param('paymentId') paymentId: string,
+  ): Promise<ShareLinkView> {
+    return this.payments.shareLink(actor, paymentId);
   }
 
   @Post(':paymentId/client-callback')

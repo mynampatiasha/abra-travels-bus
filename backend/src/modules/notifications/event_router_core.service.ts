@@ -13,6 +13,7 @@ import {
 import { LivePublisher } from '../realtime/live_updates_channel.service';
 import { ALL_PERMISSIONS_WILDCARD } from '../rbac/permissions/permission-registry';
 import { RoleRepository } from '../rbac/repositories/role.repository';
+import { TicketsCustomerService } from '../tickets/tickets_customer.service';
 import { UsersService } from '../users/services/users.service';
 import { NotificationDispatcher, type Recipient } from './services/notification-dispatcher.service';
 
@@ -86,6 +87,8 @@ export interface MessageRule {
     bookingField?: string;
   };
   when?: (payload: Record<string, unknown>) => boolean;
+  /** The ticket PDF of the booking travels with the message (email attachment, WhatsApp header). */
+  attachTicketPdf?: boolean;
 }
 
 export interface EventRule {
@@ -138,6 +141,7 @@ export class EventRouter implements DomainEventHandler, OnModuleInit {
     private readonly messages: MessageSenderService,
     private readonly roles: RoleRepository,
     private readonly users: UsersService,
+    private readonly tickets: TicketsCustomerService,
   ) {}
 
   /** The events that have a rule; read when an event arrives, so late registrations count. */
@@ -242,6 +246,24 @@ export class EventRouter implements DomainEventHandler, OnModuleInit {
     const name = textOf(payload[contact.nameField]) || 'Customer';
     const userId = contact.userField ? textOf(payload[contact.userField]) : '';
     const bookingId = contact.bookingField ? textOf(payload[contact.bookingField]) : '';
+    // The values behind the words, so the message goes out as its branded email and approved template
+    const variables: Record<string, string> = {};
+    for (const [key, value] of Object.entries(payload)) {
+      if (typeof value === 'string' || typeof value === 'number') variables[key] = String(value);
+    }
+    let attachment: { filename: string; content: Buffer; contentType: string } | undefined;
+    if (rule.attachTicketPdf && bookingId) {
+      try {
+        const file = await this.tickets.pdfForBooking(bookingId);
+        attachment = { filename: file.fileName, content: file.body, contentType: 'application/pdf' };
+      } catch (error) {
+        // The message still goes out; only the file is missing
+        this.logger.warn(
+          { bookingId, message: error instanceof Error ? error.message : 'unknown' },
+          'The ticket PDF could not be made for a message',
+        );
+      }
+    }
     let failed = 0;
     for (const channel of rule.channels) {
       const address = textOf(
@@ -260,6 +282,8 @@ export class EventRouter implements DomainEventHandler, OnModuleInit {
           ? { bookingId: new Types.ObjectId(bookingId) }
           : {}),
         eventId: event.eventId,
+        variables,
+        ...(attachment ? { attachment } : {}),
       });
       if (sent.status === 'FAILED') failed += 1;
     }

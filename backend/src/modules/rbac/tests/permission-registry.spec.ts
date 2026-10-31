@@ -91,6 +91,7 @@ describe('permission registry', () => {
       'create',
       'update',
       'cancel',
+      'export',
     ]);
     expect(grouped['users.permissions']?.map((definition) => definition.action)).toEqual([
       'read',

@@ -54,6 +54,13 @@ export class MetaCloudWhatsAppProvider implements WhatsAppProvider {
         parameters: message.bodyParameters.map((text) => ({ type: 'text', text })),
       },
     ];
+    if (message.documentHeader) {
+      const mediaId = await this.uploadDocument(settings, message.documentHeader);
+      components.unshift({
+        type: 'header',
+        parameters: [{ type: 'document', document: { id: mediaId, filename: message.documentHeader.filename } }],
+      });
+    }
     if (message.urlButtonParameter !== undefined) {
       components.push({
         type: 'button',
@@ -107,5 +114,32 @@ export class MetaCloudWhatsAppProvider implements WhatsAppProvider {
     if (typeof messageId !== 'string' || messageId.length === 0) {
       throw new WhatsAppDeliveryError('WhatsApp did not confirm the message');
     }
+  }
+
+  /** Uploads the file to WhatsApp and returns the media id the message refers to. */
+  private async uploadDocument(
+    settings: { apiVersion: string; phoneNumberId: string; accessToken: string; timeoutMs?: number | undefined },
+    file: { filename: string; content: Buffer; contentType: string },
+  ): Promise<string> {
+    const form = new FormData();
+    form.append('messaging_product', 'whatsapp');
+    form.append('type', file.contentType);
+    form.append('file', new Blob([new Uint8Array(file.content)], { type: file.contentType }), file.filename);
+    let response: Response;
+    try {
+      response = await this.fetchFn(`${GRAPH_API_ORIGIN}/${settings.apiVersion}/${settings.phoneNumberId}/media`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${settings.accessToken}` },
+        body: form,
+        signal: AbortSignal.timeout(settings.timeoutMs ?? DEFAULT_TIMEOUT_MS),
+      });
+    } catch {
+      throw new WhatsAppDeliveryError('The ticket could not be sent to WhatsApp');
+    }
+    const body = (await response.json().catch(() => undefined)) as { id?: string } | undefined;
+    if (!response.ok || typeof body?.id !== 'string') {
+      throw new WhatsAppDeliveryError(`WhatsApp did not accept the ticket file (HTTP ${response.status})`);
+    }
+    return body.id;
   }
 }

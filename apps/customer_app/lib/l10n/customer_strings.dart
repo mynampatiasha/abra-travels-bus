@@ -372,6 +372,10 @@ abstract final class CustomerStrings {
   static const payEncrypted = 'payEncrypted';
   static const payHoldCaption = 'payHoldCaption';
   static const payAction = 'payAction';
+  static const payShareAction = 'payShareAction';
+  static const payChooseNext = 'payChooseNext';
+  static const payShareMessage = 'payShareMessage';
+  static const payShareFailed = 'payShareFailed';
   static const payProcessingBarTitle = 'payProcessingBarTitle';
   static const payProcessingBarSubtitle = 'payProcessingBarSubtitle';
   static const payProcessingTitle = 'payProcessingTitle';
@@ -980,6 +984,10 @@ abstract final class CustomerStrings {
     payEncrypted,
     payHoldCaption,
     payAction,
+    payShareAction,
+    payChooseNext,
+    payShareMessage,
+    payShareFailed,
     payProcessingBarTitle,
     payProcessingBarSubtitle,
     payProcessingTitle,

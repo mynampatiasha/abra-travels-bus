@@ -20,6 +20,8 @@ export interface WhatsAppTemplateMessage {
   urlButtonParameter?: string;
   /** What the message is for (logs, metrics). */
   purpose: 'OTP' | 'NOTIFICATION';
+  /** A file shown in the header of the message (the ticket PDF). The template must have a document header. */
+  documentHeader?: { filename: string; content: Buffer; contentType: string } | undefined;
 }
 
 /**

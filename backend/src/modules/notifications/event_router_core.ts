@@ -1,6 +1,7 @@
 /* eslint-disable max-lines -- the routing rules are one data table, plan Appendix B */
 import { Injectable, Module, type OnModuleInit } from '@nestjs/common';
 import { MessagesModule } from '../messages/messages_admin_manage';
+import { TicketsModule } from '../tickets/tickets.module';
 import { RbacModule } from '../rbac/rbac.module';
 import { RealtimeModule } from '../realtime/live_updates_channel';
 import { UsersModule } from '../users/users.module';
@@ -307,6 +308,7 @@ export const CORE_EVENT_RULES: readonly EventRule[] = [
       {
         channels: ['WHATSAPP', 'EMAIL'],
         kind: 'BOOKING_CONFIRMED',
+        attachTicketPdf: true,
         subject: 'Booking confirmed: {pnr}',
         body: '{route}, {departureText}. Seats {seatsText}. Boarding at {boardingPoint}. Amount {amountText}. Track your bus and see your ticket in the Abra app.',
         contact: {
@@ -614,7 +616,7 @@ export class CoreEventRulesRegistration implements OnModuleInit {
  * EventRouter and calling addRules in its onModuleInit.
  */
 @Module({
-  imports: [NotificationsModule, MessagesModule, RealtimeModule, RbacModule, UsersModule],
+  imports: [NotificationsModule, MessagesModule, RealtimeModule, RbacModule, UsersModule, TicketsModule],
   providers: [EventRouter, CoreEventRulesRegistration],
   exports: [EventRouter],
 })

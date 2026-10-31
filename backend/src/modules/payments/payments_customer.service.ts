@@ -39,6 +39,8 @@ export interface PaymentRow {
   refundedPaise?: number;
   refunds?: Array<{ gatewayRefundId: string; amountPaise: number; reason: string; status: 'PENDING' | 'COMPLETED'; at: Date }>;
   paidAt?: Date;
+  /** The link made for someone else to pay this order (one per payment). */
+  shareLink?: { linkId: string; url: string; expiresAt: Date };
   createdAt?: Date;
 }
 
@@ -70,6 +72,7 @@ export const paymentSchema = new Schema<PaymentRow>(
       default: [],
     },
     paidAt: { type: Date },
+    shareLink: { type: { linkId: String, url: String, expiresAt: Date }, required: false, _id: false },
   },
   { collection: 'payments', timestamps: true, versionKey: false },
 );
@@ -114,6 +117,14 @@ export interface PaymentOrderView {
   keyId: string;
   amountPaise: number;
   currency: string;
+}
+
+export interface ShareLinkView {
+  paymentId: string;
+  url: string;
+  amountPaise: number;
+  currency: string;
+  expiresAt: string;
 }
 
 export interface PaymentResultView {
@@ -217,6 +228,46 @@ export class PaymentsCustomerService {
     return this.orderView(created.toObject() as PaymentDoc);
   }
 
+  // ----- a link for someone else to pay -----
+
+  /**
+   * A link that anyone can open to pay this order, to share by WhatsApp or any app. One link for
+   * each payment: asking again returns it. When the money arrives the webhook confirms the
+   * booking through the same checks as any payment.
+   */
+  async shareLink(actor: AuthenticatedUserActor, paymentIdText: string): Promise<ShareLinkView> {
+    const payment = await this.ownPayment(actor, paymentIdText);
+    if (payment.status !== 'CREATED') {
+      throw new ApiException('INVALID_STATE_TRANSITION', 'This payment is already done, so it cannot be shared.');
+    }
+    const booking = await this.bookings.findById(payment.bookingId).lean<BookingDoc>().exec();
+    if (!booking || booking.status !== 'PAYMENT_PENDING') {
+      throw new ApiException('INVALID_STATE_TRANSITION', 'This booking can no longer be paid.');
+    }
+    const view = (link: { url: string; expiresAt: Date }): ShareLinkView => ({
+      paymentId: payment._id.toHexString(),
+      url: link.url,
+      amountPaise: payment.amountPaise,
+      currency: payment.currency,
+      expiresAt: link.expiresAt.toISOString(),
+    });
+    if (payment.shareLink && payment.shareLink.expiresAt > new Date()) return view(payment.shareLink);
+
+    const gateway = await this.gateways.current();
+    const made = await gateway.createPaymentLink({
+      amountPaise: payment.amountPaise,
+      currency: payment.currency,
+      description: `Bus ticket ${booking.pnr}`,
+      notes: { paymentId: payment._id.toHexString(), pnr: booking.pnr },
+      expiresAt: booking.holdExpiresAt,
+    });
+    await this.payments.updateOne(
+      { _id: payment._id, status: 'CREATED' },
+      { $set: { shareLink: { linkId: made.linkId, url: made.url, expiresAt: made.expiresAt } } },
+    );
+    return view(made);
+  }
+
   // ----- webhook -----
 
   /**
@@ -251,7 +302,12 @@ export class PaymentsCustomerService {
 
     let outcome = 'IGNORED';
     if (event.type === 'payment.captured' && event.gatewayOrderId && event.gatewayPaymentId) {
-      const payment = await this.payments.findOne({ gatewayOrderId: event.gatewayOrderId }).lean<PaymentDoc>().exec();
+      // Paid through a shared link, the order is the link's own: our payment is named in the notes
+      const payment =
+        (await this.payments.findOne({ gatewayOrderId: event.gatewayOrderId }).lean<PaymentDoc>().exec()) ??
+        (event.notePaymentId && Types.ObjectId.isValid(event.notePaymentId)
+          ? await this.payments.findById(event.notePaymentId).lean<PaymentDoc>().exec()
+          : null);
       if (!payment) {
         outcome = 'UNKNOWN_ORDER';
       } else if (

@@ -140,6 +140,19 @@ class PaymentController extends Notifier<PaymentState> {
     bookingId: state.bookingId,
   );
 
+  /// The link someone else can pay with. The booking is made first when it does not exist yet, so
+  /// the link is for a real booking with the amount the server worked out. Throws when the
+  /// backend cannot be reached or the hold is gone; the screen says so.
+  Future<String> shareLink({required BookingRequest request}) async {
+    var bookingId = state.bookingId;
+    if (bookingId == null) {
+      final created = await ref.read(bookingRepositoryProvider).createBooking(request);
+      bookingId = created.bookingId;
+      state = state.copyWith(bookingId: bookingId);
+    }
+    return ref.read(paymentRepositoryProvider).createShareLink(bookingId: bookingId);
+  }
+
   /// Pays [amountPaise] with what is chosen. Returns the result so the
   /// screen can go on (success, or the hold ran out); a declined payment
   /// also puts the state in [PaymentPhase.failed].
@@ -148,10 +161,11 @@ class PaymentController extends Notifier<PaymentState> {
     required int amountPaise,
     required DateTime now,
   }) async {
-    final instrument = state.instrumentAt(now);
+    // How to pay is chosen on the Razorpay screen (UPI apps, QR, card, net banking); nothing about the
+    // payment method, and never a card number, is typed into this app.
+    final instrument = state.instrumentAt(now) ?? const PaymentInstrument.upi();
     final hold = ref.read(seatHoldProvider(tripId));
-    if (instrument == null ||
-        hold == null ||
+    if (hold == null ||
         hold.released ||
         state.phase == PaymentPhase.processing) {
       return null;

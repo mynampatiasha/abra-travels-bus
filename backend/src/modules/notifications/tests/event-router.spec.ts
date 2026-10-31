@@ -69,6 +69,7 @@ function setup() {
     messages as never,
     roles as never,
     users as never,
+    { pdfForBooking: jest.fn() } as never,
   );
   new CoreEventRulesRegistration(router).onModuleInit();
   const delivered = () => dispatcher.deliver.mock.calls as Array<[Recipient, NotificationContent]>;

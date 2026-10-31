@@ -23,7 +23,8 @@ export class DevelopmentWhatsAppProvider implements WhatsAppProvider {
     if (this.logMessages) {
       this.logger.log(
         `DEVELOPMENT WHATSAPP (not sent) to ${message.to}: template ${message.templateName} ` +
-          `[${message.bodyParameters.join(', ')}]`,
+          `[${message.bodyParameters.join(', ')}]` +
+          (message.documentHeader ? ` with document ${message.documentHeader.filename}` : ''),
       );
     }
     return Promise.resolve();

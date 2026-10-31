@@ -376,7 +376,11 @@ export async function testRazorpay(
   if (!response.ok)
     return { ok: false, message: `Razorpay refused the request (HTTP ${response.status}).` };
   const mode = values.keyId.startsWith('rzp_live_') ? 'live' : 'test';
-  return { ok: true, message: `Connected to Razorpay in ${mode} mode.` };
+  // The keys alone are not enough to confirm a payment made after the app is closed: that needs the webhook secret
+  const webhook = values.webhookSecret
+    ? ''
+    : ' The webhook secret is not saved yet: without it, a payment made after the customer closes the app cannot confirm the booking.';
+  return { ok: true, message: `Connected to Razorpay in ${mode} mode.${webhook}` };
 }
 
 export async function testMaps(

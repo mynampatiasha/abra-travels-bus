@@ -170,6 +170,25 @@ describe('Tickets e2e (abra_supply_test)', () => {
     expect(readQr(secret, `ABR1.nothex.${booking.pnr}.abc`)).toBeNull();
   });
 
+  it('gives the ticket as a PDF for the owner after payment, and for nobody else', async () => {
+    const paid = await bookAndPay(anna, ['6'], true);
+    const pdf = await client(context)
+      .get(`${API}/bookings/${paid.bookingId}/ticket/pdf`)
+      .set(...auth(anna))
+      .buffer(true)
+      .parse((res, done) => {
+        const parts: Buffer[] = [];
+        res.on('data', (chunk: Buffer) => parts.push(chunk));
+        res.on('end', () => done(null, Buffer.concat(parts)));
+      })
+      .expect(200);
+    expect(pdf.headers['content-type']).toContain('application/pdf');
+    expect(pdf.headers['content-disposition']).toContain(`abra-ticket-${paid.pnr}.pdf`);
+    expect((pdf.body as Buffer).subarray(0, 5).toString('latin1')).toBe('%PDF-');
+    await client(context).get(`${API}/bookings/${paid.bookingId}/ticket/pdf`).set(...auth(ben)).expect(404);
+    await client(context).get(`${API}/bookings/${paid.bookingId}/ticket/pdf`).expect(401);
+  }, 60_000);
+
   it('is only for the owner, and only once the payment is done', async () => {
     const unpaid = await bookAndPay(anna, ['4'], false);
     const res = await ticket(anna, unpaid.bookingId).expect(409);

@@ -9,6 +9,8 @@ export interface EmailMessage {
   subject: string;
   text: string;
   html?: string | undefined;
+  /** Files that travel with the mail (the ticket PDF), and images the page shows inline (the logo, by `cid`). */
+  attachments?: ReadonlyArray<{ filename: string; content: Buffer; contentType: string; cid?: string }> | undefined;
 }
 
 /** The mail server did not accept the message, or could not be reached. Safe to show. */
@@ -168,6 +170,9 @@ export class EmailService {
         subject: message.subject,
         text: message.text,
         ...(message.html ? { html: message.html } : {}),
+        ...(message.attachments && message.attachments.length > 0
+          ? { attachments: message.attachments.map((file) => ({ ...file })) }
+          : {}),
       });
     } catch (error) {
       throw describeEmailFailure(error, host, port);

@@ -47,7 +47,8 @@ export async function confirmationPayload(
       boardingPoint: boarding?.name ?? '',
       amountText: `Rs ${Number.isInteger(rupees) ? rupees.toLocaleString('en-IN') : rupees.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
       contactName: booking.passengers[0]?.name ?? 'Customer',
-      contactPhone: booking.contact.mobile,
+      // WhatsApp needs the country code: the booking holds the ten digit Indian number
+      contactPhone: `+91${booking.contact.mobile}`,
       contactEmail: booking.contact.email,
     };
   }

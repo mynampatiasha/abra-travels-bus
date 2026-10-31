@@ -14,6 +14,7 @@ import 'controllers/booking_draft_controller.dart';
 import 'controllers/fare_calculator.dart';
 import 'controllers/payment_controller.dart';
 import 'controllers/seat_hold_controller.dart';
+import 'controllers/ticket_actions.dart';
 import 'models/payment_models.dart';
 import 'models/ticket_models.dart';
 import 'repositories/booking_repository.dart';
@@ -93,6 +94,41 @@ class _PaymentFlow extends ConsumerWidget {
     }
   }
 
+  Future<void> _share(BuildContext context, WidgetRef ref) async {
+    final l10n = AbraLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final amount = _totalPaise(ref);
+    final draft = ref.read(bookingDraftProvider(tripId));
+    final selection = ref.read(tripSelectionProvider(tripId));
+    final hold = ref.read(seatHoldProvider(tripId));
+    if (hold == null) return;
+    try {
+      final link = await ref
+          .read(paymentProvider(tripId).notifier)
+          .shareLink(
+            request: BookingRequest(
+              tripId: tripId,
+              lockId: hold.lockId,
+              seatIds: booking.seatIds,
+              passengers: draft.passengers,
+              contact: draft.contact,
+              gst: draft.gst,
+              boardingPointId: selection.boardingPointId ?? '',
+              droppingPointId: selection.droppingPointId ?? '',
+              couponCode: draft.coupon.isApplied ? draft.coupon.code : null,
+              tripHint: booking.trip,
+              expectedAmountPaise: amount,
+            ),
+          );
+      final total = formatRupees(l10n, amount, currencyCode: booking.trip.currency);
+      await ref.read(shareTextProvider)(
+        l10n.text(CustomerStrings.payShareMessage, <String, Object?>{'amount': total, 'link': link}),
+      );
+    } on Object {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.text(CustomerStrings.payShareFailed))));
+    }
+  }
+
   void _backToReview(BuildContext context) {
     if (context.canPop()) {
       context.pop();
@@ -150,27 +186,11 @@ class _PaymentFlow extends ConsumerWidget {
       );
     }
 
-    final instrument = state.instrumentAt(ref.read(bookingClockProvider)());
-    final VoidCallback? pay = instrument == null
-        ? null
-        : () => _pay(context, ref);
+    void pay() => _pay(context, ref);
     final payLabel = l10n.text(CustomerStrings.payAction, <String, Object?>{
       'amount': amount,
     });
     final left = ref.watch(holdSecondsProvider(tripId)).value ?? 0;
-
-    PaymentMethodCard method({
-      required PaymentMethod value,
-      required String title,
-      required String hint,
-      required Widget body,
-    }) => PaymentMethodCard(
-      title: l10n.text(title),
-      hint: l10n.text(hint),
-      selected: state.method == value,
-      onSelected: () => notifier.selectMethod(value),
-      body: body,
-    );
 
     return BookingStepScaffold(
       tripId: tripId,
@@ -194,125 +214,15 @@ class _PaymentFlow extends ConsumerWidget {
       ),
       children: <Widget>[
         HoldBanner(tripId: tripId, messageKey: CustomerStrings.holdBannerShort),
-        method(
-          value: PaymentMethod.upi,
-          title: CustomerStrings.payMethodUpi,
-          hint: CustomerStrings.payMethodUpiHint,
-          body: UpiBody(tripId: tripId),
-        ),
-        method(
-          value: PaymentMethod.card,
-          title: CustomerStrings.payMethodCard,
-          hint: CustomerStrings.payMethodCardHint,
-          body: CardBody(tripId: tripId, now: ref.read(bookingClockProvider)),
-        ),
-        method(
-          value: PaymentMethod.netBanking,
-          title: CustomerStrings.payMethodNetBanking,
-          hint: CustomerStrings.payMethodNetBankingHint,
-          body: NetBankingBody(tripId: tripId),
-        ),
-        method(
-          value: PaymentMethod.wallet,
-          title: CustomerStrings.payMethodWallet,
-          hint: CustomerStrings.payMethodWalletHint,
-          body: WalletBody(tripId: tripId),
-        ),
+        PaymentChooseNextCard(text: l10n.text(CustomerStrings.payChooseNext)),
         const SecureNote(),
         const SizedBox(height: AbraSpacing.md),
-        const _DemoPaymentSimCard(),
+        OutlinedButton.icon(
+          onPressed: () => _share(context, ref),
+          icon: const Icon(Icons.share_outlined, size: 18),
+          label: Text(l10n.text(CustomerStrings.payShareAction)),
+        ),
       ],
     );
   }
 }
-
-class _DemoPaymentSimCard extends ConsumerStatefulWidget {
-  const _DemoPaymentSimCard();
-
-  @override
-  ConsumerState<_DemoPaymentSimCard> createState() => _DemoPaymentSimCardState();
-}
-
-class _DemoPaymentSimCardState extends ConsumerState<_DemoPaymentSimCard> {
-  String _selected = 'ok';
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AbraSpacing.md),
-      decoration: BoxDecoration(
-        color: AbraColors.lightGray,
-        borderRadius: AbraRadius.medium,
-        border: Border.all(color: AbraColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.science_outlined, size: 16, color: AbraColors.blue),
-              SizedBox(width: 6),
-              Text(
-                'Demo: choose payment outcome',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: AbraColors.deepBlue,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AbraSpacing.sm),
-          Wrap(
-            spacing: AbraSpacing.sm,
-            children: [
-              ChoiceChip(
-                label: const Text('Success'),
-                selected: _selected == 'ok',
-                selectedColor: AbraColors.tealContainer,
-                onSelected: (val) {
-                  setState(() => _selected = 'ok');
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Payment mode: Success'),
-                      duration: Duration(seconds: 1),
-                    ),
-                  );
-                },
-              ),
-              ChoiceChip(
-                label: const Text('Bank declines (U30)'),
-                selected: _selected == 'decline',
-                selectedColor: AbraColors.orangeContainer,
-                onSelected: (val) {
-                  setState(() => _selected = 'decline');
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Test with UPI ID "fail@upi" or Card "4000 0000 0000 0002" to trigger decline'),
-                      duration: Duration(seconds: 3),
-                    ),
-                  );
-                },
-              ),
-              ChoiceChip(
-                label: const Text('Network timeout'),
-                selected: _selected == 'timeout',
-                selectedColor: AbraColors.dangerContainer,
-                onSelected: (val) {
-                  setState(() => _selected = 'timeout');
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Test with UPI ID "timeout@upi" to simulate timeout / release hold'),
-                      duration: Duration(seconds: 3),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-

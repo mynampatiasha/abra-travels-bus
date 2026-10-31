@@ -611,3 +611,28 @@ class SecureNote extends StatelessWidget {
     );
   }
 }
+
+/// Says what happens after "Pay": the next screen is Razorpay's, where the customer picks how to pay.
+class PaymentChooseNextCard extends StatelessWidget {
+  const PaymentChooseNextCard({required this.text, super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(AbraSpacing.lg),
+    decoration: BoxDecoration(
+      color: AbraColors.lightBlue,
+      borderRadius: AbraRadius.medium,
+      border: Border.all(color: AbraColors.border),
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const Icon(Icons.lock_outline, size: 20, color: AbraColors.blue),
+        const SizedBox(width: AbraSpacing.md),
+        Expanded(child: Text(text)),
+      ],
+    ),
+  );
+}

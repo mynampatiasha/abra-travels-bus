@@ -178,14 +178,25 @@ describe('environment validation', () => {
   });
 
   it('requires provider credentials when a real provider is selected', () => {
-    const problems = problemsOf(validTestEnvironment({ PAYMENT_GATEWAY: 'razorpay' }));
+    const problems = problemsOf(validTestEnvironment({ WHATSAPP_PROVIDER: 'meta' }));
     expect(problems).toEqual(
       expect.arrayContaining([
-        'RAZORPAY_KEY_ID: required when PAYMENT_GATEWAY=razorpay',
-        'RAZORPAY_KEY_SECRET: required when PAYMENT_GATEWAY=razorpay',
-        'RAZORPAY_WEBHOOK_SECRET: required when PAYMENT_GATEWAY=razorpay',
+        'WHATSAPP_ACCESS_TOKEN: required when WHATSAPP_PROVIDER=meta',
+        'WHATSAPP_PHONE_NUMBER_ID: required when WHATSAPP_PROVIDER=meta',
       ]),
     );
+  });
+
+  it('does not need Razorpay keys in the environment: the admin app can hold them', () => {
+    const problems = problemsOf(
+      validTestEnvironment({
+        PAYMENT_GATEWAY: 'razorpay',
+        RAZORPAY_KEY_ID: undefined,
+        RAZORPAY_KEY_SECRET: undefined,
+        RAZORPAY_WEBHOOK_SECRET: undefined,
+      }),
+    );
+    expect(problems.some((problem) => problem.startsWith('RAZORPAY_'))).toBe(false);
   });
 });
 
