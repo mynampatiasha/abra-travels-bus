@@ -75,6 +75,8 @@ export const SYSTEM_ROLES: readonly RoleDefinition[] = [
       'notifications.read',
       'messages.read',
       'messages.resend',
+      'support.read',
+      'support.manage',
     ],
   },
   {

@@ -119,7 +119,7 @@ abstract final class AdminRoutes {
     refunds: PermissionKeys.settlementsRead,
     settlements: PermissionKeys.settlementsRead,
     customers: PermissionKeys.customersRead,
-    tickets: PermissionKeys.messagesRead,
+    tickets: PermissionKeys.supportRead,
     messages: PermissionKeys.messagesRead,
     content: PermissionKeys.contentRead,
     banners: PermissionKeys.bannersRead,

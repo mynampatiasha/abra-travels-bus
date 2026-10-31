@@ -84,6 +84,8 @@ abstract final class PermissionKeys {
   static const contentRead = 'content.read';
   static const contentManage = 'content.manage';
   static const customersAccountDelete = 'customers.account.delete';
+  static const supportRead = 'support.read';
+  static const supportManage = 'support.manage';
 
   /// Every key above.
   static const Set<String> all = <String>{
@@ -164,5 +166,7 @@ abstract final class PermissionKeys {
     contentRead,
     contentManage,
     customersAccountDelete,
+    supportRead,
+    supportManage,
   };
 }

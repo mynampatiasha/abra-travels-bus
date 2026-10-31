@@ -336,9 +336,13 @@ class _FaqTabState extends State<_FaqTab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Row(
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: <Widget>[
-            Expanded(
+            SizedBox(
+              width: 260,
               child: TextField(
                 controller: _search,
                 decoration: const InputDecoration(
@@ -350,7 +354,6 @@ class _FaqTabState extends State<_FaqTab> {
                 onSubmitted: (_) => _reload(),
               ),
             ),
-            const SizedBox(width: 12),
             DropdownButton<String?>(
               value: _status,
               hint: const Text('Status'),
@@ -365,7 +368,6 @@ class _FaqTabState extends State<_FaqTab> {
               },
             ),
             if (widget.canEdit) ...<Widget>[
-              const SizedBox(width: 12),
               FilledButton.icon(
                 onPressed: _edit,
                 icon: const Icon(Icons.add),
@@ -522,10 +524,16 @@ class _FaqDialogState extends State<_FaqDialog> {
             children: <Widget>[
               TextField(
                 controller: _question,
+                onChanged: (_) {
+                  if (_error != null) setState(() => _error = null);
+                },
                 decoration: const InputDecoration(labelText: 'Question'),
               ),
               TextField(
                 controller: _answer,
+                onChanged: (_) {
+                  if (_error != null) setState(() => _error = null);
+                },
                 maxLines: 5,
                 decoration: const InputDecoration(labelText: 'Answer'),
               ),
@@ -686,6 +694,9 @@ class _PageDialogState extends State<_PageDialog> {
               ),
               TextField(
                 controller: _body,
+                onChanged: (_) {
+                  if (_error != null) setState(() => _error = null);
+                },
                 readOnly: !widget.canEdit,
                 minLines: 8,
                 maxLines: 14,

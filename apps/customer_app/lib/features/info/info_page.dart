@@ -50,7 +50,8 @@ class _PageBody extends StatelessWidget {
     final l10n = AbraLocalizations.of(context);
     final textTheme = Theme.of(context).textTheme;
     final updated = page.updatedAt;
-    return Center(
+    return Align(
+      alignment: Alignment.topCenter,
       child: SingleChildScrollView(
         padding: AbraResponsive.pagePadding(context),
         child: ConstrainedBox(

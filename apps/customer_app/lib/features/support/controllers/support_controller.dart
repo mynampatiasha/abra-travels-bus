@@ -4,15 +4,16 @@ import '../repositories/support_repository.dart';
 
 final faqsProvider = FutureProvider<List<FaqItem>>((ref) {
   return ref.watch(supportRepositoryProvider).getFaqs();
-});
+}, retry: (_, _) => null);
 
 final contactInfoProvider = FutureProvider<ContactInfo>((ref) {
   return ref.watch(supportRepositoryProvider).getContactInfo();
-});
+}, retry: (_, _) => null);
 
 final supportTicketsProvider =
     AsyncNotifierProvider<SupportTicketsNotifier, List<SupportTicket>>(
       SupportTicketsNotifier.new,
+      retry: (_, _) => null,
     );
 
 class SupportTicketsNotifier extends AsyncNotifier<List<SupportTicket>> {
@@ -62,4 +63,4 @@ final ticketDetailProvider =
   // Watch supportTicketsProvider so that ticket detail updates whenever a reply is sent
   ref.watch(supportTicketsProvider);
   return ref.watch(supportRepositoryProvider).getTicketById(id);
-});
+}, retry: (_, _) => null);

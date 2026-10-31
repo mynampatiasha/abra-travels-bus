@@ -95,6 +95,13 @@ export const AUDIT_ACTIONS = [
   'customer.deleted',
   'customer.restored',
   'customer.account-deleted',
+  'support.ticket.updated',
+  'support.ticket.assigned',
+  'support.ticket.replied',
+  'support.ticket.resolved',
+  'support.ticket.reopened',
+  'support.canned.created',
+  'support.canned.deleted',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

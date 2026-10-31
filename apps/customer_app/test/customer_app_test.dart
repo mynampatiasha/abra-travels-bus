@@ -372,10 +372,10 @@ void main() {
 
       await open(tester, '/my-trips');
       expect(find.text('Upcoming (3)'), findsOneWidget);
-      // The help centre has no articles yet; it says so.
+      // The help centre has no published articles yet; it says so.
       await open(tester, '/support');
       expect(find.text('Help centre'), findsWidgets);
-      expect(find.text('Coming soon'), findsOneWidget);
+      expect(find.text('No help articles yet'), findsOneWidget);
     });
   });
 

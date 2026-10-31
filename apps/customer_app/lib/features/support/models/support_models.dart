@@ -54,6 +54,7 @@ class SupportTicket {
     required this.customerId,
     required this.customerName,
     required this.subject,
+    this.number = '',
     required this.category,
     required this.priority,
     required this.status,
@@ -63,6 +64,9 @@ class SupportTicket {
   });
 
   final String id;
+
+  /// `TK-12`: what people read and say; the id is only for the app.
+  final String number;
   final String customerId;
   final String customerName;
   final String subject;
@@ -78,6 +82,7 @@ class SupportTicket {
     List<TicketMessage>? messages,
   }) => SupportTicket(
     id: id,
+    number: number,
     customerId: customerId,
     customerName: customerName,
     subject: subject,

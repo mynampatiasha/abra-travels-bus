@@ -109,6 +109,13 @@ export const AUDIT_ACTION_LABELS: Readonly<Record<AuditAction, string>> = {
   'customer.deleted': 'Deleted a customer',
   'customer.restored': 'Restored a customer',
   'customer.account-deleted': 'A customer deleted their own account',
+  'support.ticket.updated': 'Changed a support ticket',
+  'support.ticket.assigned': 'Assigned a support ticket',
+  'support.ticket.replied': 'Replied to a support ticket',
+  'support.ticket.resolved': 'Resolved a support ticket',
+  'support.ticket.reopened': 'Reopened a support ticket',
+  'support.canned.created': 'Added a ready-made reply',
+  'support.canned.deleted': 'Removed a ready-made reply',
 };
 
 /**

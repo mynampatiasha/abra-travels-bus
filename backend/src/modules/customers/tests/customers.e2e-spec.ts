@@ -24,7 +24,7 @@ import {
 import { type ProfileView } from '../customers_customer.service';
 
 type Caller = SeededUser & { tokens: Tokens };
-type Method = 'get' | 'post' | 'patch' | 'delete';
+type Method = 'get' | 'post' | 'put' | 'patch' | 'delete';
 interface Person {
   tokens: Tokens;
   id: string;

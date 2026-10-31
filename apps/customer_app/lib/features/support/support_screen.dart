@@ -11,6 +11,7 @@ import '../../routing/app_routes.dart';
 import '../authentication/gate/require_sign_in.dart';
 import '../authentication/gate/sign_in_intent.dart';
 import 'controllers/support_controller.dart';
+import 'create_ticket_sheet.dart';
 import 'models/support_models.dart';
 import 'ticket_details_screen.dart';
 
@@ -55,8 +56,8 @@ class SupportScreen extends ConsumerWidget {
                 child: CircularProgressIndicator(),
               ),
             ),
-            error: (Object e, StackTrace _) => AbraCard(
-              child: Text('Could not load FAQs: $e'),
+            error: (Object e, StackTrace _) => const AbraCard(
+              child: Text('Could not load the help centre. Check your connection and open this page again.'),
             ),
             data: (List<FaqItem> faqs) {
               if (faqs.isEmpty) {
@@ -68,7 +69,7 @@ class SupportScreen extends ConsumerWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            'Coming soon',
+                            'No help articles yet',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
@@ -76,7 +77,8 @@ class SupportScreen extends ConsumerWidget {
                           ),
                           SizedBox(height: AbraSpacing.xs),
                           Text(
-                            'Not connected yet - built in Phase 4',
+                            'Our team has not published any help articles yet. You can still contact support below.',
+                            textAlign: TextAlign.center,
                             style: TextStyle(
                               color: AbraColors.textSecondary,
                             ),
@@ -168,52 +170,21 @@ class SupportScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    _infoRow(Icons.phone_outlined, 'Phone', contact.phone),
-                    const Divider(height: AbraSpacing.lg),
-                    _infoRow(Icons.chat_outlined, 'WhatsApp', contact.whatsapp),
-                    const Divider(height: AbraSpacing.lg),
-                    _infoRow(Icons.email_outlined, 'Email', contact.email),
-                    const Divider(height: AbraSpacing.lg),
-                    _infoRow(Icons.access_time, 'Hours', contact.hours),
+                    ..._contactRows(contact),
                     const SizedBox(height: AbraSpacing.lg),
-                    const Wrap(
-                      spacing: AbraSpacing.md,
-                      runSpacing: AbraSpacing.sm,
-                      children: <Widget>[
-                        Tooltip(
-                          message: 'Not connected yet',
-                          child: OutlinedButton(
-                            onPressed: null,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.phone, size: 16),
-                                SizedBox(width: 8),
-                                Text('Call'),
-                              ],
-                            ),
-                          ),
-                        ),
-                        Tooltip(
-                          message: 'Not connected yet',
-                          child: FilledButton(
-                            onPressed: null,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.support_agent, size: 16),
-                                SizedBox(width: 8),
-                                Flexible(
-                                  child: Text(
-                                    'Create a ticket',
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
+                    FilledButton.icon(
+                      icon: const Icon(Icons.support_agent, size: 16),
+                      label: const Text('Create a ticket'),
+                      onPressed: () {
+                        if (auth is AuthSignedIn) {
+                          CreateTicketSheet.show(context);
+                        } else {
+                          requireSignIn(
+                            context,
+                            const SignInIntent(returnLocation: AppRoutes.support),
+                          );
+                        }
+                      },
                     ),
                   ],
                 ),
@@ -227,7 +198,7 @@ class SupportScreen extends ConsumerWidget {
             const SectionHeader(title: 'My tickets'),
             ticketsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (Object e, StackTrace _) => Text('Could not load tickets: $e'),
+              error: (Object e, StackTrace _) => const Text('Could not load your tickets. Check your connection and open this page again.'),
               data: (List<SupportTicket> tickets) {
                 if (tickets.isEmpty) {
                   return const AbraCard(
@@ -242,7 +213,7 @@ class SupportScreen extends ConsumerWidget {
                           ),
                           SizedBox(height: AbraSpacing.sm),
                           Text(
-                            'Not connected yet - built in Phase 4',
+                            'You have not raised any tickets.',
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: AbraColors.textSecondary,
@@ -304,7 +275,7 @@ class SupportScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: AbraSpacing.xs),
                             Text(
-                              '${t.id} • ${t.messages.length} message${t.messages.length == 1 ? '' : 's'}',
+                              t.number.isEmpty ? 'Ticket' : t.number,
                               style: const TextStyle(
                                 fontSize: 12,
                                 color: AbraColors.textSecondary,
@@ -334,6 +305,29 @@ class SupportScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  /// Phone, email and hours that staff have saved; a line that is empty is left out.
+  List<Widget> _contactRows(ContactInfo contact) {
+    final rows = <(IconData, String, String)>[
+      (Icons.phone_outlined, 'Phone', contact.phone),
+      (Icons.email_outlined, 'Email', contact.email),
+      (Icons.access_time, 'Hours', contact.hours),
+    ].where((row) => row.$3.trim().isNotEmpty).toList();
+    if (rows.isEmpty) {
+      return const <Widget>[
+        Text(
+          'Contact details have not been set up yet. Raise a ticket and we will get back to you.',
+          style: TextStyle(color: AbraColors.textSecondary),
+        ),
+      ];
+    }
+    return <Widget>[
+      for (var i = 0; i < rows.length; i++) ...<Widget>[
+        if (i > 0) const Divider(height: AbraSpacing.lg),
+        _infoRow(rows[i].$1, rows[i].$2, rows[i].$3),
+      ],
+    ];
   }
 
   Widget _infoRow(IconData icon, String label, String value) {

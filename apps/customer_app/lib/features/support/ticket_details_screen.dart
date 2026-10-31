@@ -49,7 +49,7 @@ class _TicketDetailsScreenState extends ConsumerState<TicketDetailsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to send reply: $e')),
+          SnackBar(content: Text('$e')),
         );
       }
     } finally {
@@ -78,15 +78,15 @@ class _TicketDetailsScreenState extends ConsumerState<TicketDetailsScreen> {
 
     return Scaffold(
       appBar: GradientAppBar(
-        title: 'Ticket ${widget.ticketId}',
+        title: 'Ticket ${ticketAsync.value?.number ?? ''}'.trim(),
       ),
       body: ticketAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (Object err, StackTrace _) =>
-            Center(child: Text('Error loading ticket: $err')),
+            const Center(child: Text('Could not load this ticket. Check your connection and try again.')),
         data: (SupportTicket? ticket) {
           if (ticket == null) {
-            return const Center(child: Text('Not connected yet - built in Phase 4'));
+            return const Center(child: Text('This ticket could not be found.'));
           }
 
           return Column(
@@ -244,7 +244,8 @@ class _TicketDetailsScreenState extends ConsumerState<TicketDetailsScreen> {
 
               // Bottom Reply Bar
               Container(
-                padding: const EdgeInsets.all(AbraSpacing.sm),
+                // The assistant button floats at the bottom right: keep Send clear of it
+                padding: const EdgeInsetsDirectional.fromSTEB(AbraSpacing.sm, AbraSpacing.sm, 72, AbraSpacing.sm),
                 decoration: const BoxDecoration(
                   color: AbraColors.white,
                   border: Border(top: BorderSide(color: AbraColors.divider)),
@@ -277,9 +278,9 @@ class _TicketDetailsScreenState extends ConsumerState<TicketDetailsScreen> {
                         style: IconButton.styleFrom(
                           backgroundColor: AbraColors.blue,
                         ),
-                        tooltip: 'Not connected yet',
+                        tooltip: 'Send',
                         icon: const Icon(Icons.send, size: 18),
-                        onPressed: null,
+                        onPressed: _sending ? null : _sendReply,
                       ),
                     ],
                   ),

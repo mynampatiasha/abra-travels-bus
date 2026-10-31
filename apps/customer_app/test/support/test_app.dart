@@ -13,6 +13,7 @@ import 'package:customer_app/features/onboarding/first_launch.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_authentication/shared_authentication.dart';
 import 'package:shared_core/shared_core.dart';
@@ -115,6 +116,8 @@ class TestApp {
     // The device settings of an earlier run, to start the app again as
     // after a restart.
     InMemoryPreferencesStore? devicePreferences,
+    // Providers a test replaces, for example the file chooser.
+    this.extraOverrides = const <Override>[],
   }) : banners = banners ?? FakeHomeBannersRepository(),
        seats = seats ?? const FakeSeatRepository(),
        trips = trips ?? FakeTripsRepository(),
@@ -161,6 +164,7 @@ class TestApp {
 
   /// The banners on Home. None unless a test gives some, so other tests
   /// see no banner requests.
+  final List<Override> extraOverrides;
   final HomeBannersRepository banners;
   final SeatRepository seats;
   final TripsRepository trips;
@@ -184,6 +188,7 @@ class TestApp {
       homeBannersRepositoryProvider.overrideWithValue(banners),
       seatRepositoryProvider.overrideWithValue(seats),
       tripsRepositoryProvider.overrideWithValue(trips),
+      ...extraOverrides,
       if (clock != null) signInClockProvider.overrideWithValue(clock),
       if (clock != null) discoveryClockProvider.overrideWithValue(clock),
     ],

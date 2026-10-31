@@ -456,6 +456,19 @@ export const CUSTOMER_ACCOUNT_PERMISSIONS = definePermissions('customers.account
   },
 });
 
+export const SUPPORT_PERMISSIONS = definePermissions('support', {
+  read: {
+    name: 'View support tickets',
+    description: 'View the support tickets, their replies and the ready-made replies.',
+    grantableTo: PLATFORM_ONLY,
+  },
+  manage: {
+    name: 'Answer support tickets',
+    description: 'Assign, reply to, resolve and reopen tickets, and keep the ready-made replies.',
+    grantableTo: PLATFORM_ONLY,
+  },
+});
+
 /** Every permission of the platform. A new module's group is added to this object. */
 export const PERMISSION_CATALOG = {
   ...USER_PERMISSIONS,
@@ -486,6 +499,7 @@ export const PERMISSION_CATALOG = {
   ...PAYOUT_PERMISSIONS,
   ...CONTENT_PERMISSIONS,
   ...CUSTOMER_ACCOUNT_PERMISSIONS,
+  ...SUPPORT_PERMISSIONS,
 } as const;
 
 /** Union of every declared permission key; the only values `@RequirePermission` accepts. */

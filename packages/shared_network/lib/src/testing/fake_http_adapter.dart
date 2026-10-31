@@ -78,7 +78,15 @@ final class FakeHttpAdapter implements HttpClientAdapter {
       await for (final chunk in requestStream) {
         bytes.addAll(chunk);
       }
-      if (bytes.isNotEmpty) body = jsonDecode(utf8.decode(bytes));
+      if (bytes.isNotEmpty) {
+        final text = utf8.decode(bytes, allowMalformed: true);
+        try {
+          body = jsonDecode(text);
+        } on FormatException {
+          // A file upload (multipart) is not JSON: keep what was sent as text
+          body = text;
+        }
+      }
     }
     final request = RecordedRequest(options, body);
     requests.add(request);
