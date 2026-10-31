@@ -16,6 +16,7 @@ String _formatRs(int paise) => '₹${(paise / 100).toStringAsFixed(0)}';
 class ClientTripItem {
   ClientTripItem({
     required this.id,
+    required this.code,
     required this.operatorId,
     required this.routeId,
     required this.route,
@@ -43,7 +44,11 @@ class ClientTripItem {
     this.cancellationReason,
   });
 
+  /// Only for calling the server. Never shown: people see [code].
   final String id;
+
+  /// The short code people read, e.g. TRP-1042.
+  final String code;
   final String operatorId;
   final String routeId;
   final String route;
@@ -73,6 +78,7 @@ class ClientTripItem {
   factory ClientTripItem.fromJson(Map<String, dynamic> json) {
     return ClientTripItem(
       id: json['id'] as String? ?? '',
+      code: json['code'] as String? ?? '',
       operatorId: json['operatorId'] as String? ?? '',
       routeId: json['routeId'] as String? ?? '',
       route: json['route'] as String? ?? '',
@@ -229,12 +235,12 @@ class _ClientTripsScreenState extends ConsumerState<ClientTripsScreen> {
 
   void _exportCsv(List<ClientTripItem> trips) {
     final buffer = StringBuffer();
-    buffer.writeln('Trip ID,Route,Bus,Departure,Booked,Total Seats,Fare,Driver,Status');
+    buffer.writeln('Trip,Route,Bus,Departure,Booked,Total Seats,Fare,Driver,Status');
     for (final t in trips) {
       final route = t.route.replaceAll('"', '""');
       final bus = t.bus.replaceAll('"', '""');
       final driver = (t.driver ?? '').replaceAll('"', '""');
-      buffer.writeln('"${t.id}","$route","$bus","${t.departureAt}",${t.bookedSeats},${t.totalSeats},${t.startingFarePaise},"$driver","${t.status}"');
+      buffer.writeln('"${t.code}","$route","$bus","${t.departureAt}",${t.bookedSeats},${t.totalSeats},${t.startingFarePaise},"$driver","${t.status}"');
     }
     final stamp = DateTime.now().toIso8601String().substring(0, 10);
     downloadTextFile('trips_$stamp.csv', buffer.toString());
@@ -561,7 +567,7 @@ class _ClientTripsScreenState extends ConsumerState<ClientTripsScreen> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Text(t.id, style: const TextStyle(fontWeight: FontWeight.w800, color: AbraColors.deepBlue)),
+                                      Text(t.code, style: const TextStyle(fontWeight: FontWeight.w800, color: AbraColors.deepBlue)),
                                       Text(t.route, style: const TextStyle(fontSize: 11, color: AbraColors.textSecondary)),
                                     ],
                                   ),
@@ -672,7 +678,7 @@ class _ClientTripsScreenState extends ConsumerState<ClientTripsScreen> {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Delay ${trip.id}'),
+        title: Text('Delay ${trip.code}'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -732,7 +738,7 @@ class _ClientTripsScreenState extends ConsumerState<ClientTripsScreen> {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Cancel ${trip.id}'),
+        title: Text('Cancel ${trip.code}'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -811,7 +817,7 @@ class _ClientTripsScreenState extends ConsumerState<ClientTripsScreen> {
       await showDialog<void>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: Text('Driver for ${trip.id}'),
+          title: Text('Driver for ${trip.code}'),
           content: SizedBox(
             width: 400,
             child: Column(
@@ -1176,7 +1182,7 @@ class _TripDetailDialogState extends ConsumerState<_TripDetailDialog> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Expanded(
-            child: Text('${t.id} · ${t.route}', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            child: Text('${t.code} · ${t.route}', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
           ),
           IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
         ],
@@ -1367,7 +1373,7 @@ class _TripDetailDialogState extends ConsumerState<_TripDetailDialog> {
               );
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Exporting manifest for ${t.id}...')),
+                SnackBar(content: Text('Exporting manifest for ${t.code}...')),
               );
             }
           },

@@ -166,14 +166,14 @@ describe('Catalogue export e2e', () => {
         '/catalogue/document-types/export',
         'Document,Key,For,Required,Has expiry,File types,Max size (MB),Max files,Instructions,Status',
       ],
-      ['/catalogue/operators/export', 'ID,Operator,Display name,Status,Updated'],
+      ['/catalogue/operators/export', 'Operator,Display name,Status,Updated'],
       [
         '/onboarding/invitations/export',
-        'ID,Company,Owner,Email,Phone,Status,Email sent,Link valid until,Invited on',
+        'Company,Owner,Email,Phone,Status,Email sent,Link valid until,Invited on',
       ],
       [
         '/onboarding/submissions/export',
-        'ID,Operator,Type,Bus,Status,Times sent,Sent on,Decided on',
+        'Operator,Type,Bus,Status,Times sent,Sent on,Decided on',
       ],
       [
         '/admin/banners/export',

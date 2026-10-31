@@ -85,7 +85,6 @@ function currentActor(): AuthenticatedUserActor {
 export const PORTAL_USERS_EXPORT_KIND: ExportKind<PortalUserView> = {
   key: 'portal_users',
   columns: [
-    { header: 'ID', value: (s) => s.id },
     { header: 'Name', value: (s) => s.name },
     { header: 'Email', value: (s) => s.email },
     { header: 'Role', value: (s) => s.roleName },

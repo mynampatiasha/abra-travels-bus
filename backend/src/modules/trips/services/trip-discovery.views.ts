@@ -2,6 +2,7 @@ import { type CityView } from '../../cities/services/cities.service';
 import { type DepartureWindow } from '../dto/trip-search.dto';
 import { type CatalogueTrip } from '../repositories/trip-catalogue.repository';
 import { type TripPoint } from '../schemas/trip.schema';
+import { tripCodeOf } from '../trip_codes';
 
 export interface PlaceView {
   id: string;
@@ -27,6 +28,8 @@ export interface TripPointView extends TripPointSummaryView {
 /** One search result. Everything in it is safe to show to anyone. */
 export interface TripSummaryView {
   id: string;
+  /** Short code people read, e.g. TRP-1042. */
+  code: string;
   operator: PlaceView;
   bus: {
     name: string;
@@ -106,6 +109,7 @@ const byTime = (a: TripPoint, b: TripPoint) => a.time.getTime() - b.time.getTime
 export function tripSummaryOf(trip: CatalogueTrip, cities: CityNames): TripSummaryView {
   return {
     id: trip._id.toHexString(),
+    code: tripCodeOf(trip),
     operator: { id: trip.operator._id.toHexString(), name: operatorName(trip.operator) },
     bus: {
       name: trip.bus.name,

@@ -4,10 +4,11 @@ import { type Connection, type HydratedDocument, type Model, Types } from 'mongo
 import { type StoredDocument } from '../../database/scoped-repository.base';
 import { ApiException } from '../../common/errors/api-exception';
 import { type ClientRequestInfo } from '../../common/http/client-request-info';
-import { skipOf } from '../../common/pipes/list-query';
+import { escapeRegExp, skipOf } from '../../common/pipes/list-query';
 import { type AuthenticatedUserActor } from '../../common/request-context/request-actor';
 import { AuditedChangeRunner } from '../rbac/services/audited-change.service';
 import { TRIP_MODEL, type Trip, type TripStatus } from './schemas/trip.schema';
+import { tripCodeOf } from './trip_codes';
 import { SEAT_INVENTORY_MODEL, type SeatInventoryItem } from './schemas/seat-inventory.schema';
 
 export type StoredTripDoc = StoredDocument<Trip>;
@@ -22,6 +23,8 @@ export interface AdminTripKpis {
 
 export interface AdminTripView {
   id: string;
+  /** Short code shown on screens, e.g. TRP-1042. */
+  code: string;
   operatorId: string;
   operatorName: string;
   routeId: string;
@@ -99,6 +102,7 @@ export class TripsAdminManageService {
 
     return {
       id: t._id.toString(),
+      code: tripCodeOf(t),
       operatorId: t.operatorId.toString(),
       operatorName,
       routeId: t.routeId.toString(),
@@ -148,6 +152,7 @@ export class TripsAdminManageService {
     if (query.search && query.search.trim().length > 0) {
       const s = query.search.trim();
       filter.$or = [
+        { tripCode: { $regex: escapeRegExp(s), $options: 'i' } },
         { route: { $regex: s, $options: 'i' } },
         { 'bus.registrationNumber': { $regex: s, $options: 'i' } },
         { 'bus.name': { $regex: s, $options: 'i' } },

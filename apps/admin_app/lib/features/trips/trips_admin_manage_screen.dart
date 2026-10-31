@@ -128,10 +128,10 @@ class _AdminTripsPageState extends ConsumerState<AdminTripsPage> {
   void _exportTrips(List<JsonMap> items) {
     if (items.isEmpty) return;
     final csvData = StringBuffer();
-    csvData.writeln('ID,Route,Bus,Departure,Status,StartingFarePaise');
+    csvData.writeln('Trip,Route,Bus,Departure,Status,StartingFarePaise');
     for (final t in items) {
       final bus = t['bus'] is Map ? (t['bus'] as Map)['name'] : '';
-      csvData.writeln('${t['id']},${t['routeId']},$bus,${t['departureTime']},${t['status']},${t['startingFarePaise']}');
+      csvData.writeln('${t['code']},"${t['route']}",$bus,${t['departureTime']},${t['status']},${t['startingFarePaise']}');
     }
     downloadTextFile('trips_export.csv', csvData.toString());
   }
@@ -442,7 +442,7 @@ class _AdminTripsPageState extends ConsumerState<AdminTripsPage> {
 
     return DataRow(
       cells: [
-        DataCell(Text(tripId, style: const TextStyle(fontWeight: FontWeight.w600))),
+        DataCell(Text('${t['code'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w600))),
         DataCell(LookupName('routes', t['routeId'] as String?)),
         DataCell(Text(busLabel)),
         DataCell(Text(departure)),
@@ -939,7 +939,7 @@ class _AdminInventoryPageState extends ConsumerState<AdminInventoryPage> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (dialogCtx, setDialogState) => AlertDialog(
-          title: Text('Seat inventory for $tripId'),
+          title: Text('Seat inventory for ${trip['code'] ?? ''}'),
           content: SizedBox(
             width: 400,
             child: Column(
@@ -1293,7 +1293,7 @@ class _AdminInventoryPageState extends ConsumerState<AdminInventoryPage> {
 
     return DataRow(
       cells: [
-        DataCell(Text(tripId, style: const TextStyle(fontWeight: FontWeight.w600))),
+        DataCell(Text('${t['code'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w600))),
         DataCell(LookupName('routes', t['routeId'] as String?)),
         DataCell(Text(busLabel)),
         DataCell(Text(departure)),

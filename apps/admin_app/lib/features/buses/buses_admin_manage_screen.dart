@@ -715,7 +715,7 @@ class _BusesAdminManageScreenState
                     const DropdownMenuItem(value: 'ALL', child: Text('All')),
                     ...busTypes.map((bt) => DropdownMenuItem(
                       value: '${bt['id']}',
-                      child: Text('${bt['name'] ?? bt['id']}', overflow: TextOverflow.ellipsis),
+                      child: Text('${bt['name'] ?? ''}', overflow: TextOverflow.ellipsis),
                     )),
                   ],
                   onChanged: (v) => notifier.setBusType(v == 'ALL' ? '' : (v ?? '')),
@@ -862,7 +862,7 @@ class _BusesAdminManageScreenState
                       const DropdownMenuItem(value: 'ALL', child: Text('All')),
                       ...busTypes.map((bt) => DropdownMenuItem(
                         value: '${bt['id']}',
-                        child: Text('${bt['name'] ?? bt['id']}', overflow: TextOverflow.ellipsis),
+                        child: Text('${bt['name'] ?? ''}', overflow: TextOverflow.ellipsis),
                       )),
                     ],
                     onChanged: (v) => notifier.setBusType(v == 'ALL' ? '' : (v ?? '')),

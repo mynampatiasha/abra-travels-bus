@@ -18,6 +18,8 @@ import {
 
 /** Point ids are generated; any string is accepted. */
 const anyId = expect.any(String) as unknown as string;
+/** A trip code such as TRP-1042 (a seeded trip has none stored, so it shows the stand-in). */
+const anyTripCode = expect.stringMatching(/^TRP-/) as unknown as string;
 
 const SEARCH = '/api/v1/trips/search';
 
@@ -143,6 +145,8 @@ describe('Discovery e2e: trip search', () => {
       const [first] = dataOf<TripSummaryView[]>(await search({}).expect(200));
       expect(first).toEqual({
         id: trips.morning!.toHexString(),
+        // The short code people read (a seeded trip has none stored, so it shows the stand-in)
+        code: anyTripCode,
         operator: { id: abra.toHexString(), name: 'Abra Travels' },
         bus: {
           name: 'Morning Volvo',

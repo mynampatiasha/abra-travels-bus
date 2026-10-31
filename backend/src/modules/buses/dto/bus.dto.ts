@@ -8,6 +8,9 @@ const fields = {
   busTypeId: objectIdString,
   /** Maker of the bus (a listed make or a typed one). */
   make: z.string().trim().min(2).max(40).optional(),
+  /** The driver and conductor who normally run the bus (`null` clears it). */
+  defaultDriverId: objectIdString.nullable().optional(),
+  defaultConductorId: objectIdString.nullable().optional(),
   /** Keys of amenities that are switched on (`GET /catalogue/amenities`). */
   amenities: z
     .array(z.string().regex(/^[A-Z][A-Z0-9_]{1,39}$/, 'must be an amenity key'))
@@ -38,6 +41,8 @@ export class UpdateBusDto extends createZodDto(
     name: fields.name.optional(),
     busTypeId: fields.busTypeId.optional(),
     make: fields.make,
+    defaultDriverId: fields.defaultDriverId,
+    defaultConductorId: fields.defaultConductorId,
     amenities: fields.amenities.optional(),
     seatCapacity: fields.seatCapacity.optional(),
     insuranceExpiryDate: fields.insuranceExpiryDate,

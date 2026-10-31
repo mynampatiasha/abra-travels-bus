@@ -77,7 +77,6 @@ export class InvitationsManageController {
 export const INVITATIONS_EXPORT_KIND: ExportKind<InvitationView> = {
   key: 'invitations',
   columns: [
-    { header: 'ID', value: (invitation) => invitation.id },
     { header: 'Company', value: (invitation) => invitation.companyName },
     { header: 'Owner', value: (invitation) => invitation.ownerName },
     { header: 'Email', value: (invitation) => invitation.email },

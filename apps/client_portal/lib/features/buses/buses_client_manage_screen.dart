@@ -8,6 +8,7 @@ import '../../core/failure_text.dart';
 import '../../core/widgets/portal_kpi_card.dart';
 import '../../core/widgets/portal_section_title.dart';
 import '../../core/widgets/portal_status_chip.dart';
+import 'bus_documents_client_screen.dart';
 
 // ===== 1. MODELS =====
 
@@ -23,6 +24,8 @@ class ClientBusItem {
     required this.status,
     this.make,
     String? displayName,
+    this.defaultDriverId,
+    this.defaultConductorId,
     this.insuranceExpiryDate,
     this.statusReason,
   }) : displayName = displayName ?? (make == null ? busTypeName : '$make $busTypeName');
@@ -33,6 +36,10 @@ class ClientBusItem {
   final String busTypeId;
   final String busTypeName;
   final String? make;
+
+  /// The driver and conductor who normally run this bus (new trips start with them).
+  final String? defaultDriverId;
+  final String? defaultConductorId;
 
   /// Ready-made name for lists, e.g. "Volvo AC Sleeper" (the bus type alone when there is no make).
   final String displayName;
@@ -51,6 +58,8 @@ class ClientBusItem {
       busTypeName: json['busTypeName'] as String? ?? json['type'] as String? ?? 'Standard',
       make: json['make'] as String?,
       displayName: json['displayName'] as String?,
+      defaultDriverId: json['defaultDriverId'] as String?,
+      defaultConductorId: json['defaultConductorId'] as String?,
       seatCapacity: (json['seatCapacity'] as num?)?.toInt() ?? (json['seats'] as num?)?.toInt() ?? 40,
       seatLayoutType: json['seatLayoutType'] as String? ?? json['layout'] as String? ?? '2+2 Seater',
       status: json['status'] as String? ?? 'ACTIVE',
@@ -429,6 +438,18 @@ class _ClientBusesViewState extends ConsumerState<_ClientBusesView> {
                                               icon: const Icon(Icons.build_circle_outlined, size: 18),
                                               tooltip: bus.status == 'MAINTENANCE' ? 'Return to service' : 'Mark maintenance',
                                               onPressed: () => _toggleMaintenance(bus),
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.folder_open_outlined, size: 18),
+                                              tooltip: 'Documents',
+                                              onPressed: () => showBusDocumentsDialog(
+                                                context,
+                                                busId: bus.id,
+                                                registration: bus.registrationNumber,
+                                                defaultDriverId: bus.defaultDriverId,
+                                                defaultConductorId: bus.defaultConductorId,
+                                                onChanged: () => ref.invalidate(clientBusesProvider),
+                                              ),
                                             ),
                                             IconButton(
                                               icon: const Icon(Icons.visibility_outlined, size: 18),

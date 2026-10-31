@@ -104,7 +104,6 @@ export class AcceptStaffInvitationDto extends createZodDto(
 export const STAFF_EXPORT_KIND: ExportKind<StaffView> = {
   key: 'staff',
   columns: [
-    { header: 'ID', value: (s) => s.id },
     { header: 'Name', value: (s) => s.name },
     { header: 'Email', value: (s) => s.email },
     { header: 'Role', value: (s) => s.roleName },
