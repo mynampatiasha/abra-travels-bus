@@ -133,6 +133,12 @@ class _AdminTicketsPageState extends ConsumerState<AdminTicketsPage> {
     }
   }
 
+  /// The list and my own count, which changes when a ticket is taken, resolved or given to me.
+  void _refreshAll() {
+    _load();
+    _loadAvailability();
+  }
+
   Future<void> _load() async {
     setState(() {
       _busy = true;
@@ -243,7 +249,7 @@ class _AdminTicketsPageState extends ConsumerState<AdminTicketsPage> {
             child: _TicketDetail(
               id: '${ticket['id']}',
               canManage: access.can(PermissionKeys.supportManage),
-              onChanged: _load,
+              onChanged: _refreshAll,
             ),
           ),
         ),
@@ -385,7 +391,7 @@ class _AdminTicketsPageState extends ConsumerState<AdminTicketsPage> {
                 selected: _mineOnly,
                 onSelected: (v) => _filter(() => _mineOnly = v),
               ),
-              IconButton(tooltip: 'Refresh', onPressed: _load, icon: const Icon(Icons.refresh)),
+              IconButton(tooltip: 'Refresh', onPressed: _refreshAll, icon: const Icon(Icons.refresh)),
               OutlinedButton.icon(
                 onPressed: _exporting ? null : _export,
                 icon: const Icon(Icons.download),
