@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:driver_app/app/providers.dart';
 import 'package:driver_app/features/bus_documents/driver_bus_documents_screen.dart';
+import 'package:driver_app/features/driver_core/driver_core_driver_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -144,6 +145,30 @@ void main() {
       expect(find.text('Delete document'), findsNothing);
       expect(find.text('Upload'), findsNothing);
       expect(adapter.requests.map((r) => r.method).toSet(), {'GET'});
+    });
+
+    testWidgets('the driver home has a Bus documents button that opens "My buses"', (tester) async {
+      final (_, app) = await _screen((request) async {
+        if (_pathOf(request) == 'driver/buses') {
+          return FakeResponse.ok(<Object?>[
+            <String, Object?>{
+              'id': 'b-1',
+              'registrationNumber': 'KA01AB1234',
+              'name': 'Vikram Travels',
+              'documentsExpiring': 0,
+              'documentsExpired': 0,
+            },
+          ]);
+        }
+        return FakeResponse.error(404, 'RESOURCE_NOT_FOUND');
+      }, const DriverHomeScreen());
+      await tester.pumpWidget(app);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Bus documents'));
+      await tester.pumpAndSettle();
+      expect(find.text('My buses'), findsOneWidget);
+      expect(find.text('KA01AB1234'), findsOneWidget);
     });
   });
 }

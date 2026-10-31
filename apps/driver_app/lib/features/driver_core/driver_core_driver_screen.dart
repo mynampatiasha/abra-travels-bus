@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/providers.dart';
 import '../../core/l10n/driver_strings.dart';
 import '../../routing/driver_routes.dart';
+import '../bus_documents/driver_bus_documents_screen.dart';
 import '../tracking/tracking_driver_screen.dart';
 
 class DriverCoreController {
@@ -73,6 +74,14 @@ class DriverHomeScreen extends ConsumerWidget {
         backgroundColor: const Color(0xFF12304A),
         foregroundColor: Colors.white,
         actions: [
+          // The documents (RC, insurance, permit, fitness...) of the buses this driver runs
+          IconButton(
+            tooltip: 'Bus documents',
+            icon: const Icon(Icons.folder_open_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const DriverBusesScreen()),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
             onPressed: () => context.go(DriverRoutes.alerts),
